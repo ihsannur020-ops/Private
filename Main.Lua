@@ -1,13 +1,11 @@
 --[[
-	Speed Control Universal - Delta Executor Ready + Loading Animation
+	Speed Control Universal - Delta Executor Ready (FIXED)
 	Oleh: Azka
 	Desain: Minimalis, background hitam, tombol biru, switch biru/putih, text putih tebal
-	Loading: Full screen hitam 40% opacity, teks "Script By Azka" di tengah
+	Semua menu dapat digeser (draggable), slider integer, walkspeed max 500
 --]]
 
--- Gunakan task.spawn agar tidak memblokir executor
 task.spawn(function()
-	-- Panggil pcall untuk menangkap error
 	local success, err = pcall(function()
 		-- ========== LOADING SCREEN ==========
 		local Players = game:GetService("Players")
@@ -16,7 +14,6 @@ task.spawn(function()
 			player = Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 		end
 
-		-- Buat loading GUI
 		local loadingGui = Instance.new("ScreenGui")
 		loadingGui.Name = "LoadingScreen"
 		loadingGui.Parent = player:WaitForChild("PlayerGui")
@@ -27,7 +24,7 @@ task.spawn(function()
 		local blackFrame = Instance.new("Frame")
 		blackFrame.Size = UDim2.new(1, 0, 1, 0)
 		blackFrame.BackgroundColor3 = Color3.new(0, 0, 0)
-		blackFrame.BackgroundTransparency = 0.6 -- 40% opacity (solid 40%)
+		blackFrame.BackgroundTransparency = 0.6
 		blackFrame.BorderSizePixel = 0
 		blackFrame.Parent = loadingGui
 
@@ -42,7 +39,6 @@ task.spawn(function()
 		loadingText.TextScaled = true
 		loadingText.Parent = blackFrame
 
-		-- Efek animasi sederhana (fade in/out teks)
 		local tweenService = game:GetService("TweenService")
 		local fadeOut = tweenService:Create(loadingText, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {TextTransparency = 0.5})
 		local fadeIn = tweenService:Create(loadingText, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {TextTransparency = 0})
@@ -51,24 +47,19 @@ task.spawn(function()
 			fadeOut:Play()
 			fadeOut.Completed:Connect(function()
 				fadeIn:Play()
-				fadeIn.Completed:Connect(function()
-					-- repeat
-				end)
+				fadeIn.Completed:Connect(function() end)
 			end)
 		end)
-		
-		-- ========== INISIALISASI GLOBAL ==========
-		if _G.SpeedControlLoaded then 
-			loadingGui:Destroy()
-			return 
-		end
+
+		-- ========== GLOBAL ==========
+		if _G.SpeedControlLoaded then loadingGui:Destroy(); return end
 		_G.SpeedControlLoaded = true
 
 		local UserInputService = game:GetService("UserInputService")
 		local RunService = game:GetService("RunService")
 		local TweenService = game:GetService("TweenService")
 
-		-- Data teleport (lokal, hanya untuk sesi)
+		-- Data teleport (lokal sesi)
 		local teleportSpots = {}
 
 		-- State fitur
@@ -83,7 +74,7 @@ task.spawn(function()
 		local infJumpEnabled = false
 		local infJumpConnection = nil
 
-		local lastWalkSpeed = 16 -- default
+		local lastWalkSpeed = 30 -- default 30
 
 		-- GUI Utama
 		local screenGui = Instance.new("ScreenGui")
@@ -92,7 +83,35 @@ task.spawn(function()
 		screenGui.ResetOnSpawn = false
 		screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-		-- ========== FUNGSI PEMBUAT ELEMEN UI ==========
+		-- ========== FUNGSI DRAG (geser) ==========
+		local function makeDraggable(frame, dragHandle)
+			dragHandle = dragHandle or frame
+			local dragging = false
+			local dragStart, startPos
+
+			dragHandle.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					dragging = true
+					dragStart = input.Position
+					startPos = frame.Position
+				end
+			end)
+
+			UserInputService.InputChanged:Connect(function(input)
+				if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+					local delta = input.Position - dragStart
+					frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+				end
+			end)
+
+			UserInputService.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					dragging = false
+				end
+			end)
+		end
+
+		-- ========== FUNGSI UI ==========
 		local function createSwitch(parent, defaultOn, callback)
 			local frame = Instance.new("Frame")
 			frame.Size = UDim2.new(0, 50, 0, 25)
@@ -141,7 +160,7 @@ task.spawn(function()
 			valueLabel.Size = UDim2.new(0, 40, 1, 0)
 			valueLabel.BackgroundTransparency = 1
 			valueLabel.TextColor3 = Color3.new(1,1,1)
-			valueLabel.Text = tostring(defaultValue)
+			valueLabel.Text = tostring(math.floor(defaultValue))
 			valueLabel.Font = Enum.Font.GothamBold
 			valueLabel.TextSize = 16
 			valueLabel.Parent = container
@@ -195,7 +214,7 @@ task.spawn(function()
 					local relativeX = math.clamp(mousePos.X - absPos.X, 0, absSize.X)
 					local percent = relativeX / absSize.X
 					currentValue = min + percent * (max - min)
-					currentValue = math.clamp(currentValue, min, max)
+					currentValue = math.floor(math.clamp(currentValue, min, max) + 0.5) -- pembulatan ke integer terdekat
 					updateSliderPosition()
 					if callback then callback(currentValue) end
 					lastWalkSpeed = currentValue
@@ -265,17 +284,19 @@ task.spawn(function()
 
 			local mainFrame = Instance.new("Frame")
 			mainFrame.Name = "MainMenu"
-			mainFrame.Size = UDim2.new(0, 420, 0, 550)
-			mainFrame.Position = UDim2.new(0.5, -210, 0.5, -275)
+			mainFrame.Size = UDim2.new(0, 420, 0, 500) -- tinggi dikurangi karena label dihapus
+			mainFrame.Position = UDim2.new(0.5, -210, 0.5, -250)
 			mainFrame.BackgroundColor3 = Color3.new(0,0,0)
 			mainFrame.BorderSizePixel = 0
 			mainFrame.Parent = screenGui
+			makeDraggable(mainFrame, mainFrame) -- drag via header nanti ditimpa? biar bisa dari header juga
 
 			local header = Instance.new("Frame")
 			header.Size = UDim2.new(1, 0, 0, 40)
 			header.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
 			header.BorderSizePixel = 0
 			header.Parent = mainFrame
+			makeDraggable(mainFrame, header) -- drag via header
 
 			local title = createBoldLabel(header, "Speed Control By Azka", UDim2.new(0.8, 0, 1, 0))
 			title.TextXAlignment = Enum.TextXAlignment.Left
@@ -291,8 +312,7 @@ task.spawn(function()
 			minimizeBtn.TextSize = 20
 			minimizeBtn.Parent = header
 			minimizeBtn.MouseButton1Click:Connect(function()
-				local body = mainFrame:FindFirstChild("Body")
-				if body then body.Visible = not body.Visible end
+				mainFrame.Visible = false -- minimize = sembunyikan seluruh menu utama
 			end)
 
 			local closeBtn = Instance.new("TextButton")
@@ -313,6 +333,7 @@ task.spawn(function()
 				confirm.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
 				confirm.BorderSizePixel = 0
 				confirm.Parent = screenGui
+				makeDraggable(confirm, confirm)
 
 				local confirmTitle = createBoldLabel(confirm, "Speed Control By Azka", UDim2.new(1,0,0,40))
 				confirmTitle.TextXAlignment = Enum.TextXAlignment.Center
@@ -327,7 +348,6 @@ task.spawn(function()
 					screenGui.Enabled = false
 					local mainBtn = screenGui:FindFirstChild("MainButton")
 					if mainBtn then mainBtn.Visible = false end
-					-- Matikan semua fitur
 					flyEnabled = false
 					if flyConnection then flyConnection:Disconnect() flyConnection = nil end
 					if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
@@ -347,6 +367,8 @@ task.spawn(function()
 			body.BackgroundTransparency = 1
 			body.BorderSizePixel = 0
 			body.ScrollBarThickness = 5
+			body.CanvasSize = UDim2.new(0,0,0,0)
+			body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 			body.Parent = mainFrame
 
 			local layout = Instance.new("UIListLayout")
@@ -362,11 +384,9 @@ task.spawn(function()
 			padding.PaddingRight = UDim.new(0, 10)
 			padding.Parent = body
 
-			createBoldLabel(body, "[ Script ]", UDim2.new(1, -20, 0, 25)).LayoutOrder = 1
-			createBoldLabel(body, "[ Bagian Utama Script ]", UDim2.new(1, -20, 0, 25)).LayoutOrder = 2
-
-			createBoldLabel(body, "Walkspeed", UDim2.new(1, -20, 0, 25)).LayoutOrder = 3
-			local wsSlider, getWS = createSlider(body, 1, 200, lastWalkSpeed, function(val)
+			-- ===== WALKSPEED =====
+			createBoldLabel(body, "Walkspeed", UDim2.new(1, -20, 0, 25)).LayoutOrder = 1
+			local wsSlider, getWS = createSlider(body, 1, 500, lastWalkSpeed, function(val)
 				lastWalkSpeed = val
 				local char = player.Character
 				if char then
@@ -374,14 +394,15 @@ task.spawn(function()
 					if hum then hum.WalkSpeed = val end
 				end
 			end)
-			wsSlider.LayoutOrder = 4
+			wsSlider.LayoutOrder = 2
 
-			createBoldLabel(body, "Umum", UDim2.new(1, -20, 0, 25)).LayoutOrder = 5
+			-- ===== UMUM =====
+			createBoldLabel(body, "Umum", UDim2.new(1, -20, 0, 25)).LayoutOrder = 3
 
 			local noclipRow = Instance.new("Frame")
 			noclipRow.Size = UDim2.new(1, -20, 0, 30)
 			noclipRow.BackgroundTransparency = 1
-			noclipRow.LayoutOrder = 6
+			noclipRow.LayoutOrder = 4
 			noclipRow.Parent = body
 			createBoldLabel(noclipRow, "No Clip", UDim2.new(0, 100, 1, 0)).TextXAlignment = Enum.TextXAlignment.Left
 			local noclipSwitch, getNoclip = createSwitch(noclipRow, false, function(state)
@@ -409,7 +430,7 @@ task.spawn(function()
 			local infRow = Instance.new("Frame")
 			infRow.Size = UDim2.new(1, -20, 0, 30)
 			infRow.BackgroundTransparency = 1
-			infRow.LayoutOrder = 7
+			infRow.LayoutOrder = 5
 			infRow.Parent = body
 			createBoldLabel(infRow, "Inf Jump", UDim2.new(0, 100, 1, 0)).TextXAlignment = Enum.TextXAlignment.Left
 			local infSwitch, getInf = createSwitch(infRow, false, function(state)
@@ -437,7 +458,7 @@ task.spawn(function()
 			local flyRow = Instance.new("Frame")
 			flyRow.Size = UDim2.new(1, -20, 0, 30)
 			flyRow.BackgroundTransparency = 1
-			flyRow.LayoutOrder = 8
+			flyRow.LayoutOrder = 6
 			flyRow.Parent = body
 			createBoldLabel(flyRow, "Fly V3", UDim2.new(0, 100, 1, 0)).TextXAlignment = Enum.TextXAlignment.Left
 			local flySwitch, getFly = createSwitch(flyRow, false, function(state)
@@ -454,16 +475,19 @@ task.spawn(function()
 			flySwitch.Position = UDim2.new(1, -55, 0, 0)
 			flySwitch.Parent = flyRow
 
-			createBoldLabel(body, "Teleport", UDim2.new(1, -20, 0, 25)).LayoutOrder = 9
+			-- ===== TELEPORT =====
+			createBoldLabel(body, "Teleport", UDim2.new(1, -20, 0, 25)).LayoutOrder = 7
+			
 			local saveBtn = createButton(body, "Save Teleport", UDim2.new(0, 150, 0, 35), Color3.new(0,0.5,1), function()
 				createSaveTeleportMenu()
 			end)
-			saveBtn.LayoutOrder = 10
+			saveBtn.LayoutOrder = 8
 
+			-- Container untuk list teleport
 			local teleportContainer = Instance.new("Frame")
 			teleportContainer.Size = UDim2.new(1, -20, 0, 0)
 			teleportContainer.BackgroundTransparency = 1
-			teleportContainer.LayoutOrder = 11
+			teleportContainer.LayoutOrder = 9
 			teleportContainer.Parent = body
 			local teleportLayout = Instance.new("UIListLayout")
 			teleportLayout.Padding = UDim.new(0, 5)
@@ -498,60 +522,71 @@ task.spawn(function()
 					end)
 					setBtn.Position = UDim2.new(0, 220, 0.5, -15)
 				end
+				-- Update canvas size
+				body.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 20)
 			end
 
 			mainFrame:SetAttribute("RefreshTeleportList", refreshTeleportList)
 			refreshTeleportList()
 		end
 
-		-- ========== FLY V3 MENU ==========
+		-- ========== FLY V3 MENU (diperbaiki) ==========
 		function createFlyMenu()
 			if screenGui:FindFirstChild("FlyMenu") then return end
 			local flyFrame = Instance.new("Frame")
 			flyFrame.Name = "FlyMenu"
-			flyFrame.Size = UDim2.new(0, 320, 0, 160)
-			flyFrame.Position = UDim2.new(0.5, -160, 0.8, -80)
+			flyFrame.Size = UDim2.new(0, 260, 0, 120)
+			flyFrame.Position = UDim2.new(0.5, -130, 0.7, -60)
 			flyFrame.BackgroundColor3 = Color3.new(0,0,0)
 			flyFrame.BorderSizePixel = 0
 			flyFrame.Parent = screenGui
+			makeDraggable(flyFrame, flyFrame)
 
 			local header = Instance.new("Frame")
-			header.Size = UDim2.new(1, 0, 0, 40)
+			header.Size = UDim2.new(1, 0, 0, 35)
 			header.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
+			header.BorderSizePixel = 0
 			header.Parent = flyFrame
+			makeDraggable(flyFrame, header)
 
 			local title = createBoldLabel(header, "[ FLY V3 ]", UDim2.new(1,0,1,0))
 			title.TextXAlignment = Enum.TextXAlignment.Center
+			title.TextSize = 18
 
 			local body = Instance.new("Frame")
-			body.Size = UDim2.new(1, 0, 1, -40)
-			body.Position = UDim2.new(0, 0, 0, 40)
+			body.Size = UDim2.new(1, 0, 1, -35)
+			body.Position = UDim2.new(0, 0, 0, 35)
 			body.BackgroundTransparency = 1
 			body.Parent = flyFrame
 
-			local speedPanel = Instance.new("Frame")
-			speedPanel.Size = UDim2.new(1, 0, 0, 50)
-			speedPanel.BackgroundTransparency = 1
-			speedPanel.Parent = body
+			-- Baris kontrol speed
+			local speedRow = Instance.new("Frame")
+			speedRow.Size = UDim2.new(1, 0, 0, 45)
+			speedRow.Position = UDim2.new(0, 0, 0, 5)
+			speedRow.BackgroundTransparency = 1
+			speedRow.Parent = body
 
-			local minusBtn = createButton(speedPanel, "-", UDim2.new(0, 45, 0, 45), Color3.new(0.3,0.3,0.3), function()
+			local minusBtn = createButton(speedRow, "-", UDim2.new(0, 40, 0, 40), Color3.new(0.3,0.3,0.3), function()
 				flySpeed = math.max(1, flySpeed - 1)
 				speedLabel.Text = tostring(flySpeed)
 			end)
-			minusBtn.Position = UDim2.new(0, 20, 0.5, -22.5)
+			minusBtn.Position = UDim2.new(0, 15, 0.5, -20)
+			minusBtn.TextSize = 20
 
-			local speedLabel = createBoldLabel(speedPanel, tostring(flySpeed), UDim2.new(0, 70, 0, 45))
-			speedLabel.Position = UDim2.new(0, 75, 0.5, -22.5)
+			local speedLabel = createBoldLabel(speedRow, tostring(flySpeed), UDim2.new(0, 70, 0, 40))
+			speedLabel.Position = UDim2.new(0, 65, 0.5, -20)
 			speedLabel.TextXAlignment = Enum.TextXAlignment.Center
-			speedLabel.TextSize = 20
+			speedLabel.TextSize = 22
 
-			local plusBtn = createButton(speedPanel, "+", UDim2.new(0, 45, 0, 45), Color3.new(0.3,0.3,0.3), function()
+			local plusBtn = createButton(speedRow, "+", UDim2.new(0, 40, 0, 40), Color3.new(0.3,0.3,0.3), function()
 				flySpeed = flySpeed + 1
 				speedLabel.Text = tostring(flySpeed)
 			end)
-			plusBtn.Position = UDim2.new(0, 155, 0.5, -22.5)
+			plusBtn.Position = UDim2.new(0, 145, 0.5, -20)
+			plusBtn.TextSize = 20
 
-			local toggleFlyBtn = createButton(body, "FLY", UDim2.new(0, 120, 0, 45), Color3.new(0,0.5,1), function()
+			-- Tombol FLY
+			local toggleFlyBtn = createButton(body, "FLY", UDim2.new(0, 120, 0, 40), Color3.new(0,0.5,1), function()
 				if flyConnection then
 					if flyConnection then flyConnection:Disconnect() flyConnection = nil end
 					if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
@@ -600,7 +635,7 @@ task.spawn(function()
 					toggleFlyBtn.Text = "STOP"
 				end
 			end)
-			toggleFlyBtn.Position = UDim2.new(0.5, -60, 0.8, -22.5)
+			toggleFlyBtn.Position = UDim2.new(0.5, -60, 0.8, -20)
 			toggleFlyBtn.Parent = body
 		end
 
@@ -614,11 +649,13 @@ task.spawn(function()
 			menu.BackgroundColor3 = Color3.new(0,0,0)
 			menu.BorderSizePixel = 0
 			menu.Parent = screenGui
+			makeDraggable(menu, menu)
 
 			local header = Instance.new("Frame")
 			header.Size = UDim2.new(1, 0, 0, 40)
 			header.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
 			header.Parent = menu
+			makeDraggable(menu, header)
 
 			local title = createBoldLabel(header, "Save Teleport", UDim2.new(1,0,1,0))
 			title.TextXAlignment = Enum.TextXAlignment.Center
@@ -685,11 +722,13 @@ task.spawn(function()
 			menu.BackgroundColor3 = Color3.new(0,0,0)
 			menu.BorderSizePixel = 0
 			menu.Parent = screenGui
+			makeDraggable(menu, menu)
 
 			local header = Instance.new("Frame")
 			header.Size = UDim2.new(1, 0, 0, 40)
 			header.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
 			header.Parent = menu
+			makeDraggable(menu, header)
 
 			local title = createBoldLabel(header, "Setting Teleport [" .. spot.name .. "]", UDim2.new(1,0,1,0))
 			title.TextXAlignment = Enum.TextXAlignment.Center
@@ -756,15 +795,16 @@ task.spawn(function()
 		-- ========== TOMBOL BULAT UTAMA (👟) ==========
 		local mainButton = Instance.new("TextButton")
 		mainButton.Name = "MainButton"
-		mainButton.Size = UDim2.new(0, 65, 0, 65)
-		mainButton.Position = UDim2.new(0, 25, 0.5, -32.5)
+		mainButton.Size = UDim2.new(0, 50, 0, 50) -- ukuran lebih kecil
+		mainButton.Position = UDim2.new(0, 20, 0.5, -25)
 		mainButton.BackgroundColor3 = Color3.new(0,0,0)
 		mainButton.BorderSizePixel = 0
 		mainButton.Text = "👟"
 		mainButton.TextColor3 = Color3.new(1,1,1)
 		mainButton.Font = Enum.Font.GothamBold
-		mainButton.TextSize = 45
+		mainButton.TextSize = 35
 		mainButton.Parent = screenGui
+		makeDraggable(mainButton, mainButton) -- tombol bisa digeser
 
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(1, 0)
@@ -794,14 +834,13 @@ task.spawn(function()
 		end)
 
 		-- ========== LOADING SELESAI ==========
-		animLoop:Disconnect() -- hentikan animasi loop
-		loadingGui:Destroy()   -- hilangkan loading screen
+		animLoop:Disconnect()
+		loadingGui:Destroy()
 		print("✅ Speed Control By Azka loaded. Tekan 👟 untuk menu.")
-	end) -- akhir pcall
+	end) -- pcall
 
 	if not success then
 		warn("⚠️ Speed Control Error: " .. tostring(err))
-		-- Coba tampilkan pesan error di layar
 		local player = game:GetService("Players").LocalPlayer
 		if player then
 			local errorGui = Instance.new("ScreenGui")
@@ -822,4 +861,4 @@ task.spawn(function()
 			errorGui:Destroy()
 		end
 	end
-end) -- akhir task.spawn
+end) -- task.spawn
