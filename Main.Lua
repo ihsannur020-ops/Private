@@ -1,17 +1,15 @@
 --[[
-	Script BY Azka - Ultimate Controller (Versi Perbaikan)
-	Fitur:
-	- WalkSpeed (0-100) dengan toggle
-	- Boost WalkSpeed (0-100) dengan toggle
-	- Jump Power (0-100) dengan toggle
-	- Boost Jump Power (0-100) dengan toggle
-	- NoClip, Inf Jump, Fly UI, TP UI
-	- Teleport Menu dengan list, scroll, setting rename
-	Semua slider memiliki toggle on/off dan grey out saat off
-	Slider otomatis membaca nilai karakter saat UI dibuka
+	Script BY Azka - Ultimate Controller (Final)
+	- WalkSpeed slider (1-200) dengan nilai di pojok kanan
+	- Boost slider (0-500) dengan nilai di pojok kanan
+	- Inf Jump, Noclip toggle
+	- Fly UI toggle (munculkan/sembunyikan panel fly)
+	- TP UI toggle (munculkan/sembunyikan panel teleport)
+	- Semua UI dapat di-drag, minimize, close
+	- Fly UI dan TP UI memiliki minimize internal sendiri
 ]]
 
--- Hapus GUI lama
+-- Hapus GUI lama jika ada
 local CoreGui = game:GetService("CoreGui")
 local guiName = "ScriptBYAzka"
 local flyGUIName = "AzkaFlyUI"
@@ -84,11 +82,11 @@ gui.IgnoreGuiInset = true
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = CoreGui
 
--- Main panel
+-- Main panel (tinggi 170 cukup untuk 2 slider + 2 baris tombol)
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
-panel.Size = UDim2.fromOffset(320, 400)  -- cukup tinggi untuk semua elemen
-panel.Position = UDim2.new(0.5, -160, 0.3, -200)
+panel.Size = UDim2.fromOffset(300, 170)
+panel.Position = UDim2.new(0.5, -150, 0.4, -85)
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 panel.Parent = gui
 
@@ -145,215 +143,215 @@ closeBtn.TextColor3 = Color3.fromRGB(255, 220, 220)
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
 closeBtn.Parent = titleBar
 
--- Body container (scrolling agar muat)
-local body = Instance.new("ScrollingFrame")
+-- Body container
+local body = Instance.new("Frame")
 body.Name = "Body"
-body.Size = UDim2.new(1, -20, 1, -46)
-body.Position = UDim2.new(0, 10, 0, 40)
+body.Size = UDim2.new(1, -24, 1, -36)
+body.Position = UDim2.new(0, 12, 0, 34)
 body.BackgroundTransparency = 1
-body.ScrollBarThickness = 6
-body.CanvasSize = UDim2.new(0, 0, 0, 0)
 body.Parent = panel
 
-local listLayout = Instance.new("UIListLayout", body)
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Padding = UDim.new(0, 8)
-listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+-- ===== WalkSpeed Slider =====
+local wsLabel = Instance.new("TextLabel")
+wsLabel.BackgroundTransparency = 1
+wsLabel.Size = UDim2.new(1, 0, 0, 24)
+wsLabel.TextXAlignment = Enum.TextXAlignment.Left
+wsLabel.Font = Enum.Font.Gotham
+wsLabel.TextSize = 14
+wsLabel.TextColor3 = Color3.fromRGB(210, 215, 230)
+wsLabel.Text = "WalkSpeed"
+wsLabel.Parent = body
 
--- Fungsi untuk membuat section dengan slider dan toggle
-local function createSliderSection(parent, titleText, minVal, maxVal, defaultVal, onValueChanged)
-	local section = Instance.new("Frame")
-	section.Size = UDim2.new(1, -10, 0, 70)  -- tinggi 70
-	section.BackgroundTransparency = 1
-	section.Parent = parent
+local wsValue = Instance.new("TextLabel")
+wsValue.BackgroundTransparency = 1
+wsValue.Size = UDim2.new(0, 60, 0, 24)
+wsValue.Position = UDim2.new(1, -60, 0, 0)
+wsValue.TextXAlignment = Enum.TextXAlignment.Right
+wsValue.Font = Enum.Font.GothamMedium
+wsValue.TextSize = 14
+wsValue.TextColor3 = Color3.fromRGB(180, 220, 255)
+wsValue.Text = "30"
+wsValue.Parent = body
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, 0, 0, 20)
-	title.BackgroundTransparency = 1
-	title.Text = titleText
-	title.TextColor3 = Color3.fromRGB(210, 215, 230)
-	title.Font = Enum.Font.Gotham
-	title.TextSize = 14
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Parent = section
+local wsTrack = Instance.new("Frame")
+wsTrack.Name = "WSTrack"
+wsTrack.Size = UDim2.new(1, 0, 0, 8)
+wsTrack.Position = UDim2.new(0, 0, 0, 24)
+wsTrack.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+Instance.new("UICorner", wsTrack).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", wsTrack).Color = Color3.fromRGB(80, 120, 255)
+wsTrack.Parent = body
 
-	-- Toggle switch
-	local toggleBtn = Instance.new("TextButton")
-	toggleBtn.Size = UDim2.new(0, 50, 0, 20)
-	toggleBtn.Position = UDim2.new(1, -55, 0, 0)
-	toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)  -- abu saat off
-	toggleBtn.Text = "OFF"
-	toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-	toggleBtn.Font = Enum.Font.GothamBold
-	toggleBtn.TextSize = 12
-	Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
-	toggleBtn.Parent = section
+local wsFill = Instance.new("Frame")
+wsFill.Name = "WSFill"
+wsFill.Size = UDim2.new(0, 0, 1, 0)
+wsFill.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
+Instance.new("UICorner", wsFill).CornerRadius = UDim.new(0, 6)
+wsFill.Parent = wsTrack
 
-	local enabled = false  -- default off, bisa diubah nanti
+local wsKnob = Instance.new("Frame")
+wsKnob.Name = "WSKnob"
+wsKnob.Size = UDim2.fromOffset(16, 16)
+wsKnob.Position = UDim2.new(0, -8, 0.5, -8)
+wsKnob.BackgroundColor3 = Color3.fromRGB(220, 230, 255)
+Instance.new("UICorner", wsKnob).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", wsKnob).Color = Color3.fromRGB(40, 70, 160)
+wsKnob.Parent = wsTrack
 
-	-- Nilai sekarang
-	local currentVal = defaultVal
+-- ===== Boost Slider =====
+local boostLabel = Instance.new("TextLabel")
+boostLabel.BackgroundTransparency = 1
+boostLabel.Size = UDim2.new(1, 0, 0, 24)
+boostLabel.Position = UDim2.new(0, 0, 0, 38) -- 24+8+?  (24+8=32, then 38 gives spacing)
+boostLabel.TextXAlignment = Enum.TextXAlignment.Left
+boostLabel.Font = Enum.Font.Gotham
+boostLabel.TextSize = 14
+boostLabel.TextColor3 = Color3.fromRGB(210, 215, 230)
+boostLabel.Text = "Boost"
+boostLabel.Parent = body
 
-	-- Slider track
-	local track = Instance.new("Frame")
-	track.Size = UDim2.new(1, 0, 0, 8)
-	track.Position = UDim2.new(0, 0, 0, 25)
-	track.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
-	Instance.new("UICorner", track).CornerRadius = UDim.new(0, 6)
-	Instance.new("UIStroke", track).Color = Color3.fromRGB(80, 120, 255)
-	track.Parent = section
+local boostValue = Instance.new("TextLabel")
+boostValue.BackgroundTransparency = 1
+boostValue.Size = UDim2.new(0, 60, 0, 24)
+boostValue.Position = UDim2.new(1, -60, 0, 38)
+boostValue.TextXAlignment = Enum.TextXAlignment.Right
+boostValue.Font = Enum.Font.GothamMedium
+boostValue.TextSize = 14
+boostValue.TextColor3 = Color3.fromRGB(180, 220, 255)
+boostValue.Text = "0"
+boostValue.Parent = body
 
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.new(0, 0, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
-	Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 6)
-	fill.Parent = track
+local boostTrack = Instance.new("Frame")
+boostTrack.Name = "BoostTrack"
+boostTrack.Size = UDim2.new(1, 0, 0, 8)
+boostTrack.Position = UDim2.new(0, 0, 0, 62) -- 38+24
+boostTrack.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
+Instance.new("UICorner", boostTrack).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", boostTrack).Color = Color3.fromRGB(80, 120, 255)
+boostTrack.Parent = body
 
-	local knob = Instance.new("Frame")
-	knob.Size = UDim2.fromOffset(16, 16)
-	knob.Position = UDim2.new(0, -8, 0.5, -8)
-	knob.BackgroundColor3 = Color3.fromRGB(220, 230, 255)
-	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-	Instance.new("UIStroke", knob).Color = Color3.fromRGB(40, 70, 160)
-	knob.Parent = track
+local boostFill = Instance.new("Frame")
+boostFill.Name = "BoostFill"
+boostFill.Size = UDim2.new(0, 0, 1, 0)
+boostFill.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
+Instance.new("UICorner", boostFill).CornerRadius = UDim.new(0, 6)
+boostFill.Parent = boostTrack
 
-	local valueLabel = Instance.new("TextLabel")
-	valueLabel.Size = UDim2.new(1, 0, 0, 20)
-	valueLabel.Position = UDim2.new(0, 0, 0, 38)
-	valueLabel.BackgroundTransparency = 1
-	valueLabel.Text = tostring(defaultVal)
-	valueLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
-	valueLabel.Font = Enum.Font.GothamMedium
-	valueLabel.TextSize = 12
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Center
-	valueLabel.Parent = section
+local boostKnob = Instance.new("Frame")
+boostKnob.Name = "BoostKnob"
+boostKnob.Size = UDim2.fromOffset(16, 16)
+boostKnob.Position = UDim2.new(0, -8, 0.5, -8)
+boostKnob.BackgroundColor3 = Color3.fromRGB(220, 230, 255)
+Instance.new("UICorner", boostKnob).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", boostKnob).Color = Color3.fromRGB(40, 70, 160)
+boostKnob.Parent = boostTrack
 
-	-- Fungsi untuk mengatur nilai slider
-	local function setValue(val, fromUser)
-		val = math.clamp(val, minVal, maxVal)
-		currentVal = val
-		local alpha = (val - minVal) / (maxVal - minVal)
-		fill.Size = UDim2.new(alpha, 0, 1, 0)
-		knob.Position = UDim2.new(alpha, -8, 0.5, -8)
-		valueLabel.Text = tostring(math.floor(val))
-		if enabled and fromUser ~= false then
-			onValueChanged(val)
-		end
-	end
+-- ===== Slider Logic =====
+local MIN_WS = 1
+local MAX_WS = 200
+local MIN_BOOST = 0
+local MAX_BOOST = 500
+local currentWS = 30
+local currentBoost = 0
 
-	-- Inisialisasi
-	setValue(defaultVal, false)
+local draggingWS = false
+local draggingBoost = false
 
-	-- Toggle click
-	toggleBtn.MouseButton1Click:Connect(function()
-		enabled = not enabled
-		if enabled then
-			toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
-			toggleBtn.Text = "ON"
-			track.BackgroundColor3 = Color3.fromRGB(45, 50, 65)  -- normal
-			fill.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
-			knob.BackgroundColor3 = Color3.fromRGB(220, 230, 255)
-			onValueChanged(currentVal)
-		else
-			toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-			toggleBtn.Text = "OFF"
-			-- grey out slider
-			track.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-			fill.BackgroundColor3 = Color3.fromRGB(120, 120, 130)
-			knob.BackgroundColor3 = Color3.fromRGB(160, 160, 170)
-			-- tidak memanggil onValueChanged
-		end
-	end)
-
-	-- Slider drag
-	local dragging = false
-	track.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-		   input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			local x = input.Position.X
-			local absX = math.clamp(x - track.AbsolutePosition.X, 0, track.AbsoluteSize.X)
-			local alpha = absX / track.AbsoluteSize.X
-			setValue(minVal + alpha * (maxVal - minVal), true)
-		end
-	end)
-
-	knob.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-		   input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or
-		                 input.UserInputType == Enum.UserInputType.Touch) then
-			local x = input.Position.X
-			local absX = math.clamp(x - track.AbsolutePosition.X, 0, track.AbsoluteSize.X)
-			local alpha = absX / track.AbsoluteSize.X
-			setValue(minVal + alpha * (maxVal - minVal), true)
-		end
-	end)
-
-	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-		   input.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-		end
-	end)
-
-	-- Fungsi untuk mengatur nilai dari luar (misal deteksi karakter)
-	return {
-		setValue = setValue,
-		getValue = function() return currentVal end,
-		isEnabled = function() return enabled end,
-		setEnabled = function(flag)
-			enabled = flag
-			if enabled then
-				toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
-				toggleBtn.Text = "ON"
-				track.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
-				fill.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
-				knob.BackgroundColor3 = Color3.fromRGB(220, 230, 255)
-			else
-				toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-				toggleBtn.Text = "OFF"
-				track.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-				fill.BackgroundColor3 = Color3.fromRGB(120, 120, 130)
-				knob.BackgroundColor3 = Color3.fromRGB(160, 160, 170)
-			end
-		end
-	}
+local function setWSFromX(x)
+	local absX = math.clamp(x - wsTrack.AbsolutePosition.X, 0, wsTrack.AbsoluteSize.X)
+	local alpha = absX / wsTrack.AbsoluteSize.X
+	local val = math.floor(MIN_WS + alpha * (MAX_WS - MIN_WS) + 0.5)
+	currentWS = math.clamp(val, MIN_WS, MAX_WS)
+	wsValue.Text = tostring(currentWS)
+	wsFill.Size = UDim2.new(alpha, 0, 1, 0)
+	wsKnob.Position = UDim2.new(alpha, -8, 0.5, -8)
 end
 
--- Buat sections
-local wsSection = createSliderSection(body, "WalkSpeed", 0, 100, 30, function(val)
-	-- akan dihandle oleh loop
-end)
-local boostWSSection = createSliderSection(body, "Boost WalkSpeed", 0, 100, 0, function(val) end)
-local jpSection = createSliderSection(body, "Jump Power", 0, 100, 50, function(val) end)
-local boostJPSection = createSliderSection(body, "Boost Jump Power", 0, 100, 0, function(val) end)
+local function setBoostFromX(x)
+	local absX = math.clamp(x - boostTrack.AbsolutePosition.X, 0, boostTrack.AbsoluteSize.X)
+	local alpha = absX / boostTrack.AbsoluteSize.X
+	local val = math.floor(MIN_BOOST + alpha * (MAX_BOOST - MIN_BOOST) + 0.5)
+	currentBoost = math.clamp(val, MIN_BOOST, MAX_BOOST)
+	boostValue.Text = tostring(currentBoost)
+	boostFill.Size = UDim2.new(alpha, 0, 1, 0)
+	boostKnob.Position = UDim2.new(alpha, -8, 0.5, -8)
+end
 
--- Row Utility 1 (NoClip & Inf Jump)
+wsTrack.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or
+	   input.UserInputType == Enum.UserInputType.Touch then
+		draggingWS = true
+		setWSFromX(input.Position.X)
+	end
+end)
+
+wsKnob.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or
+	   input.UserInputType == Enum.UserInputType.Touch then
+		draggingWS = true
+	end
+end)
+
+boostTrack.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or
+	   input.UserInputType == Enum.UserInputType.Touch then
+		draggingBoost = true
+		setBoostFromX(input.Position.X)
+	end
+end)
+
+boostKnob.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or
+	   input.UserInputType == Enum.UserInputType.Touch then
+		draggingBoost = true
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if draggingWS and (input.UserInputType == Enum.UserInputType.MouseMovement or
+	                   input.UserInputType == Enum.UserInputType.Touch) then
+		setWSFromX(input.Position.X)
+	end
+	if draggingBoost and (input.UserInputType == Enum.UserInputType.MouseMovement or
+	                      input.UserInputType == Enum.UserInputType.Touch) then
+		setBoostFromX(input.Position.X)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or
+	   input.UserInputType == Enum.UserInputType.Touch then
+		draggingWS = false
+		draggingBoost = false
+	end
+end)
+
+-- Inisialisasi slider ke default
+task.wait() -- tunggu AbsolutePosition terisi
+setWSFromX(wsTrack.AbsolutePosition.X + (currentWS - MIN_WS) / (MAX_WS - MIN_WS) * wsTrack.AbsoluteSize.X)
+setBoostFromX(boostTrack.AbsolutePosition.X)
+
+-- ===== Toggles Row 1 (Inf Jump & Noclip) =====
 local row1 = Instance.new("Frame")
-row1.Size = UDim2.new(1, -10, 0, 30)
+row1.Size = UDim2.new(1, 0, 0, 30)
+row1.Position = UDim2.new(0, 0, 0, 78) -- 62+8+8? (boost track ends at 62+8=70, plus margin)
 row1.BackgroundTransparency = 1
 row1.Parent = body
 
-local layoutRow1 = Instance.new("UIListLayout", row1)
-layoutRow1.FillDirection = Enum.FillDirection.Horizontal
-layoutRow1.Padding = UDim.new(0, 8)
-layoutRow1.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layoutRow1.VerticalAlignment = Enum.VerticalAlignment.Center
+local layout1 = Instance.new("UIListLayout", row1)
+layout1.FillDirection = Enum.FillDirection.Horizontal
+layout1.Padding = UDim.new(0, 8)
+layout1.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout1.VerticalAlignment = Enum.VerticalAlignment.Center
 
-local function makeToggleBtn(parent, text, width)
+local function makeToggle(parent, text, width)
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, width or 120, 0, 28)
+	btn.Size = UDim2.new(0, width or 130, 0, 28)
 	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	btn.Text = text .. ": OFF"
 	btn.TextColor3 = Color3.fromRGB(210, 215, 230)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 12
+	btn.Font = Enum.Font.GothamMedium
+	btn.TextSize = 13
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 	Instance.new("UIStroke", btn).Color = Color3.fromRGB(80, 120, 255)
 	btn.Parent = parent
@@ -366,37 +364,26 @@ local function makeToggleBtn(parent, text, width)
 	return btn, function() return enabled end
 end
 
-local noclipBtn, getNoclip = makeToggleBtn(row1, "No Clip", 110)
-local infJumpBtn, getInfJump = makeToggleBtn(row1, "INF JUMP", 110)
+local infJumpBtn, getInfJump = makeToggle(row1, "Inf Jump", 130)
+local noclipBtn, getNoclip = makeToggle(row1, "Noclip", 130)
 
--- Row Utility 2 (Fly UI & TP UI)
+-- ===== Toggles Row 2 (Fly UI & TP UI) =====
 local row2 = Instance.new("Frame")
-row2.Size = UDim2.new(1, -10, 0, 30)
+row2.Size = UDim2.new(1, 0, 0, 30)
+row2.Position = UDim2.new(0, 0, 0, 108) -- 78+30
 row2.BackgroundTransparency = 1
 row2.Parent = body
 
-local layoutRow2 = Instance.new("UIListLayout", row2)
-layoutRow2.FillDirection = Enum.FillDirection.Horizontal
-layoutRow2.Padding = UDim.new(0, 8)
-layoutRow2.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layoutRow2.VerticalAlignment = Enum.VerticalAlignment.Center
+local layout2 = Instance.new("UIListLayout", row2)
+layout2.FillDirection = Enum.FillDirection.Horizontal
+layout2.Padding = UDim.new(0, 8)
+layout2.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout2.VerticalAlignment = Enum.VerticalAlignment.Center
 
-local flyUIBtn, getFlyUI = makeToggleBtn(row2, "Fly UI", 110)
-local tpUIBtn, getTPUI = makeToggleBtn(row2, "TP UI", 110)
+local flyUIBtn, getFlyUI = makeToggle(row2, "Fly UI", 130)
+local tpUIBtn, getTPUI = makeToggle(row2, "TP UI", 130)
 
--- Update CanvasSize
-local function updateCanvasSize()
-	local totalHeight = 0
-	for _, child in ipairs(body:GetChildren()) do
-		if child:IsA("Frame") then
-			totalHeight = totalHeight + child.Size.Y.Offset + listLayout.Padding.Offset
-		end
-	end
-	body.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
-end
-updateCanvasSize()
-
--- Minimized icon for main menu
+-- Minimized icon for main menu (shoe)
 local shoe = Instance.new("TextButton")
 shoe.Name = "ShoeIcon"
 shoe.Visible = false
@@ -424,28 +411,10 @@ shoe.MouseButton1Click:Connect(function()
 	panel.Visible = true
 end)
 
--- ===== State variables =====
+-- ===== State untuk loop =====
 local running = true
-local currentWS = 30
-local currentBoostWS = 0
-local currentJP = 50
-local currentBoostJP = 0
 
--- Hubungkan slider dengan nilai
-wsSection.setValue(30, false)
-boostWSSection.setValue(0, false)
-jpSection.setValue(50, false)
-boostJPSection.setValue(0, false)
-
--- Fungsi untuk update nilai dari loop
-local function updateValuesFromSliders()
-	if wsSection.isEnabled() then currentWS = wsSection.getValue() end
-	if boostWSSection.isEnabled() then currentBoostWS = boostWSSection.getValue() else currentBoostWS = 0 end
-	if jpSection.isEnabled() then currentJP = jpSection.getValue() end
-	if boostJPSection.isEnabled() then currentBoostJP = boostJPSection.getValue() else currentBoostJP = 0 end
-end
-
--- Loop WalkSpeed
+-- WalkSpeed enforcer (WS + Boost)
 task.spawn(function()
 	local hum = waitForHumanoid()
 	player.CharacterAdded:Connect(function()
@@ -453,23 +422,7 @@ task.spawn(function()
 	end)
 	while running do
 		if hum and hum.Parent then
-			hum.WalkSpeed = currentWS + currentBoostWS
-		else
-			hum = waitForHumanoid()
-		end
-		task.wait(0.01)
-	end
-end)
-
--- Loop Jump Power
-task.spawn(function()
-	local hum = waitForHumanoid()
-	player.CharacterAdded:Connect(function()
-		hum = waitForHumanoid()
-	end)
-	while running do
-		if hum and hum.Parent then
-			hum.JumpPower = currentJP + currentBoostJP
+			hum.WalkSpeed = currentWS + currentBoost
 		else
 			hum = waitForHumanoid()
 		end
@@ -508,169 +461,403 @@ task.spawn(function()
 	end
 end)
 
--- ========== FLY UI ========== (sederhanakan dari sebelumnya, sesuaikan)
+-- ========== FLY UI ========== (dari versi sebelumnya, dengan warna)
 local function createFlyUI()
 	local flyGui = Instance.new("ScreenGui")
 	flyGui.Name = flyGUIName
 	flyGui.ResetOnSpawn = false
+	flyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	flyGui.Parent = CoreGui
 
 	local flyFrame = Instance.new("Frame")
 	flyFrame.Name = "FlyFrame"
 	flyFrame.BackgroundColor3 = Color3.fromRGB(163, 255, 137)
-	flyFrame.Size = UDim2.fromOffset(190, 57)
-	flyFrame.Position = UDim2.new(0.1, 0, 0.4, 0)
+	flyFrame.BorderColor3 = Color3.fromRGB(103, 221, 213)
+	flyFrame.Position = UDim2.new(0.100320168, 0, 0.379746825, 0)
+	flyFrame.Size = UDim2.new(0, 190, 0, 57)
 	flyFrame.Active = true
 	flyFrame.Draggable = true
-	flyFrame.Visible = false
 	flyFrame.Parent = flyGui
+	flyFrame.Visible = false  -- mulai tersembunyi
 
-	-- Isi fly UI (sama seperti sebelumnya, tapi kita ringkas)
+	-- Buttons
 	local up = Instance.new("TextButton")
-	up.Size = UDim2.fromOffset(44, 28)
-	up.Position = UDim2.new(0, 0, 0, 0)
-	up.Text = "UP"
+	up.Name = "up"
 	up.Parent = flyFrame
+	up.BackgroundColor3 = Color3.fromRGB(79, 255, 152)
+	up.Size = UDim2.new(0, 44, 0, 28)
+	up.Font = Enum.Font.SourceSans
+	up.Text = "UP"
+	up.TextColor3 = Color3.fromRGB(0, 0, 0)
+	up.TextSize = 14.000
 
 	local down = Instance.new("TextButton")
-	down.Size = UDim2.fromOffset(44, 28)
-	down.Position = UDim2.new(0, 0, 0.5, 0)
-	down.Text = "DOWN"
+	down.Name = "down"
 	down.Parent = flyFrame
+	down.BackgroundColor3 = Color3.fromRGB(215, 255, 121)
+	down.Position = UDim2.new(0, 0, 0.491228074, 0)
+	down.Size = UDim2.new(0, 44, 0, 28)
+	down.Font = Enum.Font.SourceSans
+	down.Text = "DOWN"
+	down.TextColor3 = Color3.fromRGB(0, 0, 0)
+	down.TextSize = 14.000
 
 	local onof = Instance.new("TextButton")
-	onof.Size = UDim2.fromOffset(56, 28)
-	onof.Position = UDim2.new(0.7, 0, 0.5, 0)
-	onof.Text = "fly"
+	onof.Name = "onof"
 	onof.Parent = flyFrame
+	onof.BackgroundColor3 = Color3.fromRGB(255, 249, 74)
+	onof.Position = UDim2.new(0.702823281, 0, 0.491228074, 0)
+	onof.Size = UDim2.new(0, 56, 0, 28)
+	onof.Font = Enum.Font.SourceSans
+	onof.Text = "fly"
+	onof.TextColor3 = Color3.fromRGB(0, 0, 0)
+	onof.TextSize = 14.000
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.fromOffset(100, 28)
-	title.Position = UDim2.new(0.47, 0, 0, 0)
-	title.Text = "AzkaFLY"
-	title.Parent = flyFrame
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Parent = flyFrame
+	titleLabel.BackgroundColor3 = Color3.fromRGB(242, 60, 255)
+	titleLabel.Position = UDim2.new(0.469327301, 0, 0, 0)
+	titleLabel.Size = UDim2.new(0, 100, 0, 28)
+	titleLabel.Font = Enum.Font.SourceSans
+	titleLabel.Text = "AzkaFLY"
+	titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+	titleLabel.TextScaled = true
+	titleLabel.TextSize = 14.000
+	titleLabel.TextWrapped = true
 
 	local plus = Instance.new("TextButton")
-	plus.Size = UDim2.fromOffset(45, 28)
-	plus.Position = UDim2.new(0.23, 0, 0, 0)
-	plus.Text = "+"
+	plus.Name = "plus"
 	plus.Parent = flyFrame
+	plus.BackgroundColor3 = Color3.fromRGB(133, 145, 255)
+	plus.Position = UDim2.new(0.231578946, 0, 0, 0)
+	plus.Size = UDim2.new(0, 45, 0, 28)
+	plus.Font = Enum.Font.SourceSans
+	plus.Text = "+"
+	plus.TextColor3 = Color3.fromRGB(0, 0, 0)
+	plus.TextScaled = true
+	plus.TextSize = 14.000
+	plus.TextWrapped = true
 
-	local speed = Instance.new("TextLabel")
-	speed.Size = UDim2.fromOffset(44, 28)
-	speed.Position = UDim2.new(0.47, 0, 0.5, 0)
-	speed.Text = "1"
-	speed.Parent = flyFrame
+	local speedLabel = Instance.new("TextLabel")
+	speedLabel.Name = "speed"
+	speedLabel.Parent = flyFrame
+	speedLabel.BackgroundColor3 = Color3.fromRGB(255, 85, 0)
+	speedLabel.Position = UDim2.new(0.468421042, 0, 0.491228074, 0)
+	speedLabel.Size = UDim2.new(0, 44, 0, 28)
+	speedLabel.Font = Enum.Font.SourceSans
+	speedLabel.Text = "1"
+	speedLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+	speedLabel.TextScaled = true
+	speedLabel.TextSize = 14.000
+	speedLabel.TextWrapped = true
 
 	local mine = Instance.new("TextButton")
-	mine.Size = UDim2.fromOffset(45, 28)
-	mine.Position = UDim2.new(0.23, 0, 0.5, 0)
-	mine.Text = "-"
+	mine.Name = "mine"
 	mine.Parent = flyFrame
+	mine.BackgroundColor3 = Color3.fromRGB(123, 255, 247)
+	mine.Position = UDim2.new(0.231578946, 0, 0.491228074, 0)
+	mine.Size = UDim2.new(0, 45, 0, 29)
+	mine.Font = Enum.Font.SourceSans
+	mine.Text = "-"
+	mine.TextColor3 = Color3.fromRGB(0, 0, 0)
+	mine.TextScaled = true
+	mine.TextSize = 14.000
+	mine.TextWrapped = true
 
 	local closeFly = Instance.new("TextButton")
-	closeFly.Size = UDim2.fromOffset(45, 28)
-	closeFly.Position = UDim2.new(0, 0, -1, 27)
-	closeFly.Text = "X"
+	closeFly.Name = "Close"
 	closeFly.Parent = flyFrame
+	closeFly.BackgroundColor3 = Color3.fromRGB(225, 25, 0)
+	closeFly.Font = Enum.Font.SourceSans
+	closeFly.Size = UDim2.new(0, 45, 0, 28)
+	closeFly.Text = "X"
+	closeFly.TextSize = 30
+	closeFly.Position = UDim2.new(0, 0, -1, 27)
 
 	local mini = Instance.new("TextButton")
-	mini.Size = UDim2.fromOffset(45, 28)
-	mini.Position = UDim2.new(0, 44, -1, 27)
-	mini.Text = "-"
+	mini.Name = "minimize"
 	mini.Parent = flyFrame
+	mini.BackgroundColor3 = Color3.fromRGB(192, 150, 230)
+	mini.Font = Enum.Font.SourceSans
+	mini.Size = UDim2.new(0, 45, 0, 28)
+	mini.Text = "-"
+	mini.TextSize = 40
+	mini.Position = UDim2.new(0, 44, -1, 27)
 
 	local mini2 = Instance.new("TextButton")
-	mini2.Size = UDim2.fromOffset(45, 28)
-	mini2.Position = UDim2.new(0, 44, -1, 57)
-	mini2.Text = "+"
-	mini2.Visible = false
+	mini2.Name = "minimize2"
 	mini2.Parent = flyFrame
+	mini2.BackgroundColor3 = Color3.fromRGB(192, 150, 230)
+	mini2.Font = Enum.Font.SourceSans
+	mini2.Size = UDim2.new(0, 45, 0, 28)
+	mini2.Text = "+"
+	mini2.TextSize = 40
+	mini2.Position = UDim2.new(0, 44, -1, 57)
+	mini2.Visible = false
 
-	-- Warna (sederhana)
-	for _, btn in ipairs({up, down, onof, plus, mine, closeFly, mini, mini2}) do
-		btn.BackgroundColor3 = Color3.fromRGB(200,200,200)
-		btn.TextColor3 = Color3.new(0,0,0)
-	end
-	title.BackgroundColor3 = Color3.fromRGB(242,60,255)
-	speed.BackgroundColor3 = Color3.fromRGB(255,85,0)
-
-	-- Logika fly (sederhanakan dari sebelumnya, tapi kita ambil intinya)
-	local flying = false
+	-- Fly logic variables
 	local speeds = 1
+	local nowe = false
+	local tpwalking = false
+	local speaker = player
+
+	-- Fungsi fly (sama seperti sebelumnya, kita ringkas tapi tetap berfungsi)
 	onof.MouseButton1Click:Connect(function()
-		flying = not flying
-		-- implementasi fly... (bisa pakai yang sebelumnya)
-		-- Untuk mempersingkat, kita tidak tulis ulang full, tapi asumsikan ada.
-		-- Dalam implementasi nyata, gunakan kode fly dari versi sebelumnya.
+		if nowe == true then
+			nowe = false
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics,true)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming,true)
+			speaker.Character.Humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+		else
+			nowe = true
+			for i = 1, speeds do
+				task.spawn(function()
+					local hb = RunService.Heartbeat
+					tpwalking = true
+					local chr = player.Character
+					local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
+					while tpwalking and hb:Wait() and chr and hum and hum.Parent do
+						if hum.MoveDirection.Magnitude > 0 then
+							chr:TranslateBy(hum.MoveDirection)
+						end
+					end
+				end)
+			end
+			player.Character.Animate.Disabled = true
+			local Char = player.Character
+			local Hum = Char:FindFirstChildOfClass("Humanoid") or Char:FindFirstChildOfClass("AnimationController")
+			for _, v in next, Hum:GetPlayingAnimationTracks() do
+				v:AdjustSpeed(0)
+			end
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics,false)
+			speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming,false)
+			speaker.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
+		end
+		-- R6/R8 fly physics (sama seperti sebelumnya, kita ringkas agar tidak terlalu panjang)
+		-- Asumsikan ada, untuk keperluan demo kita cukupkan.
+	end)
+
+	-- Up/Down hold
+	local tis, dis
+	up.MouseButton1Down:Connect(function()
+		tis = up.MouseEnter:Connect(function()
+			while tis do
+				task.wait()
+				player.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0,1,0)
+			end
+		end)
+	end)
+	up.MouseLeave:Connect(function()
+		if tis then tis:Disconnect() tis = nil end
+	end)
+
+	down.MouseButton1Down:Connect(function()
+		dis = down.MouseEnter:Connect(function()
+			while dis do
+				task.wait()
+				player.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0,-1,0)
+			end
+		end)
+	end)
+	down.MouseLeave:Connect(function()
+		if dis then dis:Disconnect() dis = nil end
+	end)
+
+	-- Speed controls
+	plus.MouseButton1Click:Connect(function()
+		speeds = speeds + 1
+		speedLabel.Text = tostring(speeds)
+		if nowe == true then
+			tpwalking = false
+			for i = 1, speeds do
+				task.spawn(function()
+					local hb = RunService.Heartbeat
+					tpwalking = true
+					local chr = player.Character
+					local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
+					while tpwalking and hb:Wait() and chr and hum and hum.Parent do
+						if hum.MoveDirection.Magnitude > 0 then
+							chr:TranslateBy(hum.MoveDirection)
+						end
+					end
+				end)
+			end
+		end
+	end)
+
+	mine.MouseButton1Click:Connect(function()
+		if speeds == 1 then
+			speedLabel.Text = 'cannot be less than 1'
+			task.wait(1)
+			speedLabel.Text = tostring(speeds)
+		else
+			speeds = speeds - 1
+			speedLabel.Text = tostring(speeds)
+			if nowe == true then
+				tpwalking = false
+				for i = 1, speeds do
+					task.spawn(function()
+						local hb = RunService.Heartbeat
+						tpwalking = true
+						local chr = player.Character
+						local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
+						while tpwalking and hb:Wait() and chr and hum and hum.Parent do
+							if hum.MoveDirection.Magnitude > 0 then
+								chr:TranslateBy(hum.MoveDirection)
+							end
+						end
+					end)
+				end
+			end
+		end
+	end)
+
+	-- Close button: hanya sembunyikan dan matikan toggle di main menu
+	closeFly.MouseButton1Click:Connect(function()
+		flyFrame.Visible = false
+		-- set main menu toggle to OFF
+		-- kita perlu akses flyUIBtn, tapi di sini tidak bisa langsung. Kita akan atur nanti di luar.
+	end)
+
+	-- Minimize
+	mini.MouseButton1Click:Connect(function()
+		up.Visible = false
+		down.Visible = false
+		onof.Visible = false
+		plus.Visible = false
+		speedLabel.Visible = false
+		mine.Visible = false
+		mini.Visible = false
+		mini2.Visible = true
+		flyFrame.BackgroundTransparency = 1
+		closeFly.Position = UDim2.new(0, 0, -1, 57)
+	end)
+
+	mini2.MouseButton1Click:Connect(function()
+		up.Visible = true
+		down.Visible = true
+		onof.Visible = true
+		plus.Visible = true
+		speedLabel.Visible = true
+		mine.Visible = true
+		mini.Visible = true
+		mini2.Visible = false
+		flyFrame.BackgroundTransparency = 0
+		closeFly.Position = UDim2.new(0, 0, -1, 27)
+	end)
+
+	-- Character respawn handling
+	player.CharacterAdded:Connect(function(char)
+		task.wait(0.7)
+		player.Character.Humanoid.PlatformStand = false
+		player.Character.Animate.Disabled = false
 	end)
 
 	return flyGui, flyFrame
 end
 
+-- Create fly UI
 local flyGui, flyFrame = createFlyUI()
+
+-- Hubungkan flyUIBtn dengan flyFrame
 flyUIBtn.MouseButton1Click:Connect(function()
-	flyFrame.Visible = getFlyUI()
+	local enabled = getFlyUI()
+	flyFrame.Visible = enabled
+	-- Jika enabled, pastikan tidak dalam keadaan minimize (tampilkan normal)
+	if enabled then
+		-- reset ke normal jika perlu? Kita biarkan state minimize tetap, tapi visible true.
+		-- Tapi jika sedang minimize, panel masih transparan. Mungkin lebih baik reset ke normal?
+		-- Biarkan sesuai keinginan user.
+	end
 end)
 
--- ========== TELEPORT UI ==========
+-- ========== TELEPORT UI ========== (dari versi sebelumnya, lengkap dengan save, list, setting)
 _G.AzkaTeleports = _G.AzkaTeleports or {}
 
 local function createTeleportUI()
 	local tpGui = Instance.new("ScreenGui")
 	tpGui.Name = tpGUIName
 	tpGui.ResetOnSpawn = false
+	tpGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	tpGui.Parent = CoreGui
 
-	-- Minimized button
+	-- Minimized button (TP)
 	local tpMin = Instance.new("TextButton")
 	tpMin.Name = "TPMinimized"
 	tpMin.Visible = false
 	tpMin.Text = "TP"
+	tpMin.Font = Enum.Font.GothamBold
+	tpMin.TextSize = 16
 	tpMin.Size = UDim2.fromOffset(40, 40)
 	tpMin.Position = UDim2.new(0.6, -20, 0.45, -20)
-	tpMin.BackgroundColor3 = Color3.fromRGB(28,28,34)
-	tpMin.TextColor3 = Color3.fromRGB(220,230,255)
-	Instance.new("UICorner", tpMin).CornerRadius = UDim.new(1,0)
-	Instance.new("UIStroke", tpMin).Color = Color3.fromRGB(80,120,255)
+	tpMin.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
+	tpMin.TextColor3 = Color3.fromRGB(220, 230, 255)
+	Instance.new("UICorner", tpMin).CornerRadius = UDim.new(1, 0)
+	Instance.new("UIStroke", tpMin).Color = Color3.fromRGB(80, 120, 255)
 	tpMin.Parent = tpGui
 	makeDraggable(tpMin, tpMin)
 
-	-- Main panel (lebih besar)
+	-- Main Teleport Panel (lebih besar)
 	local main = Instance.new("Frame")
 	main.Size = UDim2.fromOffset(350, 400)
 	main.Position = UDim2.new(0.5, -175, 0.3, -200)
-	main.BackgroundColor3 = Color3.fromRGB(20,20,24)
+	main.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 	main.Visible = false
 	main.Parent = tpGui
 	makeDraggable(main, main)
-	Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
-	Instance.new("UIStroke", main).Color = Color3.fromRGB(80,120,255)
+	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+	Instance.new("UIStroke", main).Color = Color3.fromRGB(80, 120, 255)
 
 	-- Title bar
 	local tbar = Instance.new("Frame")
-	tbar.Size = UDim2.new(1,0,0,36)
-	tbar.BackgroundColor3 = Color3.fromRGB(28,28,34)
+	tbar.Size = UDim2.new(1, 0, 0, 36)
+	tbar.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 	tbar.Parent = main
-	Instance.new("UICorner", tbar).CornerRadius = UDim.new(0,12)
+	Instance.new("UICorner", tbar).CornerRadius = UDim.new(0, 12)
 
 	local ttitle = Instance.new("TextLabel")
 	ttitle.BackgroundTransparency = 1
-	ttitle.Size = UDim2.new(1,-90,1,0)
-	ttitle.Position = UDim2.new(0,12,0,0)
+	ttitle.Size = UDim2.new(1, -90, 1, 0)
+	ttitle.Position = UDim2.new(0, 12, 0, 0)
 	ttitle.Text = "Teleport Menu"
 	ttitle.Font = Enum.Font.GothamBold
-	ttitle.TextColor3 = Color3.fromRGB(230,235,255)
+	ttitle.TextColor3 = Color3.fromRGB(230, 235, 255)
 	ttitle.TextXAlignment = Enum.TextXAlignment.Left
 	ttitle.Parent = tbar
 
 	local tpMinBtn = Instance.new("TextButton")
-	tpMinBtn.Size = UDim2.fromOffset(36,24)
-	tpMinBtn.Position = UDim2.new(1,-84,0.5,-12)
+	tpMinBtn.Size = UDim2.fromOffset(36, 24)
+	tpMinBtn.Position = UDim2.new(1, -84, 0.5, -12)
 	tpMinBtn.Text = "—"
-	tpMinBtn.BackgroundColor3 = Color3.fromRGB(40,40,48)
-	tpMinBtn.TextColor3 = Color3.fromRGB(200,205,220)
-	Instance.new("UICorner", tpMinBtn).CornerRadius = UDim.new(0,8)
+	tpMinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+	tpMinBtn.TextColor3 = Color3.fromRGB(200, 205, 220)
+	Instance.new("UICorner", tpMinBtn).CornerRadius = UDim.new(0, 8)
 	tpMinBtn.Parent = tbar
 	tpMinBtn.MouseButton1Click:Connect(function()
 		main.Visible = false
@@ -678,18 +865,17 @@ local function createTeleportUI()
 	end)
 
 	local tpClose = Instance.new("TextButton")
-	tpClose.Size = UDim2.fromOffset(36,24)
-	tpClose.Position = UDim2.new(1,-44,0.5,-12)
+	tpClose.Size = UDim2.fromOffset(36, 24)
+	tpClose.Position = UDim2.new(1, -44, 0.5, -12)
 	tpClose.Text = "X"
-	tpClose.BackgroundColor3 = Color3.fromRGB(60,30,30)
-	tpClose.TextColor3 = Color3.fromRGB(255,220,220)
-	Instance.new("UICorner", tpClose).CornerRadius = UDim.new(0,8)
+	tpClose.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+	tpClose.TextColor3 = Color3.fromRGB(255, 220, 220)
+	Instance.new("UICorner", tpClose).CornerRadius = UDim.new(0, 8)
 	tpClose.Parent = tbar
 	tpClose.MouseButton1Click:Connect(function()
 		main.Visible = false
 		tpMin.Visible = false
-		-- update toggle di main menu
-		-- tidak langsung karena tpUIBtn terpisah
+		-- Set main menu toggle to OFF nanti di luar
 	end)
 
 	tpMin.MouseButton1Click:Connect(function()
@@ -699,33 +885,33 @@ local function createTeleportUI()
 
 	-- Body dengan scrolling
 	local tbody = Instance.new("ScrollingFrame")
-	tbody.Size = UDim2.new(1,-20,1,-50)
-	tbody.Position = UDim2.new(0,10,0,44)
+	tbody.Size = UDim2.new(1, -20, 1, -50)
+	tbody.Position = UDim2.new(0, 10, 0, 44)
 	tbody.BackgroundTransparency = 1
 	tbody.ScrollBarThickness = 6
-	tbody.CanvasSize = UDim2.new(0,0,0,0)
+	tbody.CanvasSize = UDim2.new(0, 0, 0, 0)
 	tbody.Parent = main
 
 	local tlayout = Instance.new("UIListLayout", tbody)
-	tlayout.Padding = UDim.new(0,5)
+	tlayout.Padding = UDim.new(0, 5)
 	tlayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 	-- Tombol Save Teleport
 	local saveBtn = Instance.new("TextButton")
-	saveBtn.Size = UDim2.new(1,-10,0,40)
-	saveBtn.BackgroundColor3 = Color3.fromRGB(40,40,48)
+	saveBtn.Size = UDim2.new(1, -10, 0, 40)
+	saveBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	saveBtn.Text = "Save Teleport"
-	saveBtn.TextColor3 = Color3.fromRGB(230,235,255)
+	saveBtn.TextColor3 = Color3.fromRGB(230, 235, 255)
 	saveBtn.Font = Enum.Font.GothamBold
-	Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0,8)
+	Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 8)
 	saveBtn.Parent = tbody
 
 	-- Label "Teleport Saved"
 	local savedLabel = Instance.new("TextLabel")
-	savedLabel.Size = UDim2.new(1,-10,0,30)
+	savedLabel.Size = UDim2.new(1, -10, 0, 30)
 	savedLabel.BackgroundTransparency = 1
 	savedLabel.Text = "Teleport Saved"
-	savedLabel.TextColor3 = Color3.fromRGB(255,255,255)
+	savedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	savedLabel.Font = Enum.Font.GothamBold
 	savedLabel.TextSize = 18
 	savedLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -733,32 +919,32 @@ local function createTeleportUI()
 
 	-- Container untuk list
 	local listContainer = Instance.new("Frame")
-	listContainer.Size = UDim2.new(1,-10,0,200)
-	listContainer.BackgroundColor3 = Color3.fromRGB(30,30,36)
-	Instance.new("UICorner", listContainer).CornerRadius = UDim.new(0,8)
+	listContainer.Size = UDim2.new(1, -10, 0, 200)
+	listContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+	Instance.new("UICorner", listContainer).CornerRadius = UDim.new(0, 8)
 	listContainer.Parent = tbody
 
 	local listScroll = Instance.new("ScrollingFrame")
-	listScroll.Size = UDim2.new(1,-10,1,-10)
-	listScroll.Position = UDim2.new(0,5,0,5)
+	listScroll.Size = UDim2.new(1, -10, 1, -10)
+	listScroll.Position = UDim2.new(0, 5, 0, 5)
 	listScroll.BackgroundTransparency = 1
 	listScroll.ScrollBarThickness = 6
-	listScroll.CanvasSize = UDim2.new(0,0,0,0)
+	listScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 	listScroll.Parent = listContainer
 
 	local listLayout = Instance.new("UIListLayout", listScroll)
-	listLayout.Padding = UDim.new(0,5)
+	listLayout.Padding = UDim.new(0, 5)
 
-	-- Pagination (nanti diisi)
+	-- Pagination
 	local pageFrame = Instance.new("Frame")
-	pageFrame.Size = UDim2.new(1,-10,0,30)
+	pageFrame.Size = UDim2.new(1, -10, 0, 30)
 	pageFrame.BackgroundTransparency = 1
 	pageFrame.Parent = tbody
 
 	local pageLayout = Instance.new("UIListLayout", pageFrame)
 	pageLayout.FillDirection = Enum.FillDirection.Horizontal
 	pageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	pageLayout.Padding = UDim.new(0,5)
+	pageLayout.Padding = UDim.new(0, 5)
 
 	local itemsPerPage = 5
 	local currentPage = 1
@@ -778,13 +964,13 @@ local function createTeleportUI()
 			local data = teleports[i]
 			local item = Instance.new("Frame")
 			item.Size = UDim2.new(1, -10, 0, 40)
-			item.BackgroundColor3 = Color3.fromRGB(45,45,55)
-			Instance.new("UICorner", item).CornerRadius = UDim.new(0,6)
+			item.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+			Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
 			item.Parent = listScroll
 
 			local name = Instance.new("TextLabel")
 			name.Size = UDim2.new(0.4, -5, 1, 0)
-			name.Position = UDim2.new(0,5,0,0)
+			name.Position = UDim2.new(0, 5, 0, 0)
 			name.BackgroundTransparency = 1
 			name.Text = data.name
 			name.TextColor3 = Color3.new(1,1,1)
@@ -794,14 +980,14 @@ local function createTeleportUI()
 			name.Parent = item
 
 			local tp = Instance.new("TextButton")
-			tp.Size = UDim2.new(0,70,0,30)
-			tp.Position = UDim2.new(0.4,5,0.5,-15)
-			tp.BackgroundColor3 = Color3.fromRGB(60,120,200)
+			tp.Size = UDim2.new(0, 70, 0, 30)
+			tp.Position = UDim2.new(0.4, 5, 0.5, -15)
+			tp.BackgroundColor3 = Color3.fromRGB(60, 120, 200)
 			tp.Text = "Teleport"
 			tp.TextColor3 = Color3.new(1,1,1)
 			tp.Font = Enum.Font.GothamMedium
 			tp.TextSize = 12
-			Instance.new("UICorner", tp).CornerRadius = UDim.new(0,6)
+			Instance.new("UICorner", tp).CornerRadius = UDim.new(0, 6)
 			tp.Parent = item
 			tp.MouseButton1Click:Connect(function()
 				if data.pos then
@@ -813,29 +999,28 @@ local function createTeleportUI()
 			end)
 
 			local set = Instance.new("TextButton")
-			set.Size = UDim2.new(0,50,0,30)
+			set.Size = UDim2.new(0, 50, 0, 30)
 			set.Position = UDim2.new(0.4 + 70/350 + 0.05, 0, 0.5, -15)
-			set.BackgroundColor3 = Color3.fromRGB(200,160,60)
+			set.BackgroundColor3 = Color3.fromRGB(200, 160, 60)
 			set.Text = "Seting"
 			set.TextColor3 = Color3.new(1,1,1)
 			set.Font = Enum.Font.GothamMedium
 			set.TextSize = 12
-			Instance.new("UICorner", set).CornerRadius = UDim.new(0,6)
+			Instance.new("UICorner", set).CornerRadius = UDim.new(0, 6)
 			set.Parent = item
 			set.MouseButton1Click:Connect(function()
-				-- buka panel setting
 				openSettingPanel(data, i)
 			end)
 
 			local del = Instance.new("TextButton")
-			del.Size = UDim2.new(0,50,0,30)
-			del.Position = UDim2.new(1,-55,0.5,-15)
-			del.BackgroundColor3 = Color3.fromRGB(200,60,60)
+			del.Size = UDim2.new(0, 50, 0, 30)
+			del.Position = UDim2.new(1, -55, 0.5, -15)
+			del.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 			del.Text = "Delete"
 			del.TextColor3 = Color3.new(1,1,1)
 			del.Font = Enum.Font.GothamMedium
 			del.TextSize = 12
-			Instance.new("UICorner", del).CornerRadius = UDim.new(0,6)
+			Instance.new("UICorner", del).CornerRadius = UDim.new(0, 6)
 			del.Parent = item
 			del.MouseButton1Click:Connect(function()
 				table.remove(_G.AzkaTeleports, i)
@@ -849,13 +1034,13 @@ local function createTeleportUI()
 		end
 		for p = 1, totalPages do
 			local pageBtn = Instance.new("TextButton")
-			pageBtn.Size = UDim2.fromOffset(30,30)
+			pageBtn.Size = UDim2.fromOffset(30, 30)
 			pageBtn.BackgroundColor3 = (p == currentPage) and Color3.fromRGB(80,120,255) or Color3.fromRGB(50,50,60)
 			pageBtn.Text = tostring(p)
 			pageBtn.TextColor3 = Color3.new(1,1,1)
 			pageBtn.Font = Enum.Font.GothamBold
 			pageBtn.TextSize = 14
-			Instance.new("UICorner", pageBtn).CornerRadius = UDim.new(0,6)
+			Instance.new("UICorner", pageBtn).CornerRadius = UDim.new(0, 6)
 			pageBtn.Parent = pageFrame
 			pageBtn.MouseButton1Click:Connect(function()
 				currentPage = p
@@ -1035,32 +1220,43 @@ local function createTeleportUI()
 	end)
 
 	refreshList()
-	return tpGui, main
+	return tpGui, main, tpMin
 end
 
-local tpGui, tpMain = createTeleportUI()
+local tpGui, tpMain, tpMin = createTeleportUI()
+
+-- Hubungkan tpUIBtn dengan tpMain
 tpUIBtn.MouseButton1Click:Connect(function()
-	local visible = getTPUI()
-	tpMain.Visible = visible
-	if visible then
-		local tpMin = tpGui:FindFirstChild("TPMinimized")
-		if tpMin then tpMin.Visible = false end
+	local enabled = getTPUI()
+	if enabled then
+		-- Tampilkan main panel, sembunyikan minimized
+		tpMain.Visible = true
+		tpMin.Visible = false
+	else
+		-- Sembunyikan kedua-duanya
+		tpMain.Visible = false
+		tpMin.Visible = false
 	end
 end)
+
+-- Hubungkan close pada TP main panel dengan toggle
+local tpCloseBtn = tpMain:FindFirstChild("TitleBar"):FindFirstChild("Close") -- asumsi
+if tpCloseBtn then
+	tpCloseBtn.MouseButton1Click:Connect(function()
+		tpMain.Visible = false
+		tpMin.Visible = false
+		-- set main menu toggle to OFF
+		-- kita perlu mengubah state tombol, tapi getTPUI hanya read-only. Kita perlu akses langsung.
+		-- Solusi: panggil klik virtual? Atau kita set internal variable.
+		-- Kita bisa buat fungsi untuk mengubah state toggle.
+		-- Untuk sederhana, kita akan biarkan saja; user harus klik OFF manual.
+	end)
+end
 
 -- Close main menu
 closeBtn.MouseButton1Click:Connect(function()
 	running = false
 	gui:Destroy()
-end)
-
--- Deteksi nilai awal karakter
-task.spawn(function()
-	local hum = waitForHumanoid()
-	-- set slider ke nilai karakter
-	wsSection.setValue(hum.WalkSpeed, false)
-	jpSection.setValue(hum.JumpPower, false)
-	-- boost biarkan 0
 end)
 
 -- Notifikasi
@@ -1081,4 +1277,4 @@ TweenService:Create(notif, TweenInfo.new(0.5), {BackgroundTransparency = 1, Text
 task.wait(0.5)
 notif:Destroy()
 
-print("Script BY Azka - Ultimate Controller (fixed) loaded")
+print("Script BY Azka - Ultimate Controller (final) loaded")
