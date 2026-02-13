@@ -10,6 +10,7 @@
 	- Main menu menyesuaikan tinggi konten
 	- Toggle bekerja benar: ON = tampil, OFF = sembunyi
 	- Teleport UI: tampilan lebih rapi, bold, setting panel dengan koordinat
+	- Perbaikan: duplikat slider di main menu dihapus, urutan inisialisasi fly/tp diperbaiki
 ]]
 
 -- Hapus GUI lama jika ada
@@ -88,11 +89,11 @@ gui.Parent = CoreGui
 -- Main panel (lebar tetap, tinggi menyesuaikan konten)
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
-panel.Size = UDim2.fromOffset(300, 0) -- tinggi akan diatur nanti
+panel.Size = UDim2.fromOffset(300, 0)
 panel.Position = UDim2.new(0.5, -150, 0.4, -85)
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 panel.Parent = gui
-panel.AutomaticSize = Enum.AutomaticSize.Y -- agar menyesuaikan konten
+panel.AutomaticSize = Enum.AutomaticSize.Y
 
 local corner = Instance.new("UICorner", panel)
 corner.CornerRadius = UDim.new(0, 12)
@@ -101,7 +102,7 @@ stroke.Thickness = 1
 stroke.Color = Color3.fromRGB(80, 120, 255)
 stroke.Transparency = 0.25
 
--- Title bar (tetap, tidak ikut auto-size)
+-- Title bar
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
 titleBar.Size = UDim2.new(1, 0, 0, 36)
@@ -162,29 +163,7 @@ layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 8)
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- ===== WalkSpeed Slider =====
-local wsLabel = Instance.new("TextLabel")
-wsLabel.BackgroundTransparency = 1
-wsLabel.Size = UDim2.new(1, 0, 0, 24)
-wsLabel.TextXAlignment = Enum.TextXAlignment.Left
-wsLabel.Font = Enum.Font.Gotham
-wsLabel.TextSize = 14
-wsLabel.TextColor3 = Color3.fromRGB(210, 215, 230)
-wsLabel.Text = "WalkSpeed"
-wsLabel.Parent = body
-
-local wsValue = Instance.new("TextLabel")
-wsValue.BackgroundTransparency = 1
-wsValue.Size = UDim2.new(0, 60, 0, 24)
-wsValue.Position = UDim2.new(1, -60, 0, 0) -- relatif terhadap body? Tidak, karena layout, posisi manual tidak berguna. Kita tempatkan di dalam frame slider.
-wsValue.TextXAlignment = Enum.TextXAlignment.Right
-wsValue.Font = Enum.Font.GothamMedium
-wsValue.TextSize = 14
-wsValue.TextColor3 = Color3.fromRGB(180, 220, 255)
-wsValue.Text = "30"
-wsValue.Parent = body
-
--- Kita perlu frame untuk menampung label dan slider agar rapi. Mari buat container per slider.
+-- ===== WalkSpeed Slider (dalam container) =====
 local wsContainer = Instance.new("Frame")
 wsContainer.Size = UDim2.new(1, 0, 0, 40)
 wsContainer.BackgroundTransparency = 1
@@ -236,7 +215,7 @@ Instance.new("UICorner", wsKnob).CornerRadius = UDim.new(1, 0)
 Instance.new("UIStroke", wsKnob).Color = Color3.fromRGB(40, 70, 160)
 wsKnob.Parent = wsTrack
 
--- ===== Boost Slider =====
+-- ===== Boost Slider (dalam container) =====
 local boostContainer = Instance.new("Frame")
 boostContainer.Size = UDim2.new(1, 0, 0, 40)
 boostContainer.BackgroundTransparency = 1
@@ -420,8 +399,8 @@ layout2.Padding = UDim.new(0, 8)
 layout2.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout2.VerticalAlignment = Enum.VerticalAlignment.Center
 
-local flyUIBtn, getFlyUI = makeToggle(row2, "Fly UI", 130)
-local tpUIBtn, getTPUI = makeToggle(row2, "TP UI", 130)
+local flyUIBtn, _ = makeToggle(row2, "Fly UI", 130)  -- kita akan atur ulang callback
+local tpUIBtn, _ = makeToggle(row2, "TP UI", 130)
 
 -- Minimized icon for main menu (shoe)
 local shoe = Instance.new("TextButton")
@@ -502,7 +481,7 @@ task.spawn(function()
 end)
 
 -- ========== FLY UI ==========
-local function createFlyUI(setVisibleCallback)
+local function createFlyUI()
 	local flyGui = Instance.new("ScreenGui")
 	flyGui.Name = flyGUIName
 	flyGui.ResetOnSpawn = false
@@ -520,7 +499,7 @@ local function createFlyUI(setVisibleCallback)
 	flyFrame.Parent = flyGui
 	flyFrame.Visible = false
 
-	-- Buttons (sama seperti sebelumnya, tapi kita ringkas)
+	-- Buttons
 	local up = Instance.new("TextButton")
 	up.Name = "up"
 	up.Parent = flyFrame
@@ -627,7 +606,7 @@ local function createFlyUI(setVisibleCallback)
 	mini2.Position = UDim2.new(0, 44, -1, 57)
 	mini2.Visible = false
 
-	-- Fly logic (sederhana, sama seperti sebelumnya)
+	-- Fly logic (sederhana)
 	local speeds = 1
 	local nowe = false
 	local tpwalking = false
@@ -636,10 +615,10 @@ local function createFlyUI(setVisibleCallback)
 	onof.MouseButton1Click:Connect(function()
 		if nowe then
 			nowe = false
-			-- matikan fly (kode asli)
+			-- matikan fly (kode asli bisa ditambahkan)
 		else
 			nowe = true
-			-- hidupkan fly (kode asli)
+			-- hidupkan fly
 		end
 	end)
 
@@ -686,14 +665,6 @@ local function createFlyUI(setVisibleCallback)
 		end
 	end)
 
-	-- Close button: sembunyikan dan panggil callback
-	closeFly.MouseButton1Click:Connect(function()
-		flyFrame.Visible = false
-		if setVisibleCallback then
-			setVisibleCallback(false)
-		end
-	end)
-
 	-- Minimize
 	mini.MouseButton1Click:Connect(function()
 		up.Visible = false
@@ -727,19 +698,23 @@ local function createFlyUI(setVisibleCallback)
 		player.Character.Animate.Disabled = false
 	end)
 
-	return flyGui, flyFrame
+	return flyGui, flyFrame, closeFly
 end
 
--- Fungsi untuk mengatur visibilitas fly UI
+-- Buat fly UI
+local flyGui, flyFrame, flyClose = createFlyUI()
+
+-- Fungsi untuk mengatur visibilitas fly UI (didefinisikan setelah flyFrame ada)
 local function setFlyUIVisible(flag)
 	flyFrame.Visible = flag
-	-- update toggle di main menu
 	flyUIBtn.Text = "Fly UI" .. (flag and ": ON" or ": OFF")
 	flyUIBtn.BackgroundColor3 = flag and Color3.fromRGB(35, 70, 45) or Color3.fromRGB(40, 40, 48)
 end
 
--- Buat fly UI dengan callback
-local flyGui, flyFrame = createFlyUI(setFlyUIVisible)
+-- Hubungkan tombol close fly dengan toggle
+flyClose.MouseButton1Click:Connect(function()
+	setFlyUIVisible(false)
+end)
 
 -- Hubungkan flyUIBtn
 flyUIBtn.MouseButton1Click:Connect(function()
@@ -750,7 +725,7 @@ end)
 -- ========== TELEPORT UI ==========
 _G.AzkaTeleports = _G.AzkaTeleports or {}
 
-local function createTeleportUI(setVisibleCallback)
+local function createTeleportUI()
 	local tpGui = Instance.new("ScreenGui")
 	tpGui.Name = tpGUIName
 	tpGui.ResetOnSpawn = false
@@ -773,9 +748,9 @@ local function createTeleportUI(setVisibleCallback)
 	tpMin.Parent = tpGui
 	makeDraggable(tpMin, tpMin)
 
-	-- Main Teleport Panel (lebih besar)
+	-- Main Teleport Panel
 	local main = Instance.new("Frame")
-	main.Size = UDim2.fromOffset(350, 450) -- sedikit lebih tinggi untuk muat semua
+	main.Size = UDim2.fromOffset(350, 450)
 	main.Position = UDim2.new(0.5, -175, 0.3, -225)
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 	main.Visible = false
@@ -797,7 +772,7 @@ local function createTeleportUI(setVisibleCallback)
 	ttitle.Position = UDim2.new(0, 12, 0, 0)
 	ttitle.Text = "Teleport Menu"
 	ttitle.Font = Enum.Font.GothamBold
-	ttitle.TextSize = 18 -- sedikit lebih besar
+	ttitle.TextSize = 18
 	ttitle.TextColor3 = Color3.fromRGB(230, 235, 255)
 	ttitle.TextXAlignment = Enum.TextXAlignment.Left
 	ttitle.Parent = tbar
@@ -823,13 +798,6 @@ local function createTeleportUI(setVisibleCallback)
 	tpClose.TextColor3 = Color3.fromRGB(255, 220, 220)
 	Instance.new("UICorner", tpClose).CornerRadius = UDim.new(0, 8)
 	tpClose.Parent = tbar
-	tpClose.MouseButton1Click:Connect(function()
-		main.Visible = false
-		tpMin.Visible = false
-		if setVisibleCallback then
-			setVisibleCallback(false)
-		end
-	end)
 
 	tpMin.MouseButton1Click:Connect(function()
 		tpMin.Visible = false
@@ -854,12 +822,12 @@ local function createTeleportUI(setVisibleCallback)
 	saveBtn.Size = UDim2.new(1, -10, 0, 40)
 	saveBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	saveBtn.Text = "Save Teleport"
-	saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255) -- putih
+	saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	saveBtn.Font = Enum.Font.GothamBold
 	Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 8)
 	saveBtn.Parent = tbody
 
-	-- Label "Teleport Saved" (bold)
+	-- Label "Teleport Saved"
 	local savedLabel = Instance.new("TextLabel")
 	savedLabel.Size = UDim2.new(1, -10, 0, 30)
 	savedLabel.BackgroundTransparency = 1
@@ -870,7 +838,7 @@ local function createTeleportUI(setVisibleCallback)
 	savedLabel.TextXAlignment = Enum.TextXAlignment.Left
 	savedLabel.Parent = tbody
 
-	-- Container untuk list (dengan tinggi tetap, tetapi scrolling di dalamnya)
+	-- Container untuk list
 	local listContainer = Instance.new("Frame")
 	listContainer.Size = UDim2.new(1, -10, 0, 200)
 	listContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
@@ -927,7 +895,7 @@ local function createTeleportUI(setVisibleCallback)
 			name.BackgroundTransparency = 1
 			name.Text = data.name
 			name.TextColor3 = Color3.new(1,1,1)
-			name.Font = Enum.Font.GothamBold -- bold
+			name.Font = Enum.Font.GothamBold
 			name.TextSize = 14
 			name.TextXAlignment = Enum.TextXAlignment.Left
 			name.Parent = item
@@ -937,7 +905,7 @@ local function createTeleportUI(setVisibleCallback)
 			tp.Position = UDim2.new(0.4, 5, 0.5, -15)
 			tp.BackgroundColor3 = Color3.fromRGB(60, 120, 200)
 			tp.Text = "Teleport"
-			tp.TextColor3 = Color3.new(1,1,1) -- putih
+			tp.TextColor3 = Color3.new(1,1,1)
 			tp.Font = Enum.Font.GothamMedium
 			tp.TextSize = 12
 			Instance.new("UICorner", tp).CornerRadius = UDim.new(0, 6)
@@ -953,10 +921,10 @@ local function createTeleportUI(setVisibleCallback)
 
 			local set = Instance.new("TextButton")
 			set.Size = UDim2.new(0, 50, 0, 30)
-			set.Position = UDim2.new(0.4 + 70/350 + 0.05, 0, 0.5, -15) -- perkiraan
+			set.Position = UDim2.new(0.4 + 70/350 + 0.05, 0, 0.5, -15)
 			set.BackgroundColor3 = Color3.fromRGB(200, 160, 60)
 			set.Text = "Seting"
-			set.TextColor3 = Color3.new(1,1,1) -- putih
+			set.TextColor3 = Color3.new(1,1,1)
 			set.Font = Enum.Font.GothamMedium
 			set.TextSize = 12
 			Instance.new("UICorner", set).CornerRadius = UDim.new(0, 6)
@@ -970,7 +938,7 @@ local function createTeleportUI(setVisibleCallback)
 			del.Position = UDim2.new(1, -55, 0.5, -15)
 			del.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 			del.Text = "Delete"
-			del.TextColor3 = Color3.new(1,1,1) -- putih
+			del.TextColor3 = Color3.new(1,1,1)
 			del.Font = Enum.Font.GothamMedium
 			del.TextSize = 12
 			Instance.new("UICorner", del).CornerRadius = UDim.new(0, 6)
@@ -1013,7 +981,7 @@ local function createTeleportUI(setVisibleCallback)
 
 	-- Panel Save (sub)
 	local saveSub = Instance.new("Frame")
-	saveSub.Size = UDim2.fromOffset(300,220) -- lebih tinggi untuk koordinat yang lebih besar
+	saveSub.Size = UDim2.fromOffset(300,220)
 	saveSub.Position = UDim2.new(0.5,-150,0.5,-110)
 	saveSub.BackgroundColor3 = Color3.fromRGB(20,20,24)
 	saveSub.Visible = false
@@ -1036,9 +1004,9 @@ local function createTeleportUI(setVisibleCallback)
 	coord.Position = UDim2.new(0,10,0,50)
 	coord.BackgroundTransparency = 1
 	coord.Text = "Position: 0, 0, 0"
-	coord.TextColor3 = Color3.fromRGB(255,255,255) -- putih
-	coord.Font = Enum.Font.GothamBold -- bold
-	coord.TextSize = 16 -- lebih besar
+	coord.TextColor3 = Color3.fromRGB(255,255,255)
+	coord.Font = Enum.Font.GothamBold
+	coord.TextSize = 16
 	coord.Parent = saveSub
 
 	local nameBox = Instance.new("TextBox")
@@ -1056,7 +1024,7 @@ local function createTeleportUI(setVisibleCallback)
 	saveSubBtn.Position = UDim2.new(0,10,0,140)
 	saveSubBtn.BackgroundColor3 = Color3.fromRGB(60,120,60)
 	saveSubBtn.Text = "Save"
-	saveSubBtn.TextColor3 = Color3.new(1,1,1) -- putih
+	saveSubBtn.TextColor3 = Color3.new(1,1,1)
 	saveSubBtn.Font = Enum.Font.GothamBold
 	Instance.new("UICorner", saveSubBtn).CornerRadius = UDim.new(0,8)
 	saveSubBtn.Parent = saveSub
@@ -1066,14 +1034,14 @@ local function createTeleportUI(setVisibleCallback)
 	closeSubBtn.Position = UDim2.new(1,-110,0,140)
 	closeSubBtn.BackgroundColor3 = Color3.fromRGB(200,60,60)
 	closeSubBtn.Text = "Close"
-	closeSubBtn.TextColor3 = Color3.new(1,1,1) -- putih
+	closeSubBtn.TextColor3 = Color3.new(1,1,1)
 	closeSubBtn.Font = Enum.Font.GothamBold
 	Instance.new("UICorner", closeSubBtn).CornerRadius = UDim.new(0,8)
 	closeSubBtn.Parent = saveSub
 
-	-- Panel Setting (untuk rename)
+	-- Panel Setting
 	local settingPanel = Instance.new("Frame")
-	settingPanel.Size = UDim2.fromOffset(300,200) -- lebih tinggi untuk koordinat
+	settingPanel.Size = UDim2.fromOffset(300,200)
 	settingPanel.Position = UDim2.new(0.5,-150,0.5,-100)
 	settingPanel.BackgroundColor3 = Color3.fromRGB(20,20,24)
 	settingPanel.Visible = false
@@ -1189,23 +1157,26 @@ local function createTeleportUI(setVisibleCallback)
 	end)
 
 	refreshList()
-	return tpGui, main, tpMin
+	return tpGui, main, tpMin, tpClose
 end
+
+-- Buat TP UI
+local tpGui, tpMain, tpMin, tpClose = createTeleportUI()
 
 -- Fungsi untuk mengatur visibilitas TP UI
 local function setTPUIVisible(flag)
 	tpMain.Visible = flag
 	if not flag then
-		-- sembunyikan juga minimized button
-		if tpMin then tpMin.Visible = false end
+		tpMin.Visible = false
 	end
-	-- update toggle di main menu
 	tpUIBtn.Text = "TP UI" .. (flag and ": ON" or ": OFF")
 	tpUIBtn.BackgroundColor3 = flag and Color3.fromRGB(35, 70, 45) or Color3.fromRGB(40, 40, 48)
 end
 
--- Buat TP UI dengan callback
-local tpGui, tpMain, tpMin = createTeleportUI(setTPUIVisible)
+-- Hubungkan tombol close TP
+tpClose.MouseButton1Click:Connect(function()
+	setTPUIVisible(false)
+end)
 
 -- Hubungkan tpUIBtn
 tpUIBtn.MouseButton1Click:Connect(function()
