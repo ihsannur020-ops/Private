@@ -1,5 +1,5 @@
 --[[
-	Script BY Azka - Ultimate Controller (Final + Perbaikan)
+	Script BY Azka - Ultimate Controller (Final + Perbaikan TP UI)
 	- WalkSpeed slider (1-200) dengan nilai di pojok kanan
 	- Boost slider (0-500) dengan nilai di pojok kanan
 	- Inf Jump, Noclip toggle
@@ -9,8 +9,8 @@
 	- Fly UI dan TP UI memiliki minimize internal sendiri
 	- Main menu menyesuaikan tinggi konten
 	- Toggle bekerja benar: ON = tampil, OFF = sembunyi
-	- Teleport UI: tampilan lebih rapi, bold, setting panel dengan koordinat
-	- Perbaikan: duplikat slider di main menu dihapus, urutan inisialisasi fly/tp diperbaiki
+	- Teleport UI: tanpa container list, hanya scrolling list langsung, tanpa tombol Setting
+	- Semua tombol menggunakan gaya teks yang konsisten
 ]]
 
 -- Hapus GUI lama jika ada
@@ -86,7 +86,7 @@ gui.IgnoreGuiInset = true
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = CoreGui
 
--- Main panel (lebar tetap, tinggi menyesuaikan konten)
+-- Main panel
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.Size = UDim2.fromOffset(300, 0)
@@ -149,7 +149,7 @@ closeBtn.TextColor3 = Color3.fromRGB(255, 220, 220)
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
 closeBtn.Parent = titleBar
 
--- Body container (akan memuat semua konten, otomatis mengatur tinggi)
+-- Body container
 local body = Instance.new("Frame")
 body.Name = "Body"
 body.Size = UDim2.new(1, -24, 1, -36)
@@ -163,7 +163,7 @@ layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 8)
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- ===== WalkSpeed Slider (dalam container) =====
+-- ===== WalkSpeed Slider =====
 local wsContainer = Instance.new("Frame")
 wsContainer.Size = UDim2.new(1, 0, 0, 40)
 wsContainer.BackgroundTransparency = 1
@@ -215,7 +215,7 @@ Instance.new("UICorner", wsKnob).CornerRadius = UDim.new(1, 0)
 Instance.new("UIStroke", wsKnob).Color = Color3.fromRGB(40, 70, 160)
 wsKnob.Parent = wsTrack
 
--- ===== Boost Slider (dalam container) =====
+-- ===== Boost Slider =====
 local boostContainer = Instance.new("Frame")
 boostContainer.Size = UDim2.new(1, 0, 0, 40)
 boostContainer.BackgroundTransparency = 1
@@ -399,7 +399,7 @@ layout2.Padding = UDim.new(0, 8)
 layout2.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout2.VerticalAlignment = Enum.VerticalAlignment.Center
 
-local flyUIBtn, _ = makeToggle(row2, "Fly UI", 130)  -- kita akan atur ulang callback
+local flyUIBtn, _ = makeToggle(row2, "Fly UI", 130)
 local tpUIBtn, _ = makeToggle(row2, "TP UI", 130)
 
 -- Minimized icon for main menu (shoe)
@@ -499,7 +499,7 @@ local function createFlyUI()
 	flyFrame.Parent = flyGui
 	flyFrame.Visible = false
 
-	-- Buttons
+	-- Buttons (sama seperti sebelumnya)
 	local up = Instance.new("TextButton")
 	up.Name = "up"
 	up.Parent = flyFrame
@@ -704,7 +704,7 @@ end
 -- Buat fly UI
 local flyGui, flyFrame, flyClose = createFlyUI()
 
--- Fungsi untuk mengatur visibilitas fly UI (didefinisikan setelah flyFrame ada)
+-- Fungsi untuk mengatur visibilitas fly UI
 local function setFlyUIVisible(flag)
 	flyFrame.Visible = flag
 	flyUIBtn.Text = "Fly UI" .. (flag and ": ON" or ": OFF")
@@ -722,7 +722,7 @@ flyUIBtn.MouseButton1Click:Connect(function()
 	setFlyUIVisible(newState)
 end)
 
--- ========== TELEPORT UI ==========
+-- ========== TELEPORT UI (tanpa container list, tanpa tombol Setting) ==========
 _G.AzkaTeleports = _G.AzkaTeleports or {}
 
 local function createTeleportUI()
@@ -732,7 +732,7 @@ local function createTeleportUI()
 	tpGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	tpGui.Parent = CoreGui
 
-	-- Minimized button (TP)
+	-- Minimized button (TP) - tombol bulat kecil
 	local tpMin = Instance.new("TextButton")
 	tpMin.Name = "TPMinimized"
 	tpMin.Visible = false
@@ -804,30 +804,33 @@ local function createTeleportUI()
 		main.Visible = true
 	end)
 
-	-- Body dengan scrolling
+	-- Body dengan scrolling (langsung tanpa container tambahan)
 	local tbody = Instance.new("ScrollingFrame")
 	tbody.Size = UDim2.new(1, -20, 1, -50)
 	tbody.Position = UDim2.new(0, 10, 0, 44)
-	tbody.BackgroundTransparency = 1
+	tbody.BackgroundColor3 = Color3.fromRGB(30, 30, 36) -- background langsung di scrolling frame
+	tbody.BackgroundTransparency = 0
 	tbody.ScrollBarThickness = 6
 	tbody.CanvasSize = UDim2.new(0, 0, 0, 0)
+	Instance.new("UICorner", tbody).CornerRadius = UDim.new(0, 8)
 	tbody.Parent = main
 
 	local tlayout = Instance.new("UIListLayout", tbody)
 	tlayout.Padding = UDim.new(0, 8)
 	tlayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-	-- Tombol Save Teleport
+	-- Tombol Save Teleport (bold, ukuran sedang)
 	local saveBtn = Instance.new("TextButton")
 	saveBtn.Size = UDim2.new(1, -10, 0, 40)
 	saveBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 	saveBtn.Text = "Save Teleport"
 	saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	saveBtn.Font = Enum.Font.GothamBold
+	saveBtn.TextSize = 16 -- sedang
 	Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 8)
 	saveBtn.Parent = tbody
 
-	-- Label "Teleport Saved"
+	-- Label "Teleport Saved" (bold, besar)
 	local savedLabel = Instance.new("TextLabel")
 	savedLabel.Size = UDim2.new(1, -10, 0, 30)
 	savedLabel.BackgroundTransparency = 1
@@ -838,25 +841,27 @@ local function createTeleportUI()
 	savedLabel.TextXAlignment = Enum.TextXAlignment.Left
 	savedLabel.Parent = tbody
 
-	-- Container untuk list
-	local listContainer = Instance.new("Frame")
-	listContainer.Size = UDim2.new(1, -10, 0, 200)
-	listContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
-	Instance.new("UICorner", listContainer).CornerRadius = UDim.new(0, 8)
-	listContainer.Parent = tbody
-
+	-- List teleport (langsung sebagai scrolling frame, sudah di atas, jadi kita tidak perlu frame container)
+	-- Tapi kita sudah punya tbody sebagai scrolling, jadi kita akan menambahkan item ke tbody.
+	-- Untuk memisahkan antara tombol save, label, dan list, kita perlu mengatur canvas size.
+	-- Kita akan menambahkan frame khusus untuk list di dalam tbody agar mudah mengatur ukuran.
+	-- Atau kita bisa membuat list sebagai frame dengan ukuran tetap dan scroll di dalamnya? Lebih baik kita buat frame list yang merupakan anak tbody, dengan ukuran tetap, dan di dalamnya ada scrolling frame lagi.
+	-- Tapi permintaan "hapus -- Container untuk list" berarti kita menghapus listContainer yang sebelumnya membungkus listScroll. Jadi kita akan langsung menempatkan listScroll sebagai anak tbody tanpa pembungkus. Namun listScroll perlu background dan ukuran tertentu. Kita buat listScroll dengan ukuran tetap dan background, lalu letakkan di tbody.
+	
 	local listScroll = Instance.new("ScrollingFrame")
-	listScroll.Size = UDim2.new(1, -10, 1, -10)
-	listScroll.Position = UDim2.new(0, 5, 0, 5)
-	listScroll.BackgroundTransparency = 1
+	listScroll.Size = UDim2.new(1, -10, 0, 200) -- tinggi tetap 200
+	listScroll.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+	listScroll.BackgroundTransparency = 0
 	listScroll.ScrollBarThickness = 6
 	listScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-	listScroll.Parent = listContainer
+	Instance.new("UICorner", listScroll).CornerRadius = UDim.new(0, 8)
+	listScroll.Parent = tbody
 
 	local listLayout = Instance.new("UIListLayout", listScroll)
 	listLayout.Padding = UDim.new(0, 5)
+	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-	-- Pagination
+	-- Pagination (tetap di bawah list)
 	local pageFrame = Instance.new("Frame")
 	pageFrame.Size = UDim2.new(1, -10, 0, 30)
 	pageFrame.BackgroundTransparency = 1
@@ -872,9 +877,11 @@ local function createTeleportUI()
 	local totalPages = 1
 
 	local function refreshList()
+		-- Hapus semua item di listScroll
 		for _, child in ipairs(listScroll:GetChildren()) do
 			if child:IsA("Frame") then child:Destroy() end
 		end
+
 		local teleports = _G.AzkaTeleports
 		totalPages = math.max(1, math.ceil(#teleports / itemsPerPage))
 		currentPage = math.clamp(currentPage, 1, totalPages)
@@ -889,8 +896,9 @@ local function createTeleportUI()
 			Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
 			item.Parent = listScroll
 
+			-- Nama (bold)
 			local name = Instance.new("TextLabel")
-			name.Size = UDim2.new(0.4, -5, 1, 0)
+			name.Size = UDim2.new(0.5, -5, 1, 0)
 			name.Position = UDim2.new(0, 5, 0, 0)
 			name.BackgroundTransparency = 1
 			name.Text = data.name
@@ -900,9 +908,10 @@ local function createTeleportUI()
 			name.TextXAlignment = Enum.TextXAlignment.Left
 			name.Parent = item
 
+			-- Tombol Teleport
 			local tp = Instance.new("TextButton")
-			tp.Size = UDim2.new(0, 70, 0, 30)
-			tp.Position = UDim2.new(0.4, 5, 0.5, -15)
+			tp.Size = UDim2.new(0, 80, 0, 30)
+			tp.Position = UDim2.new(0.5, 5, 0.5, -15)
 			tp.BackgroundColor3 = Color3.fromRGB(60, 120, 200)
 			tp.Text = "Teleport"
 			tp.TextColor3 = Color3.new(1,1,1)
@@ -919,23 +928,10 @@ local function createTeleportUI()
 				end
 			end)
 
-			local set = Instance.new("TextButton")
-			set.Size = UDim2.new(0, 50, 0, 30)
-			set.Position = UDim2.new(0.4 + 70/350 + 0.05, 0, 0.5, -15)
-			set.BackgroundColor3 = Color3.fromRGB(200, 160, 60)
-			set.Text = "Seting"
-			set.TextColor3 = Color3.new(1,1,1)
-			set.Font = Enum.Font.GothamMedium
-			set.TextSize = 12
-			Instance.new("UICorner", set).CornerRadius = UDim.new(0, 6)
-			set.Parent = item
-			set.MouseButton1Click:Connect(function()
-				openSettingPanel(data, i)
-			end)
-
+			-- Tombol Delete
 			local del = Instance.new("TextButton")
-			del.Size = UDim2.new(0, 50, 0, 30)
-			del.Position = UDim2.new(1, -55, 0.5, -15)
+			del.Size = UDim2.new(0, 60, 0, 30)
+			del.Position = UDim2.new(1, -65, 0.5, -15)
 			del.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 			del.Text = "Delete"
 			del.TextColor3 = Color3.new(1,1,1)
@@ -949,7 +945,7 @@ local function createTeleportUI()
 			end)
 		end
 
-		-- Update pagination
+		-- Update pagination buttons
 		for _, child in ipairs(pageFrame:GetChildren()) do
 			if child:IsA("TextButton") then child:Destroy() end
 		end
@@ -969,7 +965,7 @@ local function createTeleportUI()
 			end)
 		end
 
-		-- Update canvas size list
+		-- Update canvas size listScroll
 		local h = 0
 		for _, ch in ipairs(listScroll:GetChildren()) do
 			if ch:IsA("Frame") then
@@ -995,6 +991,7 @@ local function createTeleportUI()
 	subTitle.BackgroundColor3 = Color3.fromRGB(28,28,34)
 	subTitle.Text = "Save Teleport"
 	subTitle.Font = Enum.Font.GothamBold
+	subTitle.TextSize = 18 -- sedang
 	subTitle.TextColor3 = Color3.fromRGB(230,235,255)
 	Instance.new("UICorner", subTitle).CornerRadius = UDim.new(0,12)
 	subTitle.Parent = saveSub
@@ -1026,6 +1023,7 @@ local function createTeleportUI()
 	saveSubBtn.Text = "Save"
 	saveSubBtn.TextColor3 = Color3.new(1,1,1)
 	saveSubBtn.Font = Enum.Font.GothamBold
+	saveSubBtn.TextSize = 16
 	Instance.new("UICorner", saveSubBtn).CornerRadius = UDim.new(0,8)
 	saveSubBtn.Parent = saveSub
 
@@ -1036,94 +1034,9 @@ local function createTeleportUI()
 	closeSubBtn.Text = "Close"
 	closeSubBtn.TextColor3 = Color3.new(1,1,1)
 	closeSubBtn.Font = Enum.Font.GothamBold
+	closeSubBtn.TextSize = 16
 	Instance.new("UICorner", closeSubBtn).CornerRadius = UDim.new(0,8)
 	closeSubBtn.Parent = saveSub
-
-	-- Panel Setting
-	local settingPanel = Instance.new("Frame")
-	settingPanel.Size = UDim2.fromOffset(300,200)
-	settingPanel.Position = UDim2.new(0.5,-150,0.5,-100)
-	settingPanel.BackgroundColor3 = Color3.fromRGB(20,20,24)
-	settingPanel.Visible = false
-	settingPanel.Parent = tpGui
-	makeDraggable(settingPanel, settingPanel)
-	Instance.new("UICorner", settingPanel).CornerRadius = UDim.new(0,12)
-	Instance.new("UIStroke", settingPanel).Color = Color3.fromRGB(80,120,255)
-
-	local setTitle = Instance.new("TextLabel")
-	setTitle.Size = UDim2.new(1,0,0,40)
-	setTitle.BackgroundColor3 = Color3.fromRGB(28,28,34)
-	setTitle.Text = "Edit Teleport"
-	setTitle.Font = Enum.Font.GothamBold
-	setTitle.TextColor3 = Color3.fromRGB(230,235,255)
-	Instance.new("UICorner", setTitle).CornerRadius = UDim.new(0,12)
-	setTitle.Parent = settingPanel
-
-	local setCoord = Instance.new("TextLabel")
-	setCoord.Size = UDim2.new(1,-20,0,30)
-	setCoord.Position = UDim2.new(0,10,0,50)
-	setCoord.BackgroundTransparency = 1
-	setCoord.Text = "Position: 0, 0, 0"
-	setCoord.TextColor3 = Color3.new(1,1,1)
-	setCoord.Font = Enum.Font.GothamBold
-	setCoord.TextSize = 14
-	setCoord.Parent = settingPanel
-
-	local setNameBox = Instance.new("TextBox")
-	setNameBox.Size = UDim2.new(1,-20,0,36)
-	setNameBox.Position = UDim2.new(0,10,0,90)
-	setNameBox.BackgroundColor3 = Color3.fromRGB(40,40,48)
-	setNameBox.PlaceholderText = "Nama Baru"
-	setNameBox.Text = ""
-	setNameBox.TextColor3 = Color3.new(1,1,1)
-	Instance.new("UICorner", setNameBox).CornerRadius = UDim.new(0,8)
-	setNameBox.Parent = settingPanel
-
-	local setSave = Instance.new("TextButton")
-	setSave.Size = UDim2.new(0,100,0,40)
-	setSave.Position = UDim2.new(0.5,-110,0,140)
-	setSave.BackgroundColor3 = Color3.fromRGB(60,120,60)
-	setSave.Text = "Save"
-	setSave.TextColor3 = Color3.new(1,1,1)
-	setSave.Font = Enum.Font.GothamBold
-	Instance.new("UICorner", setSave).CornerRadius = UDim.new(0,8)
-	setSave.Parent = settingPanel
-
-	local setCancel = Instance.new("TextButton")
-	setCancel.Size = UDim2.new(0,100,0,40)
-	setCancel.Position = UDim2.new(0.5,10,0,140)
-	setCancel.BackgroundColor3 = Color3.fromRGB(200,60,60)
-	setCancel.Text = "Cancel"
-	setCancel.TextColor3 = Color3.new(1,1,1)
-	setCancel.Font = Enum.Font.GothamBold
-	Instance.new("UICorner", setCancel).CornerRadius = UDim.new(0,8)
-	setCancel.Parent = settingPanel
-
-	local currentEditIdx
-
-	local function openSettingPanel(data, idx)
-		currentEditIdx = idx
-		setNameBox.Text = data.name
-		setCoord.Text = string.format("Position: %.1f, %.1f, %.1f", data.pos.X, data.pos.Y, data.pos.Z)
-		main.Visible = false
-		settingPanel.Visible = true
-	end
-
-	setSave.MouseButton1Click:Connect(function()
-		local newName = setNameBox.Text
-		if newName == "" then newName = "Unnamed" end
-		if currentEditIdx and _G.AzkaTeleports[currentEditIdx] then
-			_G.AzkaTeleports[currentEditIdx].name = newName
-			refreshList()
-		end
-		settingPanel.Visible = false
-		main.Visible = true
-	end)
-
-	setCancel.MouseButton1Click:Connect(function()
-		settingPanel.Visible = false
-		main.Visible = true
-	end)
 
 	-- Tombol Save di main
 	saveBtn.MouseButton1Click:Connect(function()
@@ -1208,4 +1121,4 @@ TweenService:Create(notif, TweenInfo.new(0.5), {BackgroundTransparency = 1, Text
 task.wait(0.5)
 notif:Destroy()
 
-print("Script BY Azka - Ultimate Controller (final + perbaikan) loaded")
+print("Script BY Azka - Ultimate Controller (final + perbaikan TP UI) loaded")
