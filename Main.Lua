@@ -8,7 +8,6 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
@@ -19,7 +18,7 @@ if existingGui then
     existingGui:Destroy()
 end
 
--- Variabel global untuk kontrol (opsional)
+-- Variabel global untuk kontrol
 _G.AzkaUI = _G.AzkaUI or {}
 if _G.AzkaUI.Cleanup then
     _G.AzkaUI.Cleanup()
@@ -41,7 +40,7 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.Size = UDim2.fromOffset(600, 450)
 panel.Position = UDim2.new(0.5, -300, 0.4, -225)
-panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25) -- solid gelap
+panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 panel.BorderSizePixel = 0
 panel.Active = true
 panel.Parent = gui
@@ -81,28 +80,11 @@ titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.Text = "Script BY Azka"
 titleLabel.Parent = titleBar
 
--- Tombol Close (X)
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "Close"
-closeBtn.Size = UDim2.fromOffset(30, 24)
-closeBtn.Position = UDim2.new(1, -70, 0.5, -12)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeBtn.Text = "X"
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 16
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.AutoButtonColor = false
-closeBtn.Parent = titleBar
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
-closeCorner.Parent = closeBtn
-
--- Tombol Minimize (-)
+-- Tombol Minimize (-) [sebelah kiri dari Close]
 local minBtn = Instance.new("TextButton")
 minBtn.Name = "Minimize"
 minBtn.Size = UDim2.fromOffset(30, 24)
-minBtn.Position = UDim2.new(1, -36, 0.5, -12)
+minBtn.Position = UDim2.new(1, -70, 0.5, -12)  -- lebih ke kiri
 minBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 180)
 minBtn.Text = "-"
 minBtn.Font = Enum.Font.GothamBold
@@ -114,6 +96,23 @@ minBtn.Parent = titleBar
 local minCorner = Instance.new("UICorner")
 minCorner.CornerRadius = UDim.new(0, 8)
 minCorner.Parent = minBtn
+
+-- Tombol Close (X) [pojok kanan]
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "Close"
+closeBtn.Size = UDim2.fromOffset(30, 24)
+closeBtn.Position = UDim2.new(1, -36, 0.5, -12)  -- paling kanan
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.Text = "X"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.AutoButtonColor = false
+closeBtn.Parent = titleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeBtn
 
 -- Panel kiri (menu)
 local leftPanel = Instance.new("Frame")
@@ -201,7 +200,7 @@ local contentCorner = Instance.new("UICorner")
 contentCorner.CornerRadius = UDim.new(0, 10)
 contentCorner.Parent = contentPanel
 
--- Konten untuk menu Main (akan diisi nanti)
+-- Konten untuk menu Main
 local mainContent = Instance.new("Frame")
 mainContent.Name = "MainContent"
 mainContent.Size = UDim2.new(1, -20, 1, -20)
@@ -310,7 +309,7 @@ sliderKnob.Size = UDim2.fromOffset(18, 18)
 sliderKnob.Position = UDim2.fromOffset(-9, -5)
 sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 sliderKnob.BackgroundTransparency = 1
-sliderKnob.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png" -- lingkaran putih
+sliderKnob.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 sliderKnob.ImageColor3 = Color3.fromRGB(255, 255, 255)
 sliderKnob.ImageTransparency = 0
 sliderKnob.Parent = sliderTrack
@@ -350,19 +349,19 @@ noclipCorner.CornerRadius = UDim.new(0, 8)
 noclipCorner.Parent = noclipBtn
 
 -- =============================================
---      FRAME MINIMIZE (kotak dengan ⬡)
+--      FRAME MINIMIZE (kotak dengan ☰)
 -- =============================================
 local minimizeFrame = Instance.new("Frame")
 minimizeFrame.Name = "MinimizeFrame"
-minimizeFrame.Size = UDim2.fromOffset(80, 80) -- ukuran kotak kecil
-minimizeFrame.Position = panel.Position -- ikuti posisi panel awal
+minimizeFrame.Size = UDim2.fromOffset(40, 40)  -- ukuran kecil (setengah dari sebelumnya)
+minimizeFrame.Position = panel.Position
 minimizeFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 minimizeFrame.Visible = false
 minimizeFrame.Active = true
 minimizeFrame.Parent = gui
 
 local minFrameCorner = Instance.new("UICorner")
-minFrameCorner.CornerRadius = UDim.new(0, 12)
+minFrameCorner.CornerRadius = UDim.new(0, 8)
 minFrameCorner.Parent = minimizeFrame
 
 local minFrameStroke = Instance.new("UIStroke")
@@ -370,15 +369,15 @@ minFrameStroke.Thickness = 2
 minFrameStroke.Color = Color3.fromRGB(80, 120, 255)
 minFrameStroke.Parent = minimizeFrame
 
-local hexagonLabel = Instance.new("TextLabel")
-hexagonLabel.Name = "Hexagon"
-hexagonLabel.Size = UDim2.new(1, 0, 1, 0)
-hexagonLabel.BackgroundTransparency = 1
-hexagonLabel.Text = "⬡" -- Hexagon unicode
-hexagonLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-hexagonLabel.Font = Enum.Font.GothamBold
-hexagonLabel.TextSize = 50
-hexagonLabel.Parent = minimizeFrame
+local menuIcon = Instance.new("TextLabel")
+menuIcon.Name = "MenuIcon"
+menuIcon.Size = UDim2.new(1, 0, 1, 0)
+menuIcon.BackgroundTransparency = 1
+menuIcon.Text = "☰"  -- ikon hamburger
+menuIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+menuIcon.Font = Enum.Font.GothamBold
+menuIcon.TextSize = 24
+menuIcon.Parent = minimizeFrame
 
 -- =============================================
 --              FUNGSI-FUNGSI
@@ -386,7 +385,7 @@ hexagonLabel.Parent = minimizeFrame
 
 -- Variabel state
 local isMinimized = false
-local currentMenu = "Main" -- Main, Teleport, Setting
+local currentMenu = "Main"
 local wsValueNum = 30
 local minWS = 30
 local maxWS = 100
@@ -396,6 +395,7 @@ local draggingSlider = false
 local draggingWindow = false
 local dragStartPos = Vector2.new()
 local dragStartFramePos = UDim2.new()
+local dragThreshold = 5  -- untuk membedakan klik dan drag
 
 -- Fungsi untuk mengganti menu
 local function setMenu(menu)
@@ -404,7 +404,6 @@ local function setMenu(menu)
     tpContent.Visible = (menu == "Teleport")
     settingContent.Visible = (menu == "Setting")
     
-    -- Ubah warna tombol menu (opsional)
     mainBtn.BackgroundColor3 = (menu == "Main") and Color3.fromRGB(70, 100, 200) or Color3.fromRGB(50, 50, 60)
     tpBtn.BackgroundColor3 = (menu == "Teleport") and Color3.fromRGB(70, 100, 200) or Color3.fromRGB(50, 50, 60)
     settingBtn.BackgroundColor3 = (menu == "Setting") and Color3.fromRGB(70, 100, 200) or Color3.fromRGB(50, 50, 60)
@@ -412,7 +411,7 @@ end
 
 -- Fungsi update slider berdasarkan nilai
 local function updateSliderFromValue(value)
-    value = math.floor(value + 0.5) -- pembulatan ke integer terdekat
+    value = math.floor(value + 0.5)
     wsValueNum = math.clamp(value, minWS, maxWS)
     wsValue.Text = tostring(wsValueNum)
     local alpha = (wsValueNum - minWS) / (maxWS - minWS)
@@ -442,7 +441,6 @@ local function toggleMinimize()
     panel.Visible = not isMinimized
     minimizeFrame.Visible = isMinimized
     if isMinimized then
-        -- Sinkronkan posisi minimize frame dengan posisi panel terakhir
         minimizeFrame.Position = panel.Position
     else
         panel.Position = minimizeFrame.Position
@@ -467,15 +465,8 @@ end)
 -- Minimize
 minBtn.MouseButton1Click:Connect(toggleMinimize)
 
--- Klik pada minimize frame untuk membuka (gunakan kedua event untuk memastikan)
+-- Klik pada minimize frame untuk membuka (gunakan MouseButton1Click)
 minimizeFrame.MouseButton1Click:Connect(toggleMinimize)
-minimizeFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        -- Jangan toggle jika sedang drag, biarkan drag handler yang menangani
-        -- Tapi kita perlu membedakan apakah itu klik atau drag
-        -- Kita akan handle di InputEnded nanti
-    end
-end)
 
 -- Inf Jump toggle
 infJumpBtn.MouseButton1Click:Connect(function()
@@ -540,8 +531,8 @@ end)
 -- Update posisi saat drag
 UserInputService.InputChanged:Connect(function(input)
     if draggingWindow and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = Vector2.new(input.Position.X - dragStartPos.X, input.Position.Y - dragStartPos.Y)
         local currentFrame = panel.Visible and panel or minimizeFrame
+        local delta = Vector2.new(input.Position.X - dragStartPos.X, input.Position.Y - dragStartPos.Y)
         currentFrame.Position = UDim2.new(
             dragStartFramePos.X.Scale,
             dragStartFramePos.X.Offset + delta.X,
@@ -625,7 +616,7 @@ end)
 updateSliderFromValue(30)
 setMenu("Main")
 
--- Cleanup function untuk dipanggil dari luar
+-- Cleanup function
 _G.AzkaUI.Cleanup = function()
     gui:Destroy()
 end
