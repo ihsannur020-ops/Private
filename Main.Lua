@@ -1,7 +1,7 @@
 --[[
-    Azka UI - Kustom UI seperti Kavo
+    Azka UI - Custom UI seperti Kavo
     Dibuat oleh Azka
-    Fitur: Drag, Minimize (kotak ☰), Close, Menu Slide, WalkSpeed slider, Inf Jump, Noclip
+    Fitur lengkap: Drag, Minimize (kotak ☰), Close, Menu Slide, WalkSpeed slider, Inf Jump, Noclip
 ]]
 
 -- Services
@@ -9,53 +9,57 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
-
 local player = Players.LocalPlayer
 
 -- Hapus UI lama jika ada
-local existing = CoreGui:FindFirstChild("AzkaUI")
-if existing then existing:Destroy() end
+local existingGui = CoreGui:FindFirstChild("AzkaUI")
+if existingGui then existingGui:Destroy() end
 
--- Buat ScreenGui
+-- Buat GUI utama
 local gui = Instance.new("ScreenGui")
 gui.Name = "AzkaUI"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = CoreGui
 
--- Variabel state
+-- Variabel global untuk cleanup
+_G.AzkaUI = _G.AzkaUI or {}
+if _G.AzkaUI.Cleanup then _G.AzkaUI.Cleanup() end
+
+-- State UI
 local isMinimized = false
 local wsValue = 30
 local infJumpEnabled = false
 local noclipEnabled = false
 local draggingSlider = false
+local draggingWindow = false
+local dragStartPos, dragStartFramePos
 
 -- ====================== PANEL UTAMA ======================
 local panel = Instance.new("Frame")
 panel.Name = "MainPanel"
 panel.Size = UDim2.fromOffset(600, 450)
 panel.Position = UDim2.new(0.5, -300, 0.4, -225)
-panel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)  -- solid
+panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 panel.BorderSizePixel = 0
 panel.Active = true
 panel.Parent = gui
 
--- Sudut membulat
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = panel
+local panelCorner = Instance.new("UICorner")
+panelCorner.CornerRadius = UDim.new(0, 12)
+panelCorner.Parent = panel
 
--- Stroke border
-local stroke = Instance.new("UIStroke")
-stroke.Thickness = 2
-stroke.Color = Color3.fromRGB(80, 120, 255)
-stroke.Parent = panel
+local panelStroke = Instance.new("UIStroke")
+panelStroke.Thickness = 2
+panelStroke.Color = Color3.fromRGB(80, 120, 255)
+panelStroke.Parent = panel
 
--- ====================== TITLE BAR ======================
+-- Title Bar (untuk drag)
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
 titleBar.Size = UDim2.new(1, 0, 0, 36)
-titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 titleBar.BorderSizePixel = 0
 titleBar.Parent = panel
 
@@ -65,6 +69,7 @@ titleCorner.Parent = titleBar
 
 -- Judul
 local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
 titleLabel.BackgroundTransparency = 1
 titleLabel.Size = UDim2.new(1, -90, 1, 0)
 titleLabel.Position = UDim2.new(0, 12, 0, 0)
@@ -75,8 +80,9 @@ titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.Text = "Script BY Azka"
 titleLabel.Parent = titleBar
 
--- Tombol Minimize ( - )
+-- Tombol Minimize (-)
 local minBtn = Instance.new("TextButton")
+minBtn.Name = "MinimizeBtn"
 minBtn.Size = UDim2.fromOffset(30, 24)
 minBtn.Position = UDim2.new(1, -70, 0.5, -12)
 minBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 180)
@@ -91,8 +97,9 @@ local minCorner = Instance.new("UICorner")
 minCorner.CornerRadius = UDim.new(0, 8)
 minCorner.Parent = minBtn
 
--- Tombol Close ( X )
+-- Tombol Close (X)
 local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "CloseBtn"
 closeBtn.Size = UDim2.fromOffset(30, 24)
 closeBtn.Position = UDim2.new(1, -36, 0.5, -12)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -107,12 +114,12 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 8)
 closeCorner.Parent = closeBtn
 
--- ====================== PANEL KIRI (MENU) ======================
+-- Panel Kiri (Menu)
 local leftPanel = Instance.new("Frame")
 leftPanel.Name = "LeftPanel"
 leftPanel.Size = UDim2.fromOffset(130, 380)
 leftPanel.Position = UDim2.fromOffset(10, 46)
-leftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+leftPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 leftPanel.BorderSizePixel = 0
 leftPanel.Parent = panel
 
@@ -122,9 +129,10 @@ leftCorner.Parent = leftPanel
 
 -- Tombol Main
 local mainBtn = Instance.new("TextButton")
+mainBtn.Name = "MainBtn"
 mainBtn.Size = UDim2.new(1, -20, 0, 40)
 mainBtn.Position = UDim2.fromOffset(10, 10)
-mainBtn.BackgroundColor3 = Color3.fromRGB(70, 100, 200)  -- aktif pertama
+mainBtn.BackgroundColor3 = Color3.fromRGB(70, 100, 200)  -- aktif
 mainBtn.Text = "Main"
 mainBtn.Font = Enum.Font.GothamBold
 mainBtn.TextSize = 16
@@ -138,6 +146,7 @@ mainCorner.Parent = mainBtn
 
 -- Tombol Teleport
 local tpBtn = Instance.new("TextButton")
+tpBtn.Name = "TeleportBtn"
 tpBtn.Size = UDim2.new(1, -20, 0, 40)
 tpBtn.Position = UDim2.fromOffset(10, 60)
 tpBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
@@ -154,6 +163,7 @@ tpCorner.Parent = tpBtn
 
 -- Tombol Setting
 local settingBtn = Instance.new("TextButton")
+settingBtn.Name = "SettingBtn"
 settingBtn.Size = UDim2.new(1, -20, 0, 40)
 settingBtn.Position = UDim2.fromOffset(10, 110)
 settingBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
@@ -177,12 +187,12 @@ divider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 divider.BorderSizePixel = 0
 divider.Parent = panel
 
--- ====================== PANEL KANAN (KONTEN) ======================
+-- Panel Kanan (Konten)
 local contentPanel = Instance.new("Frame")
 contentPanel.Name = "ContentPanel"
 contentPanel.Size = UDim2.fromOffset(430, 380)
 contentPanel.Position = UDim2.fromOffset(155, 46)
-contentPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+contentPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 contentPanel.BorderSizePixel = 0
 contentPanel.Parent = panel
 
@@ -302,6 +312,7 @@ knobCorner.Parent = sliderKnob
 
 -- Tombol Inf Jump
 local infJumpBtn = Instance.new("TextButton")
+infJumpBtn.Name = "InfJumpBtn"
 infJumpBtn.Size = UDim2.fromOffset(160, 40)
 infJumpBtn.Position = UDim2.fromOffset(10, 80)
 infJumpBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
@@ -318,6 +329,7 @@ infCorner.Parent = infJumpBtn
 
 -- Tombol Noclip
 local noclipBtn = Instance.new("TextButton")
+noclipBtn.Name = "NoclipBtn"
 noclipBtn.Size = UDim2.fromOffset(160, 40)
 noclipBtn.Position = UDim2.fromOffset(190, 80)
 noclipBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
@@ -361,8 +373,6 @@ menuIcon.TextSize = 24
 menuIcon.Parent = minimizeFrame
 
 -- ====================== FUNGSI-FUNGSI ======================
-
--- Fungsi ganti menu
 local function setMenu(menu)
     mainContent.Visible = (menu == "Main")
     tpContent.Visible = (menu == "Teleport")
@@ -373,7 +383,6 @@ local function setMenu(menu)
     settingBtn.BackgroundColor3 = (menu == "Setting") and Color3.fromRGB(70, 100, 200) or Color3.fromRGB(50, 50, 60)
 end
 
--- Update slider dari nilai
 local function updateSlider(value)
     value = math.floor(value + 0.5)
     wsValue = math.clamp(value, 30, 100)
@@ -388,7 +397,6 @@ local function updateSlider(value)
     end
 end
 
--- Update slider dari posisi mouse
 local function updateSliderFromMouse(mouseX)
     local trackPos = sliderTrack.AbsolutePosition.X
     local trackWidth = sliderTrack.AbsoluteSize.X
@@ -400,7 +408,6 @@ local function updateSliderFromMouse(mouseX)
     end
 end
 
--- Toggle minimize
 local function toggleMinimize()
     isMinimized = not isMinimized
     panel.Visible = not isMinimized
@@ -413,7 +420,6 @@ local function toggleMinimize()
 end
 
 -- ====================== EVENT HANDLING ======================
-
 -- Menu buttons
 mainBtn.MouseButton1Click:Connect(function() setMenu("Main") end)
 tpBtn.MouseButton1Click:Connect(function() setMenu("Teleport") end)
@@ -422,6 +428,7 @@ settingBtn.MouseButton1Click:Connect(function() setMenu("Setting") end)
 -- Close
 closeBtn.MouseButton1Click:Connect(function()
     gui:Destroy()
+    _G.AzkaUI.Cleanup = nil
 end)
 
 -- Minimize button
@@ -445,15 +452,15 @@ noclipBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Slider drag
-local function startSliderDrag(input)
+local function onSliderInputBegan(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         draggingSlider = true
         updateSliderFromMouse(input.Position.X)
     end
 end
 
-sliderTrack.InputBegan:Connect(startSliderDrag)
-sliderKnob.InputBegan:Connect(startSliderDrag)
+sliderTrack.InputBegan:Connect(onSliderInputBegan)
+sliderKnob.InputBegan:Connect(onSliderInputBegan)
 
 UserInputService.InputChanged:Connect(function(input)
     if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -467,8 +474,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- ====================== DRAG WINDOW (REVISI) ======================
--- Kita buat fungsi drag sendiri untuk masing-masing frame
+-- ====================== DRAG WINDOW (PERBAIKAN) ======================
 local function makeDraggable(frame, dragHandle)
     local dragging = false
     local dragStart = Vector2.new()
@@ -501,7 +507,7 @@ local function makeDraggable(frame, dragHandle)
     end)
 end
 
--- Terapkan drag
+-- Terapkan drag ke panel (via titleBar) dan minimizeFrame (via dirinya sendiri)
 makeDraggable(panel, titleBar)
 makeDraggable(minimizeFrame, minimizeFrame)
 
@@ -517,13 +523,13 @@ local function getHumanoid()
     return hum
 end
 
--- WalkSpeed
+-- WalkSpeed loop
 task.spawn(function()
     local hum = getHumanoid()
     player.CharacterAdded:Connect(function()
         hum = getHumanoid()
     end)
-    while gui.Parent do
+    while gui and gui.Parent do
         if hum and hum.Parent then
             hum.WalkSpeed = wsValue
         else
@@ -548,7 +554,7 @@ end)
 
 -- Noclip
 task.spawn(function()
-    while gui.Parent do
+    while gui and gui.Parent do
         if noclipEnabled then
             local char = player.Character
             if char then
@@ -567,4 +573,9 @@ end)
 updateSlider(30)
 setMenu("Main")
 
-print("Azka UI siap digunakan!")
+-- Cleanup function
+_G.AzkaUI.Cleanup = function()
+    gui:Destroy()
+end
+
+print("Azka UI berhasil dimuat! Gunakan tombol X untuk menutup.")
