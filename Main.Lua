@@ -55,12 +55,13 @@ panelStroke.Color = Color3.fromRGB(80, 120, 255)
 panelStroke.Transparency = 0
 panelStroke.Parent = panel
 
--- Title bar
+-- Title bar (untuk drag)
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
 titleBar.Size = UDim2.new(1, 0, 0, 36)
 titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 titleBar.BorderSizePixel = 0
+titleBar.Active = true
 titleBar.Parent = panel
 
 local titleCorner = Instance.new("UICorner")
@@ -80,11 +81,11 @@ titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.Text = "Script BY Azka"
 titleLabel.Parent = titleBar
 
--- Tombol Minimize (-) [sebelah kiri dari Close]
+-- Tombol Minimize (-) (sebelah kiri dari Close)
 local minBtn = Instance.new("TextButton")
 minBtn.Name = "Minimize"
 minBtn.Size = UDim2.fromOffset(30, 24)
-minBtn.Position = UDim2.new(1, -70, 0.5, -12)  -- lebih ke kiri
+minBtn.Position = UDim2.new(1, -70, 0.5, -12)
 minBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 180)
 minBtn.Text = "-"
 minBtn.Font = Enum.Font.GothamBold
@@ -97,11 +98,11 @@ local minCorner = Instance.new("UICorner")
 minCorner.CornerRadius = UDim.new(0, 8)
 minCorner.Parent = minBtn
 
--- Tombol Close (X) [pojok kanan]
+-- Tombol Close (X) (pojok kanan)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Name = "Close"
 closeBtn.Size = UDim2.fromOffset(30, 24)
-closeBtn.Position = UDim2.new(1, -36, 0.5, -12)  -- paling kanan
+closeBtn.Position = UDim2.new(1, -36, 0.5, -12)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.Text = "X"
 closeBtn.Font = Enum.Font.GothamBold
@@ -302,17 +303,18 @@ local fillCorner = Instance.new("UICorner")
 fillCorner.CornerRadius = UDim.new(0, 4)
 fillCorner.Parent = sliderFill
 
--- Slider knob (bulat)
-local sliderKnob = Instance.new("ImageButton")
+-- Slider knob (bulat) - gunakan Frame biasa agar lebih mudah di-drag
+local sliderKnob = Instance.new("Frame")
 sliderKnob.Name = "SliderKnob"
 sliderKnob.Size = UDim2.fromOffset(18, 18)
 sliderKnob.Position = UDim2.fromOffset(-9, -5)
 sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderKnob.BackgroundTransparency = 1
-sliderKnob.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-sliderKnob.ImageColor3 = Color3.fromRGB(255, 255, 255)
-sliderKnob.ImageTransparency = 0
+sliderKnob.BorderSizePixel = 0
 sliderKnob.Parent = sliderTrack
+
+local knobCorner = Instance.new("UICorner")
+knobCorner.CornerRadius = UDim.new(1, 0)
+knobCorner.Parent = sliderKnob
 
 -- Tombol Inf Jump
 local infJumpBtn = Instance.new("TextButton")
@@ -353,7 +355,7 @@ noclipCorner.Parent = noclipBtn
 -- =============================================
 local minimizeFrame = Instance.new("Frame")
 minimizeFrame.Name = "MinimizeFrame"
-minimizeFrame.Size = UDim2.fromOffset(40, 40)  -- ukuran kecil (setengah dari sebelumnya)
+minimizeFrame.Size = UDim2.fromOffset(40, 40)
 minimizeFrame.Position = panel.Position
 minimizeFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 minimizeFrame.Visible = false
@@ -373,7 +375,7 @@ local menuIcon = Instance.new("TextLabel")
 menuIcon.Name = "MenuIcon"
 menuIcon.Size = UDim2.new(1, 0, 1, 0)
 menuIcon.BackgroundTransparency = 1
-menuIcon.Text = "☰"  -- ikon hamburger
+menuIcon.Text = "☰"
 menuIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
 menuIcon.Font = Enum.Font.GothamBold
 menuIcon.TextSize = 24
@@ -396,6 +398,7 @@ local draggingWindow = false
 local dragStartPos = Vector2.new()
 local dragStartFramePos = UDim2.new()
 local dragThreshold = 5  -- untuk membedakan klik dan drag
+local dragStartTime = 0
 
 -- Fungsi untuk mengganti menu
 local function setMenu(menu)
@@ -462,10 +465,10 @@ closeBtn.MouseButton1Click:Connect(function()
     _G.AzkaUI = nil
 end)
 
--- Minimize
+-- Minimize button
 minBtn.MouseButton1Click:Connect(toggleMinimize)
 
--- Klik pada minimize frame untuk membuka (gunakan MouseButton1Click)
+-- Minimize frame click (untuk restore)
 minimizeFrame.MouseButton1Click:Connect(toggleMinimize)
 
 -- Inf Jump toggle
@@ -506,48 +509,47 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- =============================================
---              DRAG WINDOW (Perbaikan)
+--              DRAG WINDOW (Perbaikan total)
 -- =============================================
 
--- Fungsi untuk memulai drag
-local function startDrag(frame, input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingWindow = true
-        dragStartPos = Vector2.new(input.Position.X, input.Position.Y)
-        dragStartFramePos = frame.Position
-    end
+-- Fungsi drag untuk frame tertentu (panel melalui titleBar, atau minimizeFrame)
+local function setupDrag(frame, dragHandle)
+    local isDragging = false
+    local dragStartPosition = Vector2.new()
+    local dragStartFramePosition = UDim2.new()
+    
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = true
+            dragStartPosition = Vector2.new(input.Position.X, input.Position.Y)
+            dragStartFramePosition = frame.Position
+        end
+    end)
+    
+    dragHandle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = Vector2.new(input.Position.X - dragStartPosition.X, input.Position.Y - dragStartPosition.Y)
+            frame.Position = UDim2.new(
+                dragStartFramePosition.X.Scale,
+                dragStartFramePosition.X.Offset + delta.X,
+                dragStartFramePosition.Y.Scale,
+                dragStartFramePosition.Y.Offset + delta.Y
+            )
+        end
+    end)
 end
 
--- Event untuk title bar (drag panel)
-titleBar.InputBegan:Connect(function(input)
-    startDrag(panel, input)
-end)
+-- Setup drag untuk panel (via titleBar)
+setupDrag(panel, titleBar)
 
--- Event untuk minimize frame (drag minimize box)
-minimizeFrame.InputBegan:Connect(function(input)
-    startDrag(minimizeFrame, input)
-end)
-
--- Update posisi saat drag
-UserInputService.InputChanged:Connect(function(input)
-    if draggingWindow and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local currentFrame = panel.Visible and panel or minimizeFrame
-        local delta = Vector2.new(input.Position.X - dragStartPos.X, input.Position.Y - dragStartPos.Y)
-        currentFrame.Position = UDim2.new(
-            dragStartFramePos.X.Scale,
-            dragStartFramePos.X.Offset + delta.X,
-            dragStartFramePos.Y.Scale,
-            dragStartFramePos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- Akhiri drag
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingWindow = false
-    end
-end)
+-- Setup drag untuk minimizeFrame (via dirinya sendiri)
+setupDrag(minimizeFrame, minimizeFrame)
 
 -- =============================================
 --              LOOP FITUR
