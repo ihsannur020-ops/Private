@@ -1,11 +1,11 @@
 --[[
     Azka UI - Custom UI seperti Kavo untuk Delta Executor
-    Fitur: Drag, Minimize (emoji), Close, Menu Slide dengan background panel
+    Fitur: Drag, Minimize (emoji), Close, Menu Slide dengan konten WalkSpeed, Inf Jump, Noclip
     Dibuat oleh Azka
 ]]
 
--- Cek environment
-local Drawing = Drawing
+-- Services
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
@@ -14,15 +14,17 @@ if not Drawing or not UserInputService then
     return
 end
 
+local player = Players.LocalPlayer
+
 -- Variabel global untuk menyimpan state UI dan mencegah duplikasi
 _G.AzkaUI = _G.AzkaUI or {}
 if _G.AzkaUI.Cleanup then
-    _G.AzkaUI.Cleanup() -- Hapus UI sebelumnya jika ada
+    _G.AzkaUI.Cleanup()
 end
 
 -- State window
 local winX, winY = 200, 100
-local winW, winH = 600, 400
+local winW, winH = 600, 450
 local isMinimized = false
 local isDragging = false
 local dragOffsetX, dragOffsetY
@@ -34,6 +36,14 @@ local minW, minH = 200, 100
 -- Tabel untuk menyimpan semua drawing objects
 local objects = {}
 local buttons = {} -- untuk deteksi klik
+
+-- Variabel fitur
+local currentWS = 30
+local MIN_WS = 30
+local MAX_WS = 100
+local infJumpEnabled = false
+local noclipEnabled = false
+local draggingSlider = false
 
 -- Fungsi untuk membersihkan semua objek dan event
 local function Cleanup()
@@ -122,10 +132,36 @@ local function UpdatePositions()
     objects.contentArea.Position = Vector2.new(winX + 145, winY + 35)
     objects.contentArea.Size = Vector2.new(winW - 155, winH - 70)
 
-    -- Teks konten (di tengah area konten)
-    local contentX = winX + 145 + (winW - 155)/2 - 70
-    local contentY = winY + 35 + (winH - 70)/2 - 20
-    objects.contentText.Position = Vector2.new(contentX, contentY)
+    -- Elemen untuk menu Main
+    if objects.wsLabel then
+        objects.wsLabel.Position = Vector2.new(winX + 155, winY + 55)
+        objects.wsValue.Position = Vector2.new(winX + winW - 175, winY + 55)
+        
+        -- Slider track
+        objects.sliderTrack.Position = Vector2.new(winX + 155, winY + 90)
+        objects.sliderTrack.Size = Vector2.new(winW - 300, 8)
+        
+        -- Slider fill (ukuran proporsional)
+        local alpha = (currentWS - MIN_WS) / (MAX_WS - MIN_WS)
+        local fillWidth = (winW - 300) * alpha
+        objects.sliderFill.Position = Vector2.new(winX + 155, winY + 90)
+        objects.sliderFill.Size = Vector2.new(fillWidth, 8)
+        
+        -- Slider knob
+        local knobX = winX + 155 + fillWidth - 8
+        objects.sliderKnob.Position = Vector2.new(knobX, winY + 86)
+        objects.sliderKnob.Size = Vector2.new(16, 16)
+        
+        -- Tombol Inf Jump
+        objects.infJumpBtn.Position = Vector2.new(winX + 155, winY + 115)
+        objects.infJumpBtn.Size = Vector2.new(130, 30)
+        objects.infJumpText.Position = Vector2.new(winX + 165, winY + 120)
+        
+        -- Tombol Noclip
+        objects.noclipBtn.Position = Vector2.new(winX + 155 + 140, winY + 115)
+        objects.noclipBtn.Size = Vector2.new(130, 30)
+        objects.noclipText.Position = Vector2.new(winX + 165 + 140, winY + 120)
+    end
 
     -- Minimize box (jika di-minimize) dengan emoji
     objects.minimizeBox.Position = Vector2.new(winX, winY)
@@ -133,11 +169,53 @@ local function UpdatePositions()
     objects.minimizeText.Position = Vector2.new(winX + (minW/2) - 25, winY + (minH/2) - 10)
 end
 
--- Fungsi untuk mengubah konten berdasarkan menu yang dipilih
+-- Fungsi untuk mengatur visibilitas elemen menu
 local function SetMenu(menuIndex)
     currentMenu = menuIndex
-    local menuNames = {"Main", "Teleport", "Setting"}
-    objects.contentText.Text = "Ini adalah menu " .. menuNames[menuIndex] .. "\nKonten bisa ditambahkan nanti."
+
+    -- Sembunyikan semua konten spesifik menu
+    if objects.wsLabel then
+        objects.wsLabel.Visible = (menuIndex == 1)
+        objects.wsValue.Visible = (menuIndex == 1)
+        objects.sliderTrack.Visible = (menuIndex == 1)
+        objects.sliderFill.Visible = (menuIndex == 1)
+        objects.sliderKnob.Visible = (menuIndex == 1)
+        objects.infJumpBtn.Visible = (menuIndex == 1)
+        objects.infJumpText.Visible = (menuIndex == 1)
+        objects.noclipBtn.Visible = (menuIndex == 1)
+        objects.noclipText.Visible = (menuIndex == 1)
+    end
+
+    -- Untuk menu lain (Teleport, Setting) bisa ditambahkan nanti
+    if menuIndex == 1 then
+        objects.contentText.Text = "" -- kosong karena sudah ada elemen sendiri
+    elseif menuIndex == 2 then
+        objects.contentText.Text = "Menu Teleport\n(Coming Soon)"
+    elseif menuIndex == 3 then
+        objects.contentText.Text = "Menu Setting\n(Coming Soon)"
+    end
+end
+
+-- Fungsi untuk memperbarui slider berdasarkan nilai
+local function UpdateSliderFromValue(value)
+    currentWS = math.clamp(value, MIN_WS, MAX_WS)
+    local alpha = (currentWS - MIN_WS) / (MAX_WS - MIN_WS)
+    local trackWidth = winW - 300
+    local fillWidth = trackWidth * alpha
+    objects.sliderFill.Size = Vector2.new(fillWidth, 8)
+    local knobX = winX + 155 + fillWidth - 8
+    objects.sliderKnob.Position = Vector2.new(knobX, winY + 86)
+    objects.wsValue.Text = tostring(currentWS)
+end
+
+-- Fungsi untuk memperbarui slider berdasarkan posisi mouse
+local function UpdateSliderFromMouse(mouseX)
+    local trackX = winX + 155
+    local trackWidth = winW - 300
+    local relX = math.clamp(mouseX - trackX, 0, trackWidth)
+    local alpha = relX / trackWidth
+    local newValue = MIN_WS + alpha * (MAX_WS - MIN_WS)
+    UpdateSliderFromValue(newValue)
 end
 
 -- Fungsi untuk toggle minimize
@@ -162,6 +240,20 @@ local function ToggleMinimize()
     objects.divider.Visible = not isMinimized
     objects.contentArea.Visible = not isMinimized
     objects.contentText.Visible = not isMinimized
+
+    -- Konten menu Main
+    if objects.wsLabel then
+        objects.wsLabel.Visible = (not isMinimized and currentMenu == 1)
+        objects.wsValue.Visible = (not isMinimized and currentMenu == 1)
+        objects.sliderTrack.Visible = (not isMinimized and currentMenu == 1)
+        objects.sliderFill.Visible = (not isMinimized and currentMenu == 1)
+        objects.sliderKnob.Visible = (not isMinimized and currentMenu == 1)
+        objects.infJumpBtn.Visible = (not isMinimized and currentMenu == 1)
+        objects.infJumpText.Visible = (not isMinimized and currentMenu == 1)
+        objects.noclipBtn.Visible = (not isMinimized and currentMenu == 1)
+        objects.noclipText.Visible = (not isMinimized and currentMenu == 1)
+    end
+
     objects.minimizeBox.Visible = isMinimized
     objects.minimizeText.Visible = isMinimized
 end
@@ -171,7 +263,7 @@ local function CreateUI()
     -- Buat objek-objek utama
     objects.bg = NewDrawing("Square", {
         Filled = true,
-        Color = Color3.new(0.1, 0.1, 0.1), -- Hitam pekat (solid)
+        Color = Color3.new(0.1, 0.1, 0.1), -- Hitam pekat
         Transparency = 0,
         Visible = true,
         ZIndex = 1
@@ -247,22 +339,23 @@ local function CreateUI()
         ZIndex = 1
     })
     objects.minimizeText = NewDrawing("Text", {
-        Text = "✌︎㋡", -- Emoji peace dan smiley
+        Text = "✌︎㋡",
         Color = Color3.new(1, 1, 1),
         Size = 30,
         Center = true,
-        Font = 2, -- Bold, meski emoji mungkin tidak terpengaruh
+        Font = 2,
         Visible = false,
         ZIndex = 2
     })
     NewButton(objects.minimizeBox, function()
+        -- Klik pada minimize box akan membuka kembali (toggle)
         ToggleMinimize()
     end)
 
     -- Panel kiri (background menu)
     objects.leftPanel = NewDrawing("Square", {
         Filled = true,
-        Color = Color3.new(0.15, 0.15, 0.15), -- Sedikit lebih terang dari bg utama
+        Color = Color3.new(0.15, 0.15, 0.15),
         Transparency = 0,
         Visible = true,
         ZIndex = 2
@@ -281,7 +374,7 @@ local function CreateUI()
         Color = Color3.new(1, 1, 1),
         Size = 16,
         Center = false,
-        Font = 2, -- Bold
+        Font = 2,
         Visible = true,
         ZIndex = 4
     })
@@ -299,7 +392,7 @@ local function CreateUI()
         Color = Color3.new(1, 1, 1),
         Size = 16,
         Center = false,
-        Font = 2, -- Bold
+        Font = 2,
         Visible = true,
         ZIndex = 4
     })
@@ -317,7 +410,7 @@ local function CreateUI()
         Color = Color3.new(1, 1, 1),
         Size = 16,
         Center = false,
-        Font = 2, -- Bold
+        Font = 2,
         Visible = true,
         ZIndex = 4
     })
@@ -345,10 +438,101 @@ local function CreateUI()
         Color = Color3.new(1, 1, 1),
         Size = 16,
         Center = true,
-        Font = 2, -- Bold
+        Font = 2,
         Visible = true,
         ZIndex = 3
     })
+
+    -- Elemen untuk menu Main (akan disembunyikan jika menu lain)
+    objects.wsLabel = NewDrawing("Text", {
+        Text = "WalkSpeed",
+        Color = Color3.new(1, 1, 1),
+        Size = 16,
+        Font = 2,
+        Visible = false,
+        ZIndex = 3
+    })
+    objects.wsValue = NewDrawing("Text", {
+        Text = "30",
+        Color = Color3.new(0.8, 0.8, 1),
+        Size = 16,
+        Font = 2,
+        Visible = false,
+        ZIndex = 3
+    })
+
+    -- Slider track
+    objects.sliderTrack = NewDrawing("Square", {
+        Filled = true,
+        Color = Color3.new(0.3, 0.3, 0.3),
+        Transparency = 0,
+        Visible = false,
+        ZIndex = 3
+    })
+    -- Slider fill
+    objects.sliderFill = NewDrawing("Square", {
+        Filled = true,
+        Color = Color3.new(0.2, 0.6, 1),
+        Transparency = 0,
+        Visible = false,
+        ZIndex = 4
+    })
+    -- Slider knob
+    objects.sliderKnob = NewDrawing("Circle", {
+        Filled = true,
+        Color = Color3.new(1, 1, 1),
+        Radius = 8,
+        Visible = false,
+        ZIndex = 5
+    })
+
+    -- Tombol Inf Jump
+    objects.infJumpBtn = NewDrawing("Square", {
+        Filled = true,
+        Color = Color3.new(0.25, 0.25, 0.25),
+        Transparency = 0,
+        Visible = false,
+        ZIndex = 3
+    })
+    objects.infJumpText = NewDrawing("Text", {
+        Text = "Inf Jump: OFF",
+        Color = Color3.new(1, 1, 1),
+        Size = 14,
+        Font = 2,
+        Visible = false,
+        ZIndex = 4
+    })
+    NewButton(objects.infJumpBtn, function()
+        infJumpEnabled = not infJumpEnabled
+        local status = infJumpEnabled and "ON" or "OFF"
+        local color = infJumpEnabled and Color3.new(0.2, 0.8, 0.2) or Color3.new(0.25, 0.25, 0.25)
+        objects.infJumpBtn.Color = color
+        objects.infJumpText.Text = "Inf Jump: " .. status
+    end)
+
+    -- Tombol Noclip
+    objects.noclipBtn = NewDrawing("Square", {
+        Filled = true,
+        Color = Color3.new(0.25, 0.25, 0.25),
+        Transparency = 0,
+        Visible = false,
+        ZIndex = 3
+    })
+    objects.noclipText = NewDrawing("Text", {
+        Text = "Noclip: OFF",
+        Color = Color3.new(1, 1, 1),
+        Size = 14,
+        Font = 2,
+        Visible = false,
+        ZIndex = 4
+    })
+    NewButton(objects.noclipBtn, function()
+        noclipEnabled = not noclipEnabled
+        local status = noclipEnabled and "ON" or "OFF"
+        local color = noclipEnabled and Color3.new(0.2, 0.8, 0.2) or Color3.new(0.25, 0.25, 0.25)
+        objects.noclipBtn.Color = color
+        objects.noclipText.Text = "Noclip: " .. status
+    end)
 
     -- Set posisi awal
     UpdatePositions()
@@ -364,22 +548,33 @@ CreateUI()
 local function OnInputBegan(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         local mousePos = UserInputService:GetMouseLocation()
+
+        -- Cek tombol-tombol
         for _, btn in ipairs(buttons) do
             local area = btn.area
             if area.Visible then
                 local btnPos = area.Position
                 local btnSize = area.Size
-                if mousePos.X >= btnPos.X and mousePos.X <= btnPos.X + btnSize.X and
-                   mousePos.Y >= btnPos.Y and mousePos.Y <= btnPos.Y + btnSize.Y then
-                    btn.callback()
-                    break
+                -- Untuk Circle, deteksi jarak
+                if area == objects.sliderKnob then
+                    local dx = mousePos.X - btnPos.X
+                    local dy = mousePos.Y - btnPos.Y
+                    if dx*dx + dy*dy <= 8*8 then
+                        btn.callback()
+                        break
+                    end
+                else
+                    if mousePos.X >= btnPos.X and mousePos.X <= btnPos.X + btnSize.X and
+                       mousePos.Y >= btnPos.Y and mousePos.Y <= btnPos.Y + btnSize.Y then
+                        btn.callback()
+                        break
+                    end
                 end
             end
         end
 
-        -- Cek drag di title bar (hanya jika tidak minimize)
+        -- Cek drag di title bar atau minimize box
         if not isMinimized then
-            local mousePos = UserInputService:GetMouseLocation()
             local titleBar = objects.titleBar
             if mousePos.X >= titleBar.Position.X and mousePos.X <= titleBar.Position.X + titleBar.Size.X and
                mousePos.Y >= titleBar.Position.Y and mousePos.Y <= titleBar.Position.Y + titleBar.Size.Y then
@@ -387,31 +582,133 @@ local function OnInputBegan(input)
                 dragOffsetX = mousePos.X - winX
                 dragOffsetY = mousePos.Y - winY
             end
+        else
+            -- Jika minimized, drag dari minimize box
+            local minBox = objects.minimizeBox
+            if mousePos.X >= minBox.Position.X and mousePos.X <= minBox.Position.X + minBox.Size.X and
+               mousePos.Y >= minBox.Position.Y and mousePos.Y <= minBox.Position.Y + minBox.Size.Y then
+                isDragging = true
+                dragOffsetX = mousePos.X - winX
+                dragOffsetY = mousePos.Y - winY
+            end
+        end
+
+        -- Cek apakah klik di slider track/knob untuk memulai drag slider
+        if not isMinimized and currentMenu == 1 then
+            local track = objects.sliderTrack
+            local knob = objects.sliderKnob
+            if track.Visible then
+                -- Cek track
+                if mousePos.X >= track.Position.X and mousePos.X <= track.Position.X + track.Size.X and
+                   mousePos.Y >= track.Position.Y and mousePos.Y <= track.Position.Y + track.Size.Y then
+                    draggingSlider = true
+                    UpdateSliderFromMouse(mousePos.X)
+                end
+                -- Cek knob (lingkaran)
+                local dx = mousePos.X - knob.Position.X
+                local dy = mousePos.Y - knob.Position.Y
+                if dx*dx + dy*dy <= 8*8 then
+                    draggingSlider = true
+                end
+            end
         end
     end
 end
 
 local inputConn = UserInputService.InputBegan:Connect(OnInputBegan)
 
--- Loop untuk drag (RenderStepped lebih halus)
-local dragConn
-dragConn = RunService.RenderStepped:Connect(function()
+-- Handler untuk pergerakan mouse (drag slider)
+local inputChangedConn = UserInputService.InputChanged:Connect(function(input)
+    if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or
+                           input.UserInputType == Enum.UserInputType.Touch) then
+        local mousePos = UserInputService:GetMouseLocation()
+        UpdateSliderFromMouse(mousePos.X)
+    end
+end)
+
+local inputEndedConn = UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        draggingSlider = false
+    end
+end)
+
+-- Loop untuk drag window
+local dragConn = RunService.RenderStepped:Connect(function()
     if isDragging then
         local mousePos = UserInputService:GetMouseLocation()
         winX = mousePos.X - dragOffsetX
         winY = mousePos.Y - dragOffsetY
         UpdatePositions()
 
-        -- Jika mouse dilepas, stop drag
         if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
             isDragging = false
         end
     end
 end)
 
+-- Fungsi untuk mendapatkan humanoid (dari contoh)
+local function waitForHumanoid()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:FindFirstChildWhichIsA("Humanoid")
+    while not hum do
+        char = player.Character or player.CharacterAdded:Wait()
+        hum = char:FindFirstChildWhichIsA("Humanoid")
+        task.wait(0.05)
+    end
+    return hum
+end
+
+-- Loop untuk WalkSpeed
+task.spawn(function()
+    local hum = waitForHumanoid()
+    player.CharacterAdded:Connect(function()
+        hum = waitForHumanoid()
+    end)
+    while _G.AzkaUI do
+        if hum and hum.Parent then
+            hum.WalkSpeed = currentWS
+        else
+            hum = waitForHumanoid()
+        end
+        task.wait(0.01)
+    end
+end)
+
+-- Inf Jump
+task.spawn(function()
+    local hum = waitForHumanoid()
+    player.CharacterAdded:Connect(function()
+        hum = waitForHumanoid()
+    end)
+    UserInputService.JumpRequest:Connect(function()
+        if infJumpEnabled and hum and hum.Parent then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            hum.Jump = true
+        end
+    end)
+end)
+
+-- Noclip
+task.spawn(function()
+    while _G.AzkaUI do
+        if noclipEnabled then
+            local char = player.Character
+            if char then
+                for _, obj in ipairs(char:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        obj.CanCollide = false
+                    end
+                end
+            end
+        end
+        RunService.Stepped:Wait()
+    end
+end)
+
 -- Simpan koneksi untuk cleanup
 _G.AzkaUI.Cleanup = Cleanup
-_G.AzkaUI.Connections = {inputConn, dragConn}
+_G.AzkaUI.Connections = {inputConn, inputChangedConn, inputEndedConn, dragConn}
 
 -- Notifikasi
 print("Azka UI berhasil dimuat. Tekan X untuk menutup.")
