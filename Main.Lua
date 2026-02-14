@@ -1,647 +1,610 @@
---[[
-    Azka UI - Script GUI Modern dengan Fitur WalkSpeed, Inf Jump, Noclip
-    Dilengkapi dengan menu drag, minimize, dan toggle.
-    Semua teks menggunakan huruf tebal (GothamBold).
-    Dapat dijalankan di executor Roblox.
-]]
+-- Script untuk Delta Executor - GUI Panel "AzkaUI" dengan fitur Cleanup
+-- Ditempatkan di CoreGui, dengan nama "AzkaUI"
+-- Menyediakan _G.AzkaUI.Cleanup() untuk menghancurkan GUI dan membersihkan koneksi
 
--- Hapus GUI lama jika sudah ada
-local guiName = "AzkaUI"
-local coreGui = game:GetService("CoreGui")
-local existing = coreGui:FindFirstChild(guiName)
-if existing then
-    existing:Destroy()
+-- =====================================================
+-- 1. Inisialisasi dan Cleanup GUI lama
+-- =====================================================
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- Hapus GUI lama jika ada
+local existingGui = CoreGui:FindFirstChild("AzkaUI")
+if existingGui then
+    existingGui:Destroy()
 end
 
--- Layanan yang diperlukan
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService") -- opsional
+-- Jika sudah ada _G.AzkaUI, hapus (cleanup lama)
+if _G.AzkaUI and type(_G.AzkaUI) == "table" and _G.AzkaUI.Cleanup then
+    _G.AzkaUI.Cleanup()
+end
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+-- =====================================================
+-- 2. Membuat GUI baru
+-- =====================================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AzkaUI"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = CoreGui
 
--- Variabel global untuk cleanup
-_G.AzkaUI = {}
+-- Variabel global untuk menyimpan state dan koneksi
+local isMinimized = false
+local mainFrame
+local miniFrame
+local currentMenu = "Main"
+local walkSpeedValue = 16
+local infJumpEnabled = false
+local noclipEnabled = false
 
--- Fungsi untuk membuat GUI utama
-local function createUI()
-    -- ScreenGui utama
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = guiName
-    screenGui.Parent = coreGui
-    screenGui.IgnoreGuiInset = true
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- Tabel untuk menyimpan semua koneksi agar bisa dibersihkan
+local connections = {}
 
-    -- Panel utama
-    local mainPanel = Instance.new("Frame")
-    mainPanel.Name = "MainPanel"
-    mainPanel.Size = UDim2.new(0, 600, 0, 450)
-    mainPanel.Position = UDim2.new(0.5, -300, 0.4, -225) -- tengah
-    mainPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 25) -- #141419
-    mainPanel.BorderSizePixel = 0
-    mainPanel.Parent = screenGui
+-- Fungsi untuk menambah koneksi ke tabel
+local function addConnection(conn)
+    table.insert(connections, conn)
+end
 
-    -- Sudut membulat panel utama
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 12)
-    mainCorner.Parent = mainPanel
+-- =====================================================
+-- 3. Fungsi untuk membuat frame utama
+-- =====================================================
+local function createMainFrame()
+    local frame = Instance.new("Frame")
+    frame.Name = "MainFrame"
+    frame.Size = UDim2.new(0, 600, 0, 450)
+    frame.Position = UDim2.new(0.5, -300, 0.5, -225)
+    frame.BackgroundColor3 = Color3.fromHex("#141419")
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromHex("#5080FF")
+    frame.ClipsDescendants = false
+    frame.Parent = screenGui
 
-    -- Stroke biru
-    local mainStroke = Instance.new("UIStroke")
-    mainStroke.Color = Color3.fromRGB(80, 128, 255) -- #5080FF
-    mainStroke.Thickness = 2
-    mainStroke.Parent = mainPanel
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = frame
 
-    -- Title Bar
+    -- Title bar
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
     titleBar.Size = UDim2.new(1, 0, 0, 36)
-    titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45) -- #23232D
+    titleBar.BackgroundColor3 = Color3.fromHex("#23232D")
     titleBar.BorderSizePixel = 0
-    titleBar.Parent = mainPanel
+    titleBar.Parent = frame
 
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 12)
-    titleCorner.Parent = titleBar
-    -- Hanya sudut atas yang membulat, tapi kita akan biarkan seperti itu karena bawahnya tertutup panel
-
-    -- Teks judul
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Name = "TitleLabel"
     titleLabel.Size = UDim2.new(0, 200, 1, 0)
     titleLabel.Position = UDim2.new(0, 10, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = "Script BY Azka"
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextSize = 18
     titleLabel.TextColor3 = Color3.new(1, 1, 1)
+    titleLabel.TextSize = 18
+    titleLabel.Font = Enum.Font.GothamBold
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = titleBar
 
-    -- Tombol Close (X)
+    -- Tombol close
     local closeBtn = Instance.new("TextButton")
     closeBtn.Name = "CloseButton"
-    closeBtn.Size = UDim2.new(0, 30, 0, 24)
-    closeBtn.Position = UDim2.new(1, -35, 0.5, -12)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- #C83232
+    closeBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeBtn.Position = UDim2.new(1, -35, 0.5, -15)
+    closeBtn.BackgroundColor3 = Color3.fromHex("#C83232")
     closeBtn.Text = "X"
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 16
     closeBtn.TextColor3 = Color3.new(1, 1, 1)
+    closeBtn.TextSize = 18
+    closeBtn.Font = Enum.Font.GothamBold
     closeBtn.AutoButtonColor = false
     closeBtn.Parent = titleBar
 
     local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 8)
+    closeCorner.CornerRadius = UDim.new(0, 6)
     closeCorner.Parent = closeBtn
 
-    -- Tombol Minimize (-)
+    -- Tombol minimize
     local minBtn = Instance.new("TextButton")
     minBtn.Name = "MinimizeButton"
-    minBtn.Size = UDim2.new(0, 30, 0, 24)
-    minBtn.Position = UDim2.new(1, -70, 0.5, -12)
-    minBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 180) -- #4646B4
+    minBtn.Size = UDim2.new(0, 30, 0, 30)
+    minBtn.Position = UDim2.new(1, -70, 0.5, -15)
+    minBtn.BackgroundColor3 = Color3.fromHex("#4646B4")
     minBtn.Text = "-"
-    minBtn.Font = Enum.Font.GothamBold
-    minBtn.TextSize = 20
     minBtn.TextColor3 = Color3.new(1, 1, 1)
+    minBtn.TextSize = 24
+    minBtn.Font = Enum.Font.GothamBold
     minBtn.AutoButtonColor = false
     minBtn.Parent = titleBar
 
     local minCorner = Instance.new("UICorner")
-    minCorner.CornerRadius = UDim.new(0, 8)
+    minCorner.CornerRadius = UDim.new(0, 6)
     minCorner.Parent = minBtn
 
-    -- Panel Kiri (Menu)
+    -- Panel kiri
     local leftPanel = Instance.new("Frame")
     leftPanel.Name = "LeftPanel"
     leftPanel.Size = UDim2.new(0, 130, 0, 380)
-    leftPanel.Position = UDim2.new(0, 10, 0, 46)
-    leftPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 38) -- #1E1E26
+    leftPanel.Position = UDim2.new(0, 10, 0, 50)
+    leftPanel.BackgroundColor3 = Color3.fromHex("#1E1E26")
     leftPanel.BorderSizePixel = 0
-    leftPanel.Parent = mainPanel
+    leftPanel.Parent = frame
 
     local leftCorner = Instance.new("UICorner")
     leftCorner.CornerRadius = UDim.new(0, 10)
     leftCorner.Parent = leftPanel
 
     -- Tombol Main
-    local mainBtn = Instance.new("TextButton")
-    mainBtn.Name = "MainButton"
-    mainBtn.Size = UDim2.new(1, -20, 0, 40)
-    mainBtn.Position = UDim2.new(0, 10, 0, 10)
-    mainBtn.BackgroundColor3 = Color3.fromRGB(70, 100, 200) -- biru aktif
-    mainBtn.Text = "Main"
-    mainBtn.Font = Enum.Font.GothamBold
-    mainBtn.TextSize = 16
-    mainBtn.TextColor3 = Color3.new(1, 1, 1)
-    mainBtn.AutoButtonColor = false
-    mainBtn.Parent = leftPanel
+    local btnMain = Instance.new("TextButton")
+    btnMain.Name = "MenuMain"
+    btnMain.Size = UDim2.new(0, 110, 0, 40)
+    btnMain.Position = UDim2.new(0, 10, 0, 10)
+    btnMain.BackgroundColor3 = Color3.fromHex("#4664C8")
+    btnMain.Text = "Main"
+    btnMain.TextColor3 = Color3.new(1, 1, 1)
+    btnMain.TextSize = 16
+    btnMain.Font = Enum.Font.GothamBold
+    btnMain.AutoButtonColor = false
+    btnMain.Parent = leftPanel
 
-    local mainBtnCorner = Instance.new("UICorner")
-    mainBtnCorner.CornerRadius = UDim.new(0, 8)
-    mainBtnCorner.Parent = mainBtn
+    local btnMainCorner = Instance.new("UICorner")
+    btnMainCorner.CornerRadius = UDim.new(0, 6)
+    btnMainCorner.Parent = btnMain
 
     -- Tombol Teleport
-    local teleportBtn = Instance.new("TextButton")
-    teleportBtn.Name = "TeleportButton"
-    teleportBtn.Size = UDim2.new(1, -20, 0, 40)
-    teleportBtn.Position = UDim2.new(0, 10, 0, 60)
-    teleportBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60) -- abu-abu #32323C
-    teleportBtn.Text = "Teleport"
-    teleportBtn.Font = Enum.Font.GothamBold
-    teleportBtn.TextSize = 16
-    teleportBtn.TextColor3 = Color3.new(1, 1, 1)
-    teleportBtn.AutoButtonColor = false
-    teleportBtn.Parent = leftPanel
+    local btnTele = Instance.new("TextButton")
+    btnTele.Name = "MenuTeleport"
+    btnTele.Size = UDim2.new(0, 110, 0, 40)
+    btnTele.Position = UDim2.new(0, 10, 0, 60)
+    btnTele.BackgroundColor3 = Color3.fromHex("#32323C")
+    btnTele.Text = "Teleport"
+    btnTele.TextColor3 = Color3.new(1, 1, 1)
+    btnTele.TextSize = 16
+    btnTele.Font = Enum.Font.GothamBold
+    btnTele.AutoButtonColor = false
+    btnTele.Parent = leftPanel
 
-    local teleportCorner = Instance.new("UICorner")
-    teleportCorner.CornerRadius = UDim.new(0, 8)
-    teleportCorner.Parent = teleportBtn
+    local btnTeleCorner = Instance.new("UICorner")
+    btnTeleCorner.CornerRadius = UDim.new(0, 6)
+    btnTeleCorner.Parent = btnTele
 
     -- Tombol Setting
-    local settingBtn = Instance.new("TextButton")
-    settingBtn.Name = "SettingButton"
-    settingBtn.Size = UDim2.new(1, -20, 0, 40)
-    settingBtn.Position = UDim2.new(0, 10, 0, 110)
-    settingBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-    settingBtn.Text = "Setting"
-    settingBtn.Font = Enum.Font.GothamBold
-    settingBtn.TextSize = 16
-    settingBtn.TextColor3 = Color3.new(1, 1, 1)
-    settingBtn.AutoButtonColor = false
-    settingBtn.Parent = leftPanel
+    local btnSet = Instance.new("TextButton")
+    btnSet.Name = "MenuSetting"
+    btnSet.Size = UDim2.new(0, 110, 0, 40)
+    btnSet.Position = UDim2.new(0, 10, 0, 110)
+    btnSet.BackgroundColor3 = Color3.fromHex("#32323C")
+    btnSet.Text = "Setting"
+    btnSet.TextColor3 = Color3.new(1, 1, 1)
+    btnSet.TextSize = 16
+    btnSet.Font = Enum.Font.GothamBold
+    btnSet.AutoButtonColor = false
+    btnSet.Parent = leftPanel
 
-    local settingCorner = Instance.new("UICorner")
-    settingCorner.CornerRadius = UDim.new(0, 8)
-    settingCorner.Parent = settingBtn
+    local btnSetCorner = Instance.new("UICorner")
+    btnSetCorner.CornerRadius = UDim.new(0, 6)
+    btnSetCorner.Parent = btnSet
 
-    -- Garis pemisah vertikal
-    local divider = Instance.new("Frame")
-    divider.Name = "Divider"
-    divider.Size = UDim2.new(0, 2, 0, 350)
-    divider.Position = UDim2.new(0, 145, 0, 50)
-    divider.BackgroundColor3 = Color3.new(1, 1, 1)
-    divider.BorderSizePixel = 0
-    divider.Parent = mainPanel
+    -- Garis pemisah
+    local separator = Instance.new("Frame")
+    separator.Name = "Separator"
+    separator.Size = UDim2.new(0, 2, 0, 350)
+    separator.Position = UDim2.new(0, 145, 0, 50)
+    separator.BackgroundColor3 = Color3.new(1, 1, 1)
+    separator.BorderSizePixel = 0
+    separator.Parent = frame
 
-    -- Panel Kanan (Konten)
+    -- Panel kanan
     local rightPanel = Instance.new("Frame")
     rightPanel.Name = "RightPanel"
     rightPanel.Size = UDim2.new(0, 430, 0, 380)
-    rightPanel.Position = UDim2.new(0, 155, 0, 46)
-    rightPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 32) -- #191920
+    rightPanel.Position = UDim2.new(0, 155, 0, 50)
+    rightPanel.BackgroundColor3 = Color3.fromHex("#191920")
     rightPanel.BorderSizePixel = 0
-    rightPanel.Parent = mainPanel
+    rightPanel.Parent = frame
 
     local rightCorner = Instance.new("UICorner")
     rightCorner.CornerRadius = UDim.new(0, 10)
     rightCorner.Parent = rightPanel
 
-    -- Frame konten Main
-    local mainContent = Instance.new("Frame")
-    mainContent.Name = "MainContent"
-    mainContent.Size = UDim2.new(1, 0, 1, 0)
-    mainContent.BackgroundTransparency = 1
-    mainContent.Visible = true
-    mainContent.Parent = rightPanel
+    -- Konten Main
+    local contentMain = Instance.new("Frame")
+    contentMain.Name = "ContentMain"
+    contentMain.Size = UDim2.new(1, -20, 1, -20)
+    contentMain.Position = UDim2.new(0, 10, 0, 10)
+    contentMain.BackgroundTransparency = 1
+    contentMain.Visible = (currentMenu == "Main")
+    contentMain.Parent = rightPanel
 
-    -- Frame konten Teleport (placeholder)
-    local teleportContent = Instance.new("Frame")
-    teleportContent.Name = "TeleportContent"
-    teleportContent.Size = UDim2.new(1, 0, 1, 0)
-    teleportContent.BackgroundTransparency = 1
-    teleportContent.Visible = false
-    teleportContent.Parent = rightPanel
-
-    local teleportLabel = Instance.new("TextLabel")
-    teleportLabel.Size = UDim2.new(1, 0, 1, 0)
-    teleportLabel.BackgroundTransparency = 1
-    teleportLabel.Text = "Menu Teleport (Coming Soon)"
-    teleportLabel.Font = Enum.Font.GothamBold
-    teleportLabel.TextSize = 18
-    teleportLabel.TextColor3 = Color3.new(1, 1, 1)
-    teleportLabel.Parent = teleportContent
-
-    -- Frame konten Setting (placeholder)
-    local settingContent = Instance.new("Frame")
-    settingContent.Name = "SettingContent"
-    settingContent.Size = UDim2.new(1, 0, 1, 0)
-    settingContent.BackgroundTransparency = 1
-    settingContent.Visible = false
-    settingContent.Parent = rightPanel
-
-    local settingLabel = Instance.new("TextLabel")
-    settingLabel.Size = UDim2.new(1, 0, 1, 0)
-    settingLabel.BackgroundTransparency = 1
-    settingLabel.Text = "Menu Setting (Coming Soon)"
-    settingLabel.Font = Enum.Font.GothamBold
-    settingLabel.TextSize = 18
-    settingLabel.TextColor3 = Color3.new(1, 1, 1)
-    settingLabel.Parent = settingContent
-
-    -- Konten Main: WalkSpeed Label
     local wsLabel = Instance.new("TextLabel")
     wsLabel.Name = "WSLabel"
-    wsLabel.Size = UDim2.new(0, 200, 0, 30)
-    wsLabel.Position = UDim2.new(0, 10, 0, 10)
+    wsLabel.Size = UDim2.new(0, 150, 0, 30)
+    wsLabel.Position = UDim2.new(0, 0, 0, 0)
     wsLabel.BackgroundTransparency = 1
     wsLabel.Text = "WalkSpeed"
-    wsLabel.Font = Enum.Font.GothamBold
-    wsLabel.TextSize = 18
     wsLabel.TextColor3 = Color3.new(1, 1, 1)
+    wsLabel.TextSize = 18
+    wsLabel.Font = Enum.Font.GothamBold
     wsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    wsLabel.Parent = mainContent
+    wsLabel.Parent = contentMain
 
-    -- Nilai WalkSpeed
     local wsValue = Instance.new("TextLabel")
     wsValue.Name = "WSValue"
     wsValue.Size = UDim2.new(0, 50, 0, 30)
-    wsValue.Position = UDim2.new(1, -60, 0, 10)
+    wsValue.Position = UDim2.new(1, -60, 0, 0)
     wsValue.BackgroundTransparency = 1
-    wsValue.Text = "30"
-    wsValue.Font = Enum.Font.GothamBold
+    wsValue.Text = tostring(walkSpeedValue)
+    wsValue.TextColor3 = Color3.fromHex("#508CFF")
     wsValue.TextSize = 18
-    wsValue.TextColor3 = Color3.fromRGB(100, 180, 255) -- biru muda
+    wsValue.Font = Enum.Font.GothamBold
     wsValue.TextXAlignment = Enum.TextXAlignment.Right
-    wsValue.Parent = mainContent
+    wsValue.Parent = contentMain
 
-    -- Slider Track
     local sliderTrack = Instance.new("Frame")
     sliderTrack.Name = "SliderTrack"
-    sliderTrack.Size = UDim2.new(0, 380, 0, 8)
-    sliderTrack.Position = UDim2.new(0, 10, 0, 50)
-    sliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 70) -- #3C3C46
+    sliderTrack.Size = UDim2.new(1, -20, 0, 6)
+    sliderTrack.Position = UDim2.new(0, 0, 0, 40)
+    sliderTrack.BackgroundColor3 = Color3.fromHex("#3C3C46")
     sliderTrack.BorderSizePixel = 0
-    sliderTrack.Parent = mainContent
+    sliderTrack.Parent = contentMain
 
-    local trackCorner = Instance.new("UICorner")
-    trackCorner.CornerRadius = UDim.new(0, 4)
-    trackCorner.Parent = sliderTrack
+    local sliderTrackCorner = Instance.new("UICorner")
+    sliderTrackCorner.CornerRadius = UDim.new(1, 0)
+    sliderTrackCorner.Parent = sliderTrack
 
-    -- Slider Fill
     local sliderFill = Instance.new("Frame")
     sliderFill.Name = "SliderFill"
-    sliderFill.Size = UDim2.new(0, 190, 1, 0) -- 50% dari 380 (nilai awal 30 dari range 30-100 -> 0% di 30, 100% di 100, jadi untuk 30 -> 0%)
-    -- Namun kita ingin slider menunjukkan nilai relatif: 30 adalah minimum, jadi fill 0%. Maka kita hitung: (nilai - min)/(max-min) * lebar
-    sliderFill.BackgroundColor3 = Color3.fromRGB(80, 140, 255) -- #508CFF
+    sliderFill.Size = UDim2.new((walkSpeedValue - 16) / (100 - 16), 0, 1, 0)
+    sliderFill.BackgroundColor3 = Color3.fromHex("#508CFF")
     sliderFill.BorderSizePixel = 0
     sliderFill.Parent = sliderTrack
 
     local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 4)
+    fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = sliderFill
 
-    -- Slider Knob
-    local sliderKnob = Instance.new("Frame")
-    sliderKnob.Name = "SliderKnob"
-    sliderKnob.Size = UDim2.new(0, 18, 0, 18)
-    sliderKnob.Position = UDim2.new(0, 190 - 9, 0, -5) -- tengah fill
-    sliderKnob.BackgroundColor3 = Color3.new(1, 1, 1)
-    sliderKnob.BorderSizePixel = 0
-    sliderKnob.Parent = sliderTrack
+    local knob = Instance.new("ImageButton")
+    knob.Name = "Knob"
+    knob.Size = UDim2.new(0, 16, 0, 16)
+    knob.Position = UDim2.new((walkSpeedValue - 16) / (100 - 16), -8, 0.5, -8)
+    knob.BackgroundColor3 = Color3.new(1, 1, 1)
+    knob.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    knob.ImageTransparency = 1
+    knob.BorderSizePixel = 0
+    knob.Parent = sliderTrack
 
     local knobCorner = Instance.new("UICorner")
-    knobCorner.CornerRadius = UDim.new(1, 0) -- lingkaran
-    knobCorner.Parent = sliderKnob
+    knobCorner.CornerRadius = UDim.new(1, 0)
+    knobCorner.Parent = knob
 
-    -- Tombol Inf Jump
-    local infJumpBtn = Instance.new("TextButton")
-    infJumpBtn.Name = "InfJumpButton"
-    infJumpBtn.Size = UDim2.new(0, 160, 0, 40)
-    infJumpBtn.Position = UDim2.new(0, 10, 0, 80)
-    infJumpBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70) -- abu-abu
-    infJumpBtn.Text = "Inf Jump: OFF"
-    infJumpBtn.Font = Enum.Font.GothamBold
-    infJumpBtn.TextSize = 16
-    infJumpBtn.TextColor3 = Color3.new(1, 1, 1)
-    infJumpBtn.AutoButtonColor = false
-    infJumpBtn.Parent = mainContent
+    local infBtn = Instance.new("TextButton")
+    infBtn.Name = "InfJumpBtn"
+    infBtn.Size = UDim2.new(0, 160, 0, 40)
+    infBtn.Position = UDim2.new(0, 0, 0, 80)
+    infBtn.BackgroundColor3 = Color3.fromHex("#32323C")
+    infBtn.Text = "Inf Jump: OFF"
+    infBtn.TextColor3 = Color3.new(1, 1, 1)
+    infBtn.TextSize = 16
+    infBtn.Font = Enum.Font.GothamBold
+    infBtn.AutoButtonColor = false
+    infBtn.Parent = contentMain
 
     local infCorner = Instance.new("UICorner")
     infCorner.CornerRadius = UDim.new(0, 8)
-    infCorner.Parent = infJumpBtn
+    infCorner.Parent = infBtn
 
-    -- Tombol Noclip
     local noclipBtn = Instance.new("TextButton")
-    noclipBtn.Name = "NoclipButton"
+    noclipBtn.Name = "NoclipBtn"
     noclipBtn.Size = UDim2.new(0, 160, 0, 40)
     noclipBtn.Position = UDim2.new(0, 190, 0, 80)
-    noclipBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    noclipBtn.BackgroundColor3 = Color3.fromHex("#32323C")
     noclipBtn.Text = "Noclip: OFF"
-    noclipBtn.Font = Enum.Font.GothamBold
-    noclipBtn.TextSize = 16
     noclipBtn.TextColor3 = Color3.new(1, 1, 1)
+    noclipBtn.TextSize = 16
+    noclipBtn.Font = Enum.Font.GothamBold
     noclipBtn.AutoButtonColor = false
-    noclipBtn.Parent = mainContent
+    noclipBtn.Parent = contentMain
 
     local noclipCorner = Instance.new("UICorner")
     noclipCorner.CornerRadius = UDim.new(0, 8)
     noclipCorner.Parent = noclipBtn
 
-    -- Frame kecil untuk minimize
-    local miniFrame = Instance.new("Frame")
-    miniFrame.Name = "MiniFrame"
-    miniFrame.Size = UDim2.new(0, 40, 0, 40)
-    miniFrame.Position = mainPanel.Position -- ikuti posisi panel utama
-    miniFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    miniFrame.BorderSizePixel = 0
-    miniFrame.Visible = false
-    miniFrame.Parent = screenGui
+    -- Konten Teleport (placeholder)
+    local contentTele = Instance.new("Frame")
+    contentTele.Name = "ContentTeleport"
+    contentTele.Size = UDim2.new(1, -20, 1, -20)
+    contentTele.Position = UDim2.new(0, 10, 0, 10)
+    contentTele.BackgroundTransparency = 1
+    contentTele.Visible = (currentMenu == "Teleport")
+    contentTele.Parent = rightPanel
 
-    local miniCorner = Instance.new("UICorner")
-    miniCorner.CornerRadius = UDim.new(0, 8)
-    miniCorner.Parent = miniFrame
+    local teleLabel = Instance.new("TextLabel")
+    teleLabel.Size = UDim2.new(1, 0, 1, 0)
+    teleLabel.BackgroundTransparency = 1
+    teleLabel.Text = "Coming Soon"
+    teleLabel.TextColor3 = Color3.new(1, 1, 1)
+    teleLabel.TextSize = 24
+    teleLabel.Font = Enum.Font.GothamBold
+    teleLabel.Parent = contentTele
 
-    local miniStroke = Instance.new("UIStroke")
-    miniStroke.Color = Color3.fromRGB(80, 128, 255)
-    miniStroke.Thickness = 2
-    miniStroke.Parent = miniFrame
+    -- Konten Setting (placeholder)
+    local contentSet = Instance.new("Frame")
+    contentSet.Name = "ContentSetting"
+    contentSet.Size = UDim2.new(1, -20, 1, -20)
+    contentSet.Position = UDim2.new(0, 10, 0, 10)
+    contentSet.BackgroundTransparency = 1
+    contentSet.Visible = (currentMenu == "Setting")
+    contentSet.Parent = rightPanel
 
-    local miniIcon = Instance.new("TextLabel")
-    miniIcon.Name = "MiniIcon"
-    miniIcon.Size = UDim2.new(1, 0, 1, 0)
-    miniIcon.BackgroundTransparency = 1
-    miniIcon.Text = "☰"
-    miniIcon.Font = Enum.Font.GothamBold
-    miniIcon.TextSize = 24
-    miniIcon.TextColor3 = Color3.new(1, 1, 1)
-    miniIcon.Parent = miniFrame
+    local setLabel = Instance.new("TextLabel")
+    setLabel.Size = UDim2.new(1, 0, 1, 0)
+    setLabel.BackgroundTransparency = 1
+    setLabel.Text = "Coming Soon"
+    setLabel.TextColor3 = Color3.new(1, 1, 1)
+    setLabel.TextSize = 24
+    setLabel.Font = Enum.Font.GothamBold
+    setLabel.Parent = contentSet
 
-    -- Variabel state
-    local isMinimized = false
-    local dragActive = false
-    local dragStartPos, dragStartMouse
-    local currentMenu = "Main" -- Main, Teleport, Setting
-    local infJumpEnabled = false
-    local noclipEnabled = false
-    local wsValueNum = 30
+    -- =====================================================
+    -- Fungsi internal dan koneksi
+    -- =====================================================
+    local function setActiveMenu(menuName)
+        currentMenu = menuName
+        btnMain.BackgroundColor3 = (menuName == "Main") and Color3.fromHex("#4664C8") or Color3.fromHex("#32323C")
+        btnTele.BackgroundColor3 = (menuName == "Teleport") and Color3.fromHex("#4664C8") or Color3.fromHex("#32323C")
+        btnSet.BackgroundColor3 = (menuName == "Setting") and Color3.fromHex("#4664C8") or Color3.fromHex("#32323C")
+        contentMain.Visible = (menuName == "Main")
+        contentTele.Visible = (menuName == "Teleport")
+        contentSet.Visible = (menuName == "Setting")
+    end
 
-    -- Fungsi untuk memperbarui tampilan slider
-    local function updateSliderFromValue(value)
-        value = math.clamp(value, 30, 100)
-        wsValueNum = value
+    -- Koneksi tombol menu
+    addConnection(btnMain.MouseButton1Click:Connect(function() setActiveMenu("Main") end))
+    addConnection(btnTele.MouseButton1Click:Connect(function() setActiveMenu("Teleport") end))
+    addConnection(btnSet.MouseButton1Click:Connect(function() setActiveMenu("Setting") end))
+
+    -- Fungsi slider
+    local function updateSlider(value)
+        value = math.clamp(value, 16, 100)
+        walkSpeedValue = value
         wsValue.Text = tostring(math.floor(value))
-        -- Hitung lebar fill: (value - 30) / (100 - 30) * 380
-        local fillWidth = (value - 30) / 70 * 380
-        sliderFill.Size = UDim2.new(0, fillWidth, 1, 0)
-        sliderKnob.Position = UDim2.new(0, fillWidth - 9, 0, -5)
-    end
-
-    updateSliderFromValue(30)
-
-    -- Fungsi untuk mengubah WalkSpeed humanoid
-    local function setWalkSpeed(speed)
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = speed
-            end
+        local percent = (value - 16) / (100 - 16)
+        sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+        knob.Position = UDim2.new(percent, -8, 0.5, -8)
+        -- Terapkan ke player jika ada
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.WalkSpeed = value
         end
     end
 
-    -- Loop untuk WalkSpeed agar selalu sinkron (meskipun diubah game)
-    task.spawn(function()
-        while screenGui and screenGui.Parent do
-            task.wait(0.1)
-            if not isMinimized then
-                setWalkSpeed(wsValueNum)
-            end
+    -- Drag slider
+    local dragging = false
+    addConnection(knob.MouseButton1Down:Connect(function()
+        dragging = true
+    end))
+    addConnection(UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
         end
-    end)
-
-    -- Inf Jump logic
-    local jumpConnection
-    local function enableInfJump(enable)
-        if enable then
-            if jumpConnection then jumpConnection:Disconnect() end
-            jumpConnection = UserInputService.JumpRequest:Connect(function()
-                local char = player.Character
-                if char then
-                    local humanoid = char:FindFirstChildOfClass("Humanoid")
-                    if humanoid then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                end
-            end)
-        else
-            if jumpConnection then
-                jumpConnection:Disconnect()
-                jumpConnection = nil
-            end
+    end))
+    addConnection(UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local localPos = sliderTrack.AbsolutePosition
+            local sizeX = sliderTrack.AbsoluteSize.X
+            local mouseX = mouse.X
+            local relX = math.clamp(mouseX - localPos.X, 0, sizeX)
+            local newVal = 16 + (relX / sizeX) * (100 - 16)
+            updateSlider(newVal)
         end
-    end
+    end))
 
-    -- Noclip logic
-    local noclipLoop
-    local function enableNoclip(enable)
-        if enable then
-            if noclipLoop then noclipLoop:Disconnect() end
-            noclipLoop = RunService.Stepped:Connect(function()
-                local char = player.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end)
-        else
-            if noclipLoop then
-                noclipLoop:Disconnect()
-                noclipLoop = nil
-            end
-        end
-    end
+    updateSlider(walkSpeedValue)
 
-    -- Fungsi untuk mereset saat karakter respawn
-    local function onCharacterAdded(newChar)
-        character = newChar
-        -- Terapkan WalkSpeed
-        setWalkSpeed(wsValueNum)
-        -- Terapkan noclip jika aktif
-        if noclipEnabled then
-            enableNoclip(true)
-        end
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
-
-    -- Tombol Inf Jump
-    infJumpBtn.MouseButton1Click:Connect(function()
+    -- Inf Jump
+    local jumpConn
+    addConnection(infBtn.MouseButton1Click:Connect(function()
         infJumpEnabled = not infJumpEnabled
         if infJumpEnabled then
-            infJumpBtn.BackgroundColor3 = Color3.fromRGB(30, 120, 30) -- hijau #1E781E
-            infJumpBtn.Text = "Inf Jump: ON"
+            infBtn.BackgroundColor3 = Color3.fromHex("#1E781E")
+            infBtn.Text = "Inf Jump: ON"
+            if not jumpConn then
+                jumpConn = UserInputService.JumpRequest:Connect(function()
+                    if infJumpEnabled and player.Character and player.Character:FindFirstChild("Humanoid") then
+                        player.Character.Humanoid:ChangeState("Jumping")
+                    end
+                end)
+                addConnection(jumpConn)
+            end
         else
-            infJumpBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-            infJumpBtn.Text = "Inf Jump: OFF"
+            infBtn.BackgroundColor3 = Color3.fromHex("#32323C")
+            infBtn.Text = "Inf Jump: OFF"
+            if jumpConn then
+                jumpConn:Disconnect()
+                jumpConn = nil
+                -- Hapus dari tabel connections jika ada
+                for i, conn in ipairs(connections) do
+                    if conn == jumpConn then
+                        table.remove(connections, i)
+                        break
+                    end
+                end
+            end
         end
-        enableInfJump(infJumpEnabled)
-    end)
+    end))
 
-    -- Tombol Noclip
-    noclipBtn.MouseButton1Click:Connect(function()
+    -- Noclip
+    local noclipSteppedConn
+    addConnection(noclipBtn.MouseButton1Click:Connect(function()
         noclipEnabled = not noclipEnabled
         if noclipEnabled then
-            noclipBtn.BackgroundColor3 = Color3.fromRGB(30, 120, 30)
+            noclipBtn.BackgroundColor3 = Color3.fromHex("#1E781E")
             noclipBtn.Text = "Noclip: ON"
+            if not noclipSteppedConn then
+                noclipSteppedConn = game:GetService("RunService").Stepped:Connect(function()
+                    if noclipEnabled and player.Character then
+                        for _, part in pairs(player.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
+                addConnection(noclipSteppedConn)
+            end
         else
-            noclipBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+            noclipBtn.BackgroundColor3 = Color3.fromHex("#32323C")
             noclipBtn.Text = "Noclip: OFF"
+            if noclipSteppedConn then
+                noclipSteppedConn:Disconnect()
+                noclipSteppedConn = nil
+                for i, conn in ipairs(connections) do
+                    if conn == noclipSteppedConn then
+                        table.remove(connections, i)
+                        break
+                    end
+                end
+            end
         end
-        enableNoclip(noclipEnabled)
-    end)
+    end))
 
-    -- Fungsi untuk mengganti menu
-    local function setMenu(menu)
-        currentMenu = menu
-        -- Update visibilitas konten
-        mainContent.Visible = (menu == "Main")
-        teleportContent.Visible = (menu == "Teleport")
-        settingContent.Visible = (menu == "Setting")
+    -- Drag utama pada title bar
+    local dragToggle = false
+    local dragStart = nil
+    local framePos = nil
 
-        -- Update warna tombol
-        mainBtn.BackgroundColor3 = (menu == "Main") and Color3.fromRGB(70, 100, 200) or Color3.fromRGB(50, 50, 60)
-        teleportBtn.BackgroundColor3 = (menu == "Teleport") and Color3.fromRGB(70, 100, 200) or Color3.fromRGB(50, 50, 60)
-        settingBtn.BackgroundColor3 = (menu == "Setting") and Color3.fromRGB(70, 100, 200) or Color3.fromRGB(50, 50, 60)
-    end
-
-    mainBtn.MouseButton1Click:Connect(function() setMenu("Main") end)
-    teleportBtn.MouseButton1Click:Connect(function() setMenu("Teleport") end)
-    settingBtn.MouseButton1Click:Connect(function() setMenu("Setting") end)
-
-    -- Minimize function
-    minBtn.MouseButton1Click:Connect(function()
-        isMinimized = true
-        mainPanel.Visible = false
-        miniFrame.Visible = true
-        miniFrame.Position = mainPanel.Position
-    end)
-
-    miniFrame.MouseButton1Click:Connect(function()
-        isMinimized = false
-        mainPanel.Visible = true
-        miniFrame.Visible = false
-        mainPanel.Position = miniFrame.Position
-    end)
-
-    -- Close function
-    closeBtn.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-        if _G.AzkaUI and _G.AzkaUI.cleanup then
-            _G.AzkaUI.cleanup()
-        end
-    end)
-
-    -- Drag functionality untuk mainPanel (via title bar)
-    local function startDrag(frame, hit)
-        if hit and hit:IsDescendantOf(titleBar) then
-            dragActive = true
-            dragStartPos = frame.Position
-            dragStartMouse = UserInputService:GetMouseLocation()
+    local function startDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = true
+            dragStart = input.Position
+            framePos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
+                end
+            end)
         end
     end
 
-    local function updateDrag(frame)
-        if dragActive then
-            local mousePos = UserInputService:GetMouseLocation()
-            local delta = mousePos - dragStartMouse
-            local newPos = UDim2.new(
-                dragStartPos.X.Scale,
-                dragStartPos.X.Offset + delta.X,
-                dragStartPos.Y.Scale,
-                dragStartPos.Y.Offset + delta.Y
-            )
+    local function updateDrag(input)
+        if dragToggle and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            local newPos = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
             frame.Position = newPos
         end
     end
 
-    local function stopDrag()
-        dragActive = false
+    addConnection(titleBar.InputBegan:Connect(startDrag))
+    addConnection(UserInputService.InputChanged:Connect(updateDrag))
+
+    -- Tombol close
+    addConnection(closeBtn.MouseButton1Click:Connect(function()
+        _G.AzkaUI.Cleanup() -- panggil cleanup global
+    end))
+
+    -- Tombol minimize
+    addConnection(minBtn.MouseButton1Click:Connect(function()
+        isMinimized = true
+        frame.Visible = false
+        createMiniFrame()
+    end))
+
+    return frame
+end
+
+-- =====================================================
+-- 4. Fungsi untuk membuat frame kecil (minimized)
+-- =====================================================
+local function createMiniFrame()
+    if miniFrame and miniFrame.Parent then
+        miniFrame:Destroy()
     end
+    miniFrame = Instance.new("Frame")
+    miniFrame.Name = "MiniFrame"
+    miniFrame.Size = UDim2.new(0, 40, 0, 40)
+    miniFrame.Position = UDim2.new(1, -50, 0, 50)
+    miniFrame.BackgroundColor3 = Color3.fromHex("#141419")
+    miniFrame.BorderSizePixel = 2
+    miniFrame.BorderColor3 = Color3.fromHex("#5080FF")
+    miniFrame.Parent = screenGui
 
-    -- Input events
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = miniFrame
+
+    local icon = Instance.new("TextLabel")
+    icon.Name = "Icon"
+    icon.Size = UDim2.new(1, 0, 1, 0)
+    icon.BackgroundTransparency = 1
+    icon.Text = "☰"
+    icon.TextColor3 = Color3.new(1, 1, 1)
+    icon.TextSize = 24
+    icon.Font = Enum.Font.GothamBold
+    icon.Parent = miniFrame
+
+    -- Drag mini frame
+    local dragToggle = false
+    local dragStart = nil
+    local framePos = nil
+
+    local function startDrag(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if not isMinimized then
-                startDrag(mainPanel, input)
-            else
-                startDrag(miniFrame, input)
-            end
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            if not isMinimized then
-                updateDrag(mainPanel)
-            else
-                updateDrag(miniFrame)
-            end
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            stopDrag()
-        end
-    end)
-
-    -- Slider logic
-    local function updateSliderFromMouse(input)
-        local mousePos = UserInputService:GetMouseLocation()
-        local absPos = sliderTrack.AbsolutePosition
-        local absSize = sliderTrack.AbsoluteSize
-        local relativeX = mousePos.X - absPos.X
-        relativeX = math.clamp(relativeX, 0, absSize.X)
-        local value = 30 + (relativeX / absSize.X) * 70
-        value = math.floor(value + 0.5) -- pembulatan ke integer terdekat
-        updateSliderFromValue(value)
-        setWalkSpeed(value)
-    end
-
-    sliderTrack.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            updateSliderFromMouse(input)
-        end
-    end)
-
-    sliderKnob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local conn
-            conn = UserInputService.InputChanged:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseMovement then
-                    updateSliderFromMouse(inp)
-                end
-            end)
-            UserInputService.InputEnded:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-                    conn:Disconnect()
+            dragToggle = true
+            dragStart = input.Position
+            framePos = miniFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
                 end
             end)
         end
-    end)
-
-    -- Simpan fungsi cleanup
-    function _G.AzkaUI.cleanup()
-        if jumpConnection then jumpConnection:Disconnect() end
-        if noclipLoop then noclipLoop:Disconnect() end
-        if screenGui then screenGui:Destroy() end
     end
 
-    return screenGui
+    local function updateDrag(input)
+        if dragToggle and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            local newPos = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+            miniFrame.Position = newPos
+        end
+    end
+
+    addConnection(miniFrame.InputBegan:Connect(startDrag))
+    addConnection(UserInputService.InputChanged:Connect(updateDrag))
+
+    -- Klik untuk restore (dengan deteksi bukan drag)
+    addConnection(miniFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            task.wait(0.2)
+            if not dragToggle then
+                isMinimized = false
+                miniFrame:Destroy()
+                if mainFrame then
+                    mainFrame.Visible = true
+                end
+            end
+        end
+    end))
 end
 
--- Jalankan pembuatan GUI
-local success, err = pcall(createUI)
-if not success then
-    warn("Gagal membuat GUI:", err)
-end
+-- =====================================================
+-- 5. Membuat GUI dan mendefinisikan Cleanup
+-- =====================================================
+mainFrame = createMainFrame()
+
+-- Definisikan _G.AzkaUI dengan fungsi Cleanup
+_G.AzkaUI = {
+    Cleanup = function()
+        -- Hancurkan semua koneksi
+        for _, conn in ipairs(connections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        connections = {}
+        -- Hancurkan GUI
+        if screenGui and screenGui.Parent then
+            screenGui:Destroy()
+        end
+        -- Hapus referensi
+        mainFrame = nil
+        miniFrame = nil
+        _G.AzkaUI = nil
+    end
+}
