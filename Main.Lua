@@ -1,6 +1,5 @@
--- Script untuk Delta Executor - GUI Panel "AzkaUI" dengan fitur Lengkap
--- Warna biru diubah menjadi ungu (#8A2BE2)
--- Ditempatkan di CoreGui, dengan nama "AzkaUI"
+-- Script untuk Delta Executor - GUI Panel "AzkaUI" dengan perbaikan lengkap
+-- Semua border ungu menyambung, freecam diperbaiki, infinite zoom, dll.
 
 -- =====================================================
 -- 1. Inisialisasi dan Cleanup GUI lama
@@ -45,7 +44,7 @@ local isMinimized = false
 local mainFrame
 local miniFrame
 local currentMenu = "Main"
-local currentTeleportSubMenu = "Custom" -- "Custom" atau "Player"
+local currentTeleportSubMenu = "Custom"
 
 -- Variabel untuk WalkSpeed & Boost
 local walkSpeedValue = 30
@@ -58,7 +57,7 @@ end
 local infJumpEnabled = false
 local noclipEnabled = false
 local instantProximityEnabled = false
-local unlockCameraEnabled = false
+local infiniteZoomEnabled = false
 local godModeEnabled = false
 local freecamEnabled = false
 local lockPositionEnabled = false
@@ -73,6 +72,12 @@ local freecamKeys = {
     W = false, A = false, S = false, D = false,
     Space = false, Ctrl = false, Shift = false
 }
+local originalCameraSubject = nil
+local originalCameraType = nil
+
+-- Camera teleport mode
+local cameraFollowTarget = nil
+local cameraFollowConnection = nil
 
 -- Saved positions
 local savedPositions = {}
@@ -102,11 +107,46 @@ local function makeRounded(frame, radius)
     corner.Parent = frame
 end
 
--- Fungsi untuk membuat switch toggle
-local function createSwitch(parent, posX, posY, initialState, callback)
+-- Fungsi untuk membuat border di semua sisi
+local function addFullBorder(frame, color, thickness)
+    -- Border atas
+    local topBorder = Instance.new("Frame")
+    topBorder.Size = UDim2.new(1, 0, 0, thickness)
+    topBorder.Position = UDim2.new(0, 0, 0, 0)
+    topBorder.BackgroundColor3 = color
+    topBorder.BorderSizePixel = 0
+    topBorder.Parent = frame
+    
+    -- Border bawah
+    local bottomBorder = Instance.new("Frame")
+    bottomBorder.Size = UDim2.new(1, 0, 0, thickness)
+    bottomBorder.Position = UDim2.new(0, 0, 1, -thickness)
+    bottomBorder.BackgroundColor3 = color
+    bottomBorder.BorderSizePixel = 0
+    bottomBorder.Parent = frame
+    
+    -- Border kiri
+    local leftBorder = Instance.new("Frame")
+    leftBorder.Size = UDim2.new(0, thickness, 1, -thickness*2)
+    leftBorder.Position = UDim2.new(0, 0, 0, thickness)
+    leftBorder.BackgroundColor3 = color
+    leftBorder.BorderSizePixel = 0
+    leftBorder.Parent = frame
+    
+    -- Border kanan
+    local rightBorder = Instance.new("Frame")
+    rightBorder.Size = UDim2.new(0, thickness, 1, -thickness*2)
+    rightBorder.Position = UDim2.new(1, -thickness, 0, thickness)
+    rightBorder.BackgroundColor3 = color
+    rightBorder.BorderSizePixel = 0
+    rightBorder.Parent = frame
+end
+
+-- Fungsi untuk membuat switch toggle (di pojok kanan)
+local function createSwitch(parent, posY, initialState, callback)
     local switchFrame = Instance.new("Frame")
     switchFrame.Size = UDim2.new(0, 50, 0, 24)
-    switchFrame.Position = UDim2.new(0, posX, 0, posY)
+    switchFrame.Position = UDim2.new(1, -60, 0, posY)
     switchFrame.BackgroundColor3 = initialState and COLOR_PURPLE or Color3.fromHex("#32323C")
     switchFrame.BorderSizePixel = 0
     switchFrame.Parent = parent
@@ -138,7 +178,181 @@ local function createSwitch(parent, posX, posY, initialState, callback)
 end
 
 -- =====================================================
--- 4. Membuat frame utama
+-- 4. Freecam Functions (Fixed)
+-- =====================================================
+function startFreecam()
+    if freecamActive then return end
+    freecamActive = true
+    
+    -- Simpan state asli
+    originalCameraType = Camera.CameraType
+    originalCameraSubject = Camera.CameraSubject
+    
+    -- Anchor karakter
+    local character = player.Character
+    if character and character.PrimaryPart then
+        character.PrimaryPart.Anchored = true
+    end
+    
+    -- Set kamera
+    freecamCamera.CFrame = Camera.CFrame
+    freecamCamera.Parent = screenGui
+    Camera.CameraType = Enum.CameraType.Scriptable
+    Camera.CameraSubject = nil
+    Camera.CFrame = freecamCamera.CFrame
+    
+    freecamConnection = RunService.RenderStepped:Connect(function()
+        if not freecamActive then return end
+        
+        local moveVector = Vector3.new()
+        if freecamKeys.W then moveVector = moveVector + freecamCamera.CFrame.LookVector end
+        if freecamKeys.S then moveVector = moveVector - freecamCamera.CFrame.LookVector end
+        if freecamKeys.A then moveVector = moveVector - freecamCamera.CFrame.RightVector end
+        if freecamKeys.D then moveVector = moveVector + freecamCamera.CFrame.RightVector end
+        if freecamKeys.Space then moveVector = moveVector + Vector3.new(0, 1, 0) end
+        if freecamKeys.Ctrl then moveVector = moveVector + Vector3.new(0, -1, 0) end
+        
+        local speed = freecamKeys.Shift and freecamShiftSpeed or freecamSpeed
+        if moveVector.Magnitude > 0 then
+            freecamCamera.CFrame = freecamCamera.CFrame + moveVector * speed * RunService.RenderStepped.DeltaTime
+            Camera.CFrame = freecamCamera.CFrame
+        end
+    end)
+end
+
+function stopFreecam()
+    if not freecamActive then return end
+    freecamActive = false
+    
+    -- Unanchor karakter
+    local character = player.Character
+    if character and character.PrimaryPart then
+        character.PrimaryPart.Anchored = false
+    end
+    
+    if freecamConnection then
+        freecamConnection:Disconnect()
+        freecamConnection = nil
+    end
+    
+    -- Kembalikan kamera ke state semula
+    Camera.CameraType = originalCameraType or Enum.CameraType.Custom
+    Camera.CameraSubject = originalCameraSubject
+    freecamCamera.Parent = nil
+end
+
+-- Camera follow function
+function startCameraFollow(target)
+    if cameraFollowConnection then
+        cameraFollowConnection:Disconnect()
+    end
+    
+    -- Simpan state asli
+    originalCameraType = Camera.CameraType
+    originalCameraSubject = Camera.CameraSubject
+    
+    -- Set kamera untuk follow
+    Camera.CameraType = Enum.CameraType.Scriptable
+    Camera.CameraSubject = nil
+    
+    cameraFollowTarget = target
+    cameraFollowConnection = RunService.RenderStepped:Connect(function()
+        if target and target.Character and target.Character.PrimaryPart then
+            local targetPos = target.Character.PrimaryPart.Position
+            Camera.CFrame = CFrame.new(targetPos, targetPos + Camera.CFrame.LookVector)
+        end
+    end)
+end
+
+function stopCameraFollow()
+    if cameraFollowConnection then
+        cameraFollowConnection:Disconnect()
+        cameraFollowConnection = nil
+    end
+    cameraFollowTarget = nil
+    Camera.CameraType = originalCameraType or Enum.CameraType.Custom
+    Camera.CameraSubject = originalCameraSubject
+end
+
+-- Keyboard handling for freecam
+addConnection(UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not freecamActive or gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then freecamKeys.W = true
+    elseif input.KeyCode == Enum.KeyCode.A then freecamKeys.A = true
+    elseif input.KeyCode == Enum.KeyCode.S then freecamKeys.S = true
+    elseif input.KeyCode == Enum.KeyCode.D then freecamKeys.D = true
+    elseif input.KeyCode == Enum.KeyCode.Space then freecamKeys.Space = true
+    elseif input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then freecamKeys.Ctrl = true
+    elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then freecamKeys.Shift = true
+    end
+end))
+
+addConnection(UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if not freecamActive or gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then freecamKeys.W = false
+    elseif input.KeyCode == Enum.KeyCode.A then freecamKeys.A = false
+    elseif input.KeyCode == Enum.KeyCode.S then freecamKeys.S = false
+    elseif input.KeyCode == Enum.KeyCode.D then freecamKeys.D = false
+    elseif input.KeyCode == Enum.KeyCode.Space then freecamKeys.Space = false
+    elseif input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then freecamKeys.Ctrl = false
+    elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then freecamKeys.Shift = false
+    end
+end))
+
+-- =====================================================
+-- 5. Infinite Zoom
+-- =====================================================
+addConnection(RunService.RenderStepped:Connect(function()
+    if infiniteZoomEnabled then
+        Camera.MaxZoomDistance = math.huge
+        Camera.MinZoomDistance = 0.5
+    else
+        Camera.MaxZoomDistance = 400
+        Camera.MinZoomDistance = 0.5
+    end
+end))
+
+-- =====================================================
+-- 6. Inf Jump Fix
+-- =====================================================
+addConnection(UserInputService.JumpRequest:Connect(function()
+    if infJumpEnabled and player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid:ChangeState("Jumping")
+    end
+end))
+
+-- =====================================================
+-- 7. God Mode Fix
+-- =====================================================
+local function applyGodMode(character)
+    if not character then return end
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.MaxHealth = math.huge
+        humanoid.Health = math.huge
+        humanoid.BreakJointsOnDeath = false
+    end
+end
+
+player.CharacterAdded:Connect(function(character)
+    if godModeEnabled then
+        applyGodMode(character)
+    end
+end)
+
+addConnection(RunService.Stepped:Connect(function()
+    if godModeEnabled and player.Character and player.Character:FindFirstChild("Humanoid") then
+        local humanoid = player.Character.Humanoid
+        humanoid.MaxHealth = math.huge
+        if humanoid.Health < humanoid.MaxHealth then
+            humanoid.Health = humanoid.MaxHealth
+        end
+        humanoid.BreakJointsOnDeath = false
+    end
+end))
+
+-- =====================================================
+-- 8. Membuat frame utama dengan border lengkap
 -- =====================================================
 local function createMainFrame()
     local frame = Instance.new("Frame")
@@ -146,16 +360,19 @@ local function createMainFrame()
     frame.Size = UDim2.new(0, 600, 0, 450)
     frame.Position = UDim2.new(0.5, -300, 0.5, -225)
     frame.BackgroundColor3 = COLOR_BG_DARK
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = COLOR_PURPLE
+    frame.BorderSizePixel = 0 -- Nonaktifkan border default
     frame.ClipsDescendants = false
     frame.Parent = screenGui
     makeRounded(frame, 12)
+    
+    -- Tambah border ungu menyambung di semua sisi
+    addFullBorder(frame, COLOR_PURPLE, 2)
 
     -- Title bar
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 36)
+    titleBar.Size = UDim2.new(1, -4, 0, 36) -- Kurangi untuk border
+    titleBar.Position = UDim2.new(0, 2, 0, 2)
     titleBar.BackgroundColor3 = Color3.fromHex("#23232D")
     titleBar.BorderSizePixel = 0
     titleBar.Parent = frame
@@ -201,16 +418,16 @@ local function createMainFrame()
     minBtn.Parent = titleBar
     makeRounded(minBtn, 6)
 
-    -- Panel kiri dengan garis pembatas di semua sisi
+    -- Panel kiri dengan border ungu
     local leftPanel = Instance.new("Frame")
     leftPanel.Name = "LeftPanel"
     leftPanel.Size = UDim2.new(0, 130, 0, 380)
-    leftPanel.Position = UDim2.new(0, 10, 0, 50)
+    leftPanel.Position = UDim2.new(0, 12, 0, 52)
     leftPanel.BackgroundColor3 = COLOR_PANEL_DARK
-    leftPanel.BorderSizePixel = 2
-    leftPanel.BorderColor3 = COLOR_PURPLE
+    leftPanel.BorderSizePixel = 0
     leftPanel.Parent = frame
     makeRounded(leftPanel, 10)
+    addFullBorder(leftPanel, COLOR_PURPLE, 2)
 
     local btnMain = Instance.new("TextButton")
     btnMain.Name = "MenuMain"
@@ -251,25 +468,16 @@ local function createMainFrame()
     btnSet.Parent = leftPanel
     makeRounded(btnSet, 6)
 
-    -- Garis pemisah vertikal (UNGU)
-    local separator = Instance.new("Frame")
-    separator.Name = "Separator"
-    separator.Size = UDim2.new(0, 2, 0, 350)
-    separator.Position = UDim2.new(0, 145, 0, 50)
-    separator.BackgroundColor3 = COLOR_PURPLE
-    separator.BorderSizePixel = 0
-    separator.Parent = frame
-
-    -- Panel kanan dengan garis pembatas di semua sisi
+    -- Panel kanan dengan border ungu
     local rightPanel = Instance.new("Frame")
     rightPanel.Name = "RightPanel"
     rightPanel.Size = UDim2.new(0, 430, 0, 380)
-    rightPanel.Position = UDim2.new(0, 155, 0, 50)
+    rightPanel.Position = UDim2.new(0, 157, 0, 52)
     rightPanel.BackgroundColor3 = COLOR_CONTENT_DARK
-    rightPanel.BorderSizePixel = 2
-    rightPanel.BorderColor3 = COLOR_PURPLE
+    rightPanel.BorderSizePixel = 0
     rightPanel.Parent = frame
     makeRounded(rightPanel, 10)
+    addFullBorder(rightPanel, COLOR_PURPLE, 2)
 
     -- =====================================================
     -- KONTEN MAIN
@@ -295,7 +503,7 @@ local function createMainFrame()
         wsTitle.Position = UDim2.new(0, 0, 0, yPos)
         wsTitle.BackgroundTransparency = 1
         wsTitle.Text = "WalkSpeed"
-        wsTitle.TextColor3 = Color3.new(1, 1, 1)
+        wsTitle.TextColor3 = COLOR_PURPLE
         wsTitle.TextSize = 18
         wsTitle.Font = Enum.Font.GothamBold
         wsTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -319,10 +527,10 @@ local function createMainFrame()
         wsTrack.Size = UDim2.new(1, -20, 0, 6)
         wsTrack.Position = UDim2.new(0, 0, 0, yPos)
         wsTrack.BackgroundColor3 = Color3.fromHex("#3C3C46")
-        wsTrack.BorderSizePixel = 2
-        wsTrack.BorderColor3 = COLOR_PURPLE
+        wsTrack.BorderSizePixel = 0
         wsTrack.Parent = contentMain
         makeRounded(wsTrack, 3)
+        addFullBorder(wsTrack, COLOR_PURPLE, 1)
 
         local wsFill = Instance.new("Frame")
         wsFill.Name = "WSFill"
@@ -339,7 +547,7 @@ local function createMainFrame()
         wsKnob.BackgroundColor3 = Color3.new(1, 1, 1)
         wsKnob.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
         wsKnob.ImageTransparency = 1
-        wsKnob.BorderSizePixel = 2
+        wsKnob.BorderSizePixel = 1
         wsKnob.BorderColor3 = COLOR_PURPLE
         wsKnob.Parent = wsTrack
         makeCircular(wsKnob)
@@ -352,7 +560,7 @@ local function createMainFrame()
         boostTitle.Position = UDim2.new(0, 0, 0, yPos)
         boostTitle.BackgroundTransparency = 1
         boostTitle.Text = "Boost"
-        boostTitle.TextColor3 = Color3.new(1, 1, 1)
+        boostTitle.TextColor3 = COLOR_PURPLE
         boostTitle.TextSize = 18
         boostTitle.Font = Enum.Font.GothamBold
         boostTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -376,7 +584,7 @@ local function createMainFrame()
         totalSpeedLabel.Text = "Total: " .. getEffectiveWalkSpeed()
         totalSpeedLabel.TextColor3 = COLOR_PURPLE
         totalSpeedLabel.TextSize = 14
-        totalSpeedLabel.Font = Enum.Font.Gotham
+        totalSpeedLabel.Font = Enum.Font.GothamBold
         totalSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
         totalSpeedLabel.Parent = contentMain
 
@@ -387,10 +595,10 @@ local function createMainFrame()
         boostTrack.Size = UDim2.new(1, -20, 0, 6)
         boostTrack.Position = UDim2.new(0, 0, 0, yPos)
         boostTrack.BackgroundColor3 = Color3.fromHex("#3C3C46")
-        boostTrack.BorderSizePixel = 2
-        boostTrack.BorderColor3 = COLOR_PURPLE
+        boostTrack.BorderSizePixel = 0
         boostTrack.Parent = contentMain
         makeRounded(boostTrack, 3)
+        addFullBorder(boostTrack, COLOR_PURPLE, 1)
 
         local boostFill = Instance.new("Frame")
         boostFill.Name = "BoostFill"
@@ -407,19 +615,19 @@ local function createMainFrame()
         boostKnob.BackgroundColor3 = Color3.new(1, 1, 1)
         boostKnob.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
         boostKnob.ImageTransparency = 1
-        boostKnob.BorderSizePixel = 2
+        boostKnob.BorderSizePixel = 1
         boostKnob.BorderColor3 = COLOR_PURPLE
         boostKnob.Parent = boostTrack
         makeCircular(boostKnob)
 
         yPos = yPos + 25
 
-        -- Fitur-fitur dengan Switch
+        -- Fitur-fitur dengan Switch di pojok kanan
         local features = {
             {name = "Inf Jump", y = yPos},
             {name = "Noclip", y = yPos + 35},
             {name = "Instant Proximity", y = yPos + 70},
-            {name = "Unlock Camera", y = yPos + 105},
+            {name = "Infinite Zoom", y = yPos + 105},
             {name = "God Mode", y = yPos + 140},
             {name = "Freecam", y = yPos + 175},
             {name = "Lock Position", y = yPos + 210}
@@ -427,46 +635,42 @@ local function createMainFrame()
 
         for _, feat in ipairs(features) do
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0, 150, 0, 30)
+            label.Size = UDim2.new(0, 200, 0, 30)
             label.Position = UDim2.new(0, 0, 0, feat.y)
             label.BackgroundTransparency = 1
             label.Text = feat.name
-            label.TextColor3 = Color3.new(1, 1, 1)
+            label.TextColor3 = COLOR_PURPLE
             label.TextSize = 16
-            label.Font = Enum.Font.Gotham
+            label.Font = Enum.Font.GothamBold
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.Parent = contentMain
         end
 
-        -- Switches
-        local infSwitch = createSwitch(contentMain, 250, yPos, infJumpEnabled, function(state)
+        -- Switches di pojok kanan
+        local infSwitch = createSwitch(contentMain, yPos, infJumpEnabled, function(state)
             infJumpEnabled = state
         end)
 
-        local noclipSwitch = createSwitch(contentMain, 250, yPos + 35, noclipEnabled, function(state)
+        local noclipSwitch = createSwitch(contentMain, yPos + 35, noclipEnabled, function(state)
             noclipEnabled = state
         end)
 
-        local proxSwitch = createSwitch(contentMain, 250, yPos + 70, instantProximityEnabled, function(state)
+        local proxSwitch = createSwitch(contentMain, yPos + 70, instantProximityEnabled, function(state)
             instantProximityEnabled = state
         end)
 
-        local unlockSwitch = createSwitch(contentMain, 250, yPos + 105, unlockCameraEnabled, function(state)
-            unlockCameraEnabled = state
-            if state then
-                Camera.MaxZoomDistance = math.huge
-                Camera.MinZoomDistance = 0.5
-            else
-                Camera.MaxZoomDistance = 400
-                Camera.MinZoomDistance = 0.5
+        local zoomSwitch = createSwitch(contentMain, yPos + 105, infiniteZoomEnabled, function(state)
+            infiniteZoomEnabled = state
+        end)
+
+        local godSwitch = createSwitch(contentMain, yPos + 140, godModeEnabled, function(state)
+            godModeEnabled = state
+            if state and player.Character then
+                applyGodMode(player.Character)
             end
         end)
 
-        local godSwitch = createSwitch(contentMain, 250, yPos + 140, godModeEnabled, function(state)
-            godModeEnabled = state
-        end)
-
-        local freecamSwitch = createSwitch(contentMain, 250, yPos + 175, freecamEnabled, function(state)
+        local freecamSwitch = createSwitch(contentMain, yPos + 175, freecamEnabled, function(state)
             freecamEnabled = state
             if state then
                 startFreecam()
@@ -475,7 +679,7 @@ local function createMainFrame()
             end
         end)
 
-        local lockSwitch = createSwitch(contentMain, 250, yPos + 210, lockPositionEnabled, function(state)
+        local lockSwitch = createSwitch(contentMain, yPos + 210, lockPositionEnabled, function(state)
             lockPositionEnabled = state
         end)
 
@@ -500,7 +704,6 @@ local function createMainFrame()
             end
         end))
 
-        -- Click to set
         addConnection(wsTrack.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 local localPos = wsTrack.AbsolutePosition
@@ -615,6 +818,7 @@ local function createMainFrame()
     saveNameBox.Text = ""
     saveNameBox.BackgroundColor3 = Color3.fromHex("#32323C")
     saveNameBox.TextColor3 = Color3.new(1, 1, 1)
+    saveNameBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
     saveNameBox.Parent = customContent
     makeRounded(saveNameBox, 6)
 
@@ -628,16 +832,16 @@ local function createMainFrame()
     makeRounded(saveBtn, 6)
 
     local posList = Instance.new("ScrollingFrame")
-    posList.Size = UDim2.new(1, 0, 0, 200)
+    posList.Size = UDim2.new(1, 0, 0, 280)
     posList.Position = UDim2.new(0, 0, 0, 50)
     posList.BackgroundColor3 = Color3.fromHex("#32323C")
-    posList.BorderSizePixel = 2
-    posList.BorderColor3 = COLOR_PURPLE
+    posList.BorderSizePixel = 0
     posList.CanvasSize = UDim2.new(0, 0, 0, 0)
     posList.ScrollBarThickness = 6
     posList.ScrollBarImageColor3 = COLOR_PURPLE
     posList.Parent = customContent
     makeRounded(posList, 6)
+    addFullBorder(posList, COLOR_PURPLE, 1)
 
     local function updatePosList()
         for _, child in ipairs(posList:GetChildren()) do
@@ -646,46 +850,91 @@ local function createMainFrame()
         local y = 0
         for name, pos in pairs(savedPositions) do
             local item = Instance.new("Frame")
-            item.Size = UDim2.new(1, -10, 0, 30)
+            item.Size = UDim2.new(1, -10, 0, 40)
             item.Position = UDim2.new(0, 5, 0, y)
             item.BackgroundColor3 = Color3.fromHex("#1E1E26")
-            item.BorderSizePixel = 2
-            item.BorderColor3 = COLOR_PURPLE
+            item.BorderSizePixel = 0
             item.Parent = posList
             makeRounded(item, 4)
+            addFullBorder(item, COLOR_PURPLE, 1)
 
             local nameLabel = Instance.new("TextLabel")
-            nameLabel.Size = UDim2.new(0, 150, 1, 0)
-            nameLabel.Position = UDim2.new(0, 5, 0, 0)
+            nameLabel.Size = UDim2.new(0, 150, 0, 20)
+            nameLabel.Position = UDim2.new(0, 5, 0, 2)
             nameLabel.BackgroundTransparency = 1
             nameLabel.Text = name
-            nameLabel.TextColor3 = Color3.new(1, 1, 1)
+            nameLabel.TextColor3 = COLOR_PURPLE
+            nameLabel.TextSize = 16
+            nameLabel.Font = Enum.Font.GothamBold
             nameLabel.TextXAlignment = Enum.TextXAlignment.Left
             nameLabel.Parent = item
 
+            -- Switch untuk camera only
+            local camSwitch = Instance.new("Frame")
+            camSwitch.Size = UDim2.new(0, 40, 0, 20)
+            camSwitch.Position = UDim2.new(1, -200, 0.5, -10)
+            camSwitch.BackgroundColor3 = Color3.fromHex("#32323C")
+            camSwitch.BorderSizePixel = 0
+            camSwitch.Parent = item
+            makeRounded(camSwitch, 10)
+
+            local camKnob = Instance.new("Frame")
+            camKnob.Size = UDim2.new(0, 16, 0, 16)
+            camKnob.Position = UDim2.new(0, 2, 0.5, -8)
+            camKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+            camKnob.BorderSizePixel = 0
+            camKnob.Parent = camSwitch
+            makeCircular(camKnob)
+
+            local camSwitchState = false
+            local camSwitchBtn = Instance.new("TextButton")
+            camSwitchBtn.Size = UDim2.new(1, 0, 1, 0)
+            camSwitchBtn.BackgroundTransparency = 1
+            camSwitchBtn.Text = ""
+            camSwitchBtn.Parent = camSwitch
+
+            addConnection(camSwitchBtn.MouseButton1Click:Connect(function()
+                camSwitchState = not camSwitchState
+                camSwitch.BackgroundColor3 = camSwitchState and COLOR_PURPLE or Color3.fromHex("#32323C")
+                camKnob:TweenPosition(camSwitchState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8), "Out", "Linear", 0.1)
+            end))
+
+            -- Tombol Teleport
             local tpBtn = Instance.new("TextButton")
-            tpBtn.Size = UDim2.new(0, 60, 0, 20)
-            tpBtn.Position = UDim2.new(1, -125, 0.5, -10)
+            tpBtn.Size = UDim2.new(0, 70, 0, 25)
+            tpBtn.Position = UDim2.new(1, -125, 0.5, -12.5)
             tpBtn.BackgroundColor3 = COLOR_PURPLE
-            tpBtn.Text = "TP"
+            tpBtn.Text = "Teleport"
             tpBtn.TextColor3 = Color3.new(1, 1, 1)
             tpBtn.TextSize = 12
+            tpBtn.Font = Enum.Font.GothamBold
             tpBtn.Parent = item
             makeRounded(tpBtn, 4)
 
+            -- Tombol Delete
             local delBtn = Instance.new("TextButton")
-            delBtn.Size = UDim2.new(0, 60, 0, 20)
-            delBtn.Position = UDim2.new(1, -60, 0.5, -10)
+            delBtn.Size = UDim2.new(0, 50, 0, 25)
+            delBtn.Position = UDim2.new(1, -50, 0.5, -12.5)
             delBtn.BackgroundColor3 = Color3.fromHex("#C83232")
-            delBtn.Text = "Del"
+            delBtn.Text = "Delete"
             delBtn.TextColor3 = Color3.new(1, 1, 1)
             delBtn.TextSize = 12
+            delBtn.Font = Enum.Font.GothamBold
             delBtn.Parent = item
             makeRounded(delBtn, 4)
 
             addConnection(tpBtn.MouseButton1Click:Connect(function()
                 if player.Character and player.Character.PrimaryPart then
-                    player.Character.PrimaryPart.CFrame = pos
+                    if camSwitchState then
+                        -- Camera only teleport
+                        stopFreecam()
+                        stopCameraFollow()
+                        Camera.CFrame = CFrame.new(pos.Position, pos.Position + Camera.CFrame.LookVector)
+                        Camera.CameraType = Enum.CameraType.Scriptable
+                    else
+                        -- Full teleport
+                        player.Character.PrimaryPart.CFrame = pos
+                    end
                 end
             end))
 
@@ -694,7 +943,7 @@ local function createMainFrame()
                 updatePosList()
             end))
 
-            y = y + 35
+            y = y + 45
         end
         posList.CanvasSize = UDim2.new(0, 0, 0, y)
     end
@@ -712,13 +961,13 @@ local function createMainFrame()
     playerListFrame.Size = UDim2.new(1, 0, 1, -10)
     playerListFrame.Position = UDim2.new(0, 0, 0, 10)
     playerListFrame.BackgroundColor3 = Color3.fromHex("#32323C")
-    playerListFrame.BorderSizePixel = 2
-    playerListFrame.BorderColor3 = COLOR_PURPLE
+    playerListFrame.BorderSizePixel = 0
     playerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     playerListFrame.ScrollBarThickness = 6
     playerListFrame.ScrollBarImageColor3 = COLOR_PURPLE
     playerListFrame.Parent = playerContent
     makeRounded(playerListFrame, 6)
+    addFullBorder(playerListFrame, COLOR_PURPLE, 1)
 
     local function updatePlayerList()
         for _, child in ipairs(playerListFrame:GetChildren()) do
@@ -728,49 +977,94 @@ local function createMainFrame()
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= player then
                 local item = Instance.new("Frame")
-                item.Size = UDim2.new(1, -10, 0, 40)
+                item.Size = UDim2.new(1, -10, 0, 50)
                 item.Position = UDim2.new(0, 5, 0, y)
                 item.BackgroundColor3 = Color3.fromHex("#1E1E26")
-                item.BorderSizePixel = 2
-                item.BorderColor3 = COLOR_PURPLE
+                item.BorderSizePixel = 0
                 item.Parent = playerListFrame
                 makeRounded(item, 4)
+                addFullBorder(item, COLOR_PURPLE, 1)
 
                 local nameLabel = Instance.new("TextLabel")
-                nameLabel.Size = UDim2.new(0, 150, 0, 20)
-                nameLabel.Position = UDim2.new(0, 5, 0, 0)
+                nameLabel.Size = UDim2.new(0, 200, 0, 20)
+                nameLabel.Position = UDim2.new(0, 5, 0, 2)
                 nameLabel.BackgroundTransparency = 1
                 nameLabel.Text = plr.Name
-                nameLabel.TextColor3 = Color3.new(1, 1, 1)
+                nameLabel.TextColor3 = COLOR_PURPLE
+                nameLabel.TextSize = 16
+                nameLabel.Font = Enum.Font.GothamBold
                 nameLabel.TextXAlignment = Enum.TextXAlignment.Left
                 nameLabel.Parent = item
 
-                local idLabel = Instance.new("TextLabel")
-                idLabel.Size = UDim2.new(0, 150, 0, 15)
-                idLabel.Position = UDim2.new(0, 5, 0, 20)
-                idLabel.BackgroundTransparency = 1
-                idLabel.Text = "ID: " .. plr.UserId
-                idLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-                idLabel.TextSize = 12
-                idLabel.TextXAlignment = Enum.TextXAlignment.Left
-                idLabel.Parent = item
+                local displayNameLabel = Instance.new("TextLabel")
+                displayNameLabel.Size = UDim2.new(0, 200, 0, 15)
+                displayNameLabel.Position = UDim2.new(0, 5, 0, 22)
+                displayNameLabel.BackgroundTransparency = 1
+                displayNameLabel.Text = "Display: " .. plr.DisplayName
+                displayNameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                displayNameLabel.TextSize = 12
+                displayNameLabel.Font = Enum.Font.Gotham
+                displayNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+                displayNameLabel.Parent = item
 
+                -- Switch untuk camera follow
+                local camSwitch = Instance.new("Frame")
+                camSwitch.Size = UDim2.new(0, 40, 0, 20)
+                camSwitch.Position = UDim2.new(1, -200, 0.5, -10)
+                camSwitch.BackgroundColor3 = Color3.fromHex("#32323C")
+                camSwitch.BorderSizePixel = 0
+                camSwitch.Parent = item
+                makeRounded(camSwitch, 10)
+
+                local camKnob = Instance.new("Frame")
+                camKnob.Size = UDim2.new(0, 16, 0, 16)
+                camKnob.Position = UDim2.new(0, 2, 0.5, -8)
+                camKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+                camKnob.BorderSizePixel = 0
+                camKnob.Parent = camSwitch
+                makeCircular(camKnob)
+
+                local camSwitchState = false
+                local camSwitchBtn = Instance.new("TextButton")
+                camSwitchBtn.Size = UDim2.new(1, 0, 1, 0)
+                camSwitchBtn.BackgroundTransparency = 1
+                camSwitchBtn.Text = ""
+                camSwitchBtn.Parent = camSwitch
+
+                addConnection(camSwitchBtn.MouseButton1Click:Connect(function()
+                    camSwitchState = not camSwitchState
+                    camSwitch.BackgroundColor3 = camSwitchState and COLOR_PURPLE or Color3.fromHex("#32323C")
+                    camKnob:TweenPosition(camSwitchState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8), "Out", "Linear", 0.1)
+                end))
+
+                -- Tombol Teleport
                 local tpBtn = Instance.new("TextButton")
-                tpBtn.Size = UDim2.new(0, 80, 0, 30)
-                tpBtn.Position = UDim2.new(1, -90, 0.5, -15)
+                tpBtn.Size = UDim2.new(0, 70, 0, 25)
+                tpBtn.Position = UDim2.new(1, -125, 0.5, -12.5)
                 tpBtn.BackgroundColor3 = COLOR_PURPLE
-                tpBtn.Text = "TP"
+                tpBtn.Text = "Teleport"
                 tpBtn.TextColor3 = Color3.new(1, 1, 1)
+                tpBtn.TextSize = 12
+                tpBtn.Font = Enum.Font.GothamBold
                 tpBtn.Parent = item
                 makeRounded(tpBtn, 4)
 
                 addConnection(tpBtn.MouseButton1Click:Connect(function()
-                    if plr.Character and plr.Character.PrimaryPart and player.Character and player.Character.PrimaryPart then
-                        player.Character.PrimaryPart.CFrame = plr.Character.PrimaryPart.CFrame * CFrame.new(0, 0, -3)
+                    if plr.Character and plr.Character.PrimaryPart then
+                        if camSwitchState then
+                            -- Camera follow player
+                            stopFreecam()
+                            startCameraFollow(plr)
+                        else
+                            -- Full teleport
+                            if player.Character and player.Character.PrimaryPart then
+                                player.Character.PrimaryPart.CFrame = plr.Character.PrimaryPart.CFrame * CFrame.new(0, 0, -3)
+                            end
+                        end
                     end
                 end))
 
-                y = y + 45
+                y = y + 55
             end
         end
         playerListFrame.CanvasSize = UDim2.new(0, 0, 0, y)
@@ -786,6 +1080,7 @@ local function createMainFrame()
         teleTabPlayer.BackgroundColor3 = Color3.fromHex("#32323C")
         customContent.Visible = true
         playerContent.Visible = false
+        updatePosList()
     end))
 
     addConnection(teleTabPlayer.MouseButton1Click:Connect(function()
@@ -812,7 +1107,7 @@ local function createMainFrame()
     setLabel.Size = UDim2.new(1, 0, 1, 0)
     setLabel.BackgroundTransparency = 1
     setLabel.Text = "Coming Soon"
-    setLabel.TextColor3 = Color3.new(1, 1, 1)
+    setLabel.TextColor3 = COLOR_PURPLE
     setLabel.TextSize = 24
     setLabel.Font = Enum.Font.GothamBold
     setLabel.Parent = contentSet
@@ -880,84 +1175,7 @@ local function createMainFrame()
 end
 
 -- =====================================================
--- 5. Freecam Functions
--- =====================================================
-function startFreecam()
-    if freecamActive then return end
-    freecamActive = true
-    
-    local character = player.Character
-    if character then
-        character.HumanoidRootPart.Anchored = true
-    end
-    
-    freecamCamera.CFrame = Camera.CFrame
-    freecamCamera.Parent = screenGui
-    Camera.CameraType = Enum.CameraType.Scriptable
-    Camera.CFrame = freecamCamera.CFrame
-    
-    freecamConnection = RunService.RenderStepped:Connect(function()
-        local moveVector = Vector3.new()
-        if freecamKeys.W then moveVector = moveVector + Camera.CFrame.LookVector end
-        if freecamKeys.S then moveVector = moveVector - Camera.CFrame.LookVector end
-        if freecamKeys.A then moveVector = moveVector - Camera.CFrame.RightVector end
-        if freecamKeys.D then moveVector = moveVector + Camera.CFrame.RightVector end
-        if freecamKeys.Space then moveVector = moveVector + Vector3.new(0, 1, 0) end
-        if freecamKeys.Ctrl then moveVector = moveVector + Vector3.new(0, -1, 0) end
-        
-        local speed = freecamKeys.Shift and freecamShiftSpeed or freecamSpeed
-        if moveVector.Magnitude > 0 then
-            freecamCamera.CFrame = freecamCamera.CFrame + moveVector * speed * RunService.RenderStepped.DeltaTime
-            Camera.CFrame = freecamCamera.CFrame
-        end
-    end)
-end
-
-function stopFreecam()
-    if not freecamActive then return end
-    freecamActive = false
-    
-    local character = player.Character
-    if character then
-        character.HumanoidRootPart.Anchored = false
-    end
-    
-    if freecamConnection then
-        freecamConnection:Disconnect()
-        freecamConnection = nil
-    end
-    
-    Camera.CameraType = Enum.CameraType.Custom
-    freecamCamera.Parent = nil
-end
-
--- Keyboard handling for freecam
-addConnection(UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not freecamActive or gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.W then freecamKeys.W = true
-    elseif input.KeyCode == Enum.KeyCode.A then freecamKeys.A = true
-    elseif input.KeyCode == Enum.KeyCode.S then freecamKeys.S = true
-    elseif input.KeyCode == Enum.KeyCode.D then freecamKeys.D = true
-    elseif input.KeyCode == Enum.KeyCode.Space then freecamKeys.Space = true
-    elseif input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then freecamKeys.Ctrl = true
-    elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then freecamKeys.Shift = true
-    end
-end))
-
-addConnection(UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if not freecamActive or gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.W then freecamKeys.W = false
-    elseif input.KeyCode == Enum.KeyCode.A then freecamKeys.A = false
-    elseif input.KeyCode == Enum.KeyCode.S then freecamKeys.S = false
-    elseif input.KeyCode == Enum.KeyCode.D then freecamKeys.D = false
-    elseif input.KeyCode == Enum.KeyCode.Space then freecamKeys.Space = false
-    elseif input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then freecamKeys.Ctrl = false
-    elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then freecamKeys.Shift = false
-    end
-end))
-
--- =====================================================
--- 6. Mini Frame (Minimized)
+-- 9. Mini Frame (Minimized) - Kotak dengan ikon ☰
 -- =====================================================
 local function createMiniFrame(mainPos)
     if miniFrame and miniFrame.Parent then
@@ -972,7 +1190,7 @@ local function createMiniFrame(mainPos)
     miniFrame.BorderSizePixel = 2
     miniFrame.BorderColor3 = COLOR_PURPLE
     miniFrame.Parent = screenGui
-    makeCircular(miniFrame) -- Membuat frame kecil berbentuk lingkaran
+    makeRounded(miniFrame, 8) -- Kotak dengan sudut rounded 8px
 
     local icon = Instance.new("TextLabel")
     icon.Size = UDim2.new(1, 0, 1, 0)
@@ -1029,7 +1247,7 @@ local function createMiniFrame(mainPos)
 end
 
 -- =====================================================
--- 7. Apply WalkSpeed & Boost secara periodik
+-- 10. Apply WalkSpeed & Boost secara periodik
 -- =====================================================
 addConnection(RunService.RenderStepped:Connect(function()
     if player.Character and player.Character:FindFirstChild("Humanoid") then
@@ -1039,7 +1257,7 @@ addConnection(RunService.RenderStepped:Connect(function()
 end))
 
 -- =====================================================
--- 8. Instant Proximity
+-- 11. Instant Proximity
 -- =====================================================
 addConnection(RunService.Stepped:Connect(function()
     if instantProximityEnabled then
@@ -1052,31 +1270,10 @@ addConnection(RunService.Stepped:Connect(function()
 end))
 
 -- =====================================================
--- 9. God Mode
--- =====================================================
-addConnection(player.CharacterAdded:Connect(function(character)
-    if godModeEnabled then
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid.MaxHealth = math.huge
-        humanoid.Health = math.huge
-        humanoid.BreakJointsOnDeath = false
-    end
-end))
-
-addConnection(RunService.Stepped:Connect(function()
-    if godModeEnabled and player.Character and player.Character:FindFirstChild("Humanoid") then
-        local humanoid = player.Character.Humanoid
-        humanoid.MaxHealth = math.huge
-        humanoid.Health = math.huge
-        humanoid.BreakJointsOnDeath = false
-    end
-end))
-
--- =====================================================
--- 10. Lock Position
+-- 12. Lock Position
 -- =====================================================
 addConnection(RunService.RenderStepped:Connect(function()
-    if lockPositionEnabled and player.Character and player.Character.PrimaryPart then
+    if lockPositionEnabled and not freecamActive and player.Character and player.Character.PrimaryPart then
         player.Character.PrimaryPart.Anchored = true
     elseif player.Character and player.Character.PrimaryPart then
         player.Character.PrimaryPart.Anchored = false
@@ -1084,7 +1281,7 @@ addConnection(RunService.RenderStepped:Connect(function()
 end))
 
 -- =====================================================
--- 11. Noclip
+-- 13. Noclip
 -- =====================================================
 addConnection(RunService.Stepped:Connect(function()
     if noclipEnabled and player.Character then
@@ -1097,13 +1294,14 @@ addConnection(RunService.Stepped:Connect(function()
 end))
 
 -- =====================================================
--- 12. Membuat GUI dan Cleanup
+-- 14. Membuat GUI dan Cleanup
 -- =====================================================
 mainFrame = createMainFrame()
 
 _G.AzkaUI = {
     Cleanup = function()
         stopFreecam()
+        stopCameraFollow()
         for _, conn in ipairs(connections) do
             pcall(function() conn:Disconnect() end)
         end
