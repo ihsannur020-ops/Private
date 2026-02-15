@@ -1,93 +1,126 @@
--- DetectorScript (LocalScript di dalam Frame)
+-- LocalScript di dalam ScreenGui (misal di StarterGui)
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local remote = replicatedStorage:WaitForChild("WaveLoopControl")
 
-local frame = script.Parent
-local textBox = frame:FindFirstChild("TextBox")
-local detectButton = frame:FindFirstChild("TextButton")
-local outputLabel = frame:FindFirstChild("TextLabel")
+local player = game.Players.LocalPlayer
+local gui = player:WaitForChild("PlayerGui")
 
--- Pastikan semua elemen ditemukan
-if not (textBox and detectButton and outputLabel) then
-	warn("Elemen GUI tidak lengkap!")
-	return
-end
+-- Buat ScreenGui utama
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "WaveControlGUI"
+screenGui.Parent = gui
 
--- Variabel penyimpanan data sebelumnya
-local lastTarget = nil
-local previousData = {}   -- key = full name, value = true
+-- Frame utama (panel)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)  -- tengah layar
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)  -- #141414
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
 
--- Fungsi untuk mendapatkan semua descendant full name dari suatu instance
-local function getAllDescendantsFullNames(instance)
-	local names = {}
-	local function recurse(obj)
-		for _, child in ipairs(obj:GetChildren()) do
-			local full = child:GetFullName()
-			table.insert(names, full)
-			recurse(child)
-		end
-	end
-	recurse(instance)
-	return names
-end
+-- Sudut melengkung
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = mainFrame
 
--- Fungsi mendapatkan target dari input user
-local function getTargetFromInput(inputText)
-	local serviceName = inputText:match("^%s*(.-)%s*$")  -- trim spasi
-	if serviceName == "" then
-		return workspace   -- default
-	end
-	
-	local success, service = pcall(function()
-		return game:GetService(serviceName)
-	end)
-	
-	if success and service then
-		return service
-	else
-		-- Jika tidak valid, kembalikan workspace
-		return workspace
-	end
-end
+-- Garis aksen hijau neon di kiri
+local accentBar = Instance.new("Frame")
+accentBar.Size = UDim2.new(0, 4, 1, 0)
+accentBar.Position = UDim2.new(0, 0, 0, 0)
+accentBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- hijau neon
+accentBar.BorderSizePixel = 0
+accentBar.Parent = mainFrame
 
--- Event klik tombol
-detectButton.MouseButton1Click:Connect(function()
-	local target = getTargetFromInput(textBox.Text)
-	
-	-- Cek apakah target berubah (ganti service)
-	if lastTarget ~= target then
-		-- Reset snapshot dan simpan snapshot pertama untuk target baru
-		previousData = {}
-		lastTarget = target
-		
-		local currentNames = getAllDescendantsFullNames(target)
-		for _, name in ipairs(currentNames) do
-			previousData[name] = true
-		end
-		
-		outputLabel.Text = "🔄 Target berubah menjadi " .. target:GetFullName() .. ".\nSnapshot awal disimpan."
-		return
-	end
-	
-	-- Jika target sama, lakukan deteksi perubahan
-	local currentNames = getAllDescendantsFullNames(target)
-	
-	-- Cari instance baru (yang tidak ada di previousData)
-	local newInstances = {}
-	for _, name in ipairs(currentNames) do
-		if not previousData[name] then
-			table.insert(newInstances, name)
-		end
-	end
-	
-	-- Update snapshot untuk deteksi berikutnya
-	previousData = {}
-	for _, name in ipairs(currentNames) do
-		previousData[name] = true
-	end
-	
-	-- Tampilkan hasil
-	if #newInstances > 0 then
-		outputLabel.Text = "✅ Instance baru ditemukan:\n" .. table.concat(newInstances, "\n")
-	else
-		outputLabel.Text = "ℹ️ Tidak ada instance baru."
-	end
+-- Header dengan ikon dan judul
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, -10, 0, 40)
+header.Position = UDim2.new(0, 5, 0, 5)
+header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+header.BorderSizePixel = 0
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 6)
+headerCorner.Parent = header
+
+local icon = Instance.new("TextLabel")
+icon.Size = UDim2.new(0, 30, 0, 30)
+icon.Position = UDim2.new(0, 5, 0.5, -15)
+icon.BackgroundTransparency = 1
+icon.Text = "⚡"  -- ikon petir
+icon.TextColor3 = Color3.fromRGB(0, 255, 0)
+icon.TextScaled = true
+icon.Font = Enum.Font.GothamBold
+icon.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -40, 1, 0)
+title.Position = UDim2.new(0, 40, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "WAVE LOOP CONTROL"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+-- Container untuk tombol-tombol (jarak 10px dari header)
+local buttonContainer = Instance.new("Frame")
+buttonContainer.Size = UDim2.new(1, -20, 0, 120)
+buttonContainer.Position = UDim2.new(0, 10, 0, 55)
+buttonContainer.BackgroundTransparency = 1
+buttonContainer.Parent = mainFrame
+
+-- Tombol 1: Hapus Wave Loop
+local button1 = Instance.new("TextButton")
+button1.Size = UDim2.new(1, 0, 0, 50)
+button1.Position = UDim2.new(0, 0, 0, 0)
+button1.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+button1.Text = "Hapus Wave Loop"
+button1.TextColor3 = Color3.fromRGB(255, 255, 255)
+button1.TextScaled = true
+button1.Font = Enum.Font.GothamBold
+button1.BorderSizePixel = 0
+button1.Parent = buttonContainer
+
+local btn1Corner = Instance.new("UICorner")
+btn1Corner.CornerRadius = UDim.new(0, 8)
+btn1Corner.Parent = button1
+
+-- Tombol 2: Stop Loop
+local button2 = Instance.new("TextButton")
+button2.Size = UDim2.new(1, 0, 0, 50)
+button2.Position = UDim2.new(0, 0, 0, 60)
+button2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+button2.Text = "Stop Loop"
+button2.TextColor3 = Color3.fromRGB(255, 255, 255)
+button2.TextScaled = true
+button2.Font = Enum.Font.GothamBold
+button2.BorderSizePixel = 0
+button2.Parent = buttonContainer
+
+local btn2Corner = Instance.new("UICorner")
+btn2Corner.CornerRadius = UDim.new(0, 8)
+btn2Corner.Parent = button2
+
+-- Footer (Azka Script)
+local footer = Instance.new("TextLabel")
+footer.Size = UDim2.new(1, 0, 0, 30)
+footer.Position = UDim2.new(0, 0, 1, -35)
+footer.BackgroundTransparency = 1
+footer.Text = "Azka Script"
+footer.TextColor3 = Color3.fromRGB(180, 180, 180)
+footer.TextScaled = true
+footer.Font = Enum.Font.Gotham
+footer.TextXAlignment = Enum.TextXAlignment.Center
+footer.Parent = mainFrame
+
+-- Event tombol
+button1.MouseButton1Click:Connect(function()
+    remote:FireServer("Start")
+    -- Opsional: feedback visual (misal button berkedip)
+end)
+
+button2.MouseButton1Click:Connect(function()
+    remote:FireServer("Stop")
 end)
