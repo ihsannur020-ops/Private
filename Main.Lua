@@ -1,51 +1,41 @@
 -- Script untuk Delta Executor
 -- Membuat GUI dengan nama "ScriptByAzka_Deepseek" di CoreGui
--- Dilengkapi tombol minimize (animasi gulung ke atas) dan close
+-- Dilengkapi drag header, minimize (animasi gulung), dan close
 
--- ===========================================
--- CEK DAN HAPUS GUI LAMA JIKA ADA
--- ===========================================
+-- Hapus GUI lama jika ada
 local coreGui = game:GetService("CoreGui")
-local guiName = "ScriptByAzka_Deepseek"  -- Nama GUI sesuai instruksi
+local guiName = "ScriptByAzka_Deepseek"
+local existing = coreGui:FindFirstChild(guiName)
+if existing then existing:Destroy() end
 
--- Cari GUI lama dengan nama yang sama
-local existingGui = coreGui:FindFirstChild(guiName)
-if existingGui then
-    existingGui:Destroy()  -- Hapus jika sudah ada
-end
-
--- ===========================================
--- MEMBUAT GUI BARU
--- ===========================================
+-- Buat ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = guiName
 screenGui.Parent = coreGui
-screenGui.ResetOnSpawn = false  -- Agar tidak hilang saat respawn
+screenGui.ResetOnSpawn = false
 
--- Frame utama (panel)
+-- Frame utama
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 400)  -- Lebar sedikit lebih besar untuk menampung tombol
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)  -- Tengah layar
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)  -- #141414
+mainFrame.Size = UDim2.new(0, 320, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
+mainFrame.Active = true
+mainFrame.Draggable = false -- kita akan buat drag manual via header
 
--- Sudut melengkung
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 8)
 corner.Parent = mainFrame
 
--- Garis aksen hijau neon di kiri
 local accentBar = Instance.new("Frame")
 accentBar.Size = UDim2.new(0, 4, 1, 0)
 accentBar.Position = UDim2.new(0, 0, 0, 0)
-accentBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- Hijau neon
+accentBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 accentBar.BorderSizePixel = 0
 accentBar.Parent = mainFrame
 
--- ===========================================
--- HEADER (dengan ikon, judul, dan tombol minimize/close)
--- ===========================================
+-- Header (bisa di-drag)
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, -10, 0, 40)
 header.Position = UDim2.new(0, 5, 0, 5)
@@ -57,7 +47,7 @@ local headerCorner = Instance.new("UICorner")
 headerCorner.CornerRadius = UDim.new(0, 6)
 headerCorner.Parent = header
 
--- Ikon petir
+-- Ikon
 local icon = Instance.new("TextLabel")
 icon.Size = UDim2.new(0, 30, 0, 30)
 icon.Position = UDim2.new(0, 5, 0.5, -15)
@@ -70,7 +60,7 @@ icon.Parent = header
 
 -- Judul
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -100, 1, 0)  -- Beri ruang untuk tombol di kanan
+title.Size = UDim2.new(1, -100, 1, 0)
 title.Position = UDim2.new(0, 40, 0, 0)
 title.BackgroundTransparency = 1
 title.Text = "WAVE LOOP CONTROL"
@@ -85,7 +75,7 @@ local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
 minimizeBtn.Position = UDim2.new(1, -65, 0.5, -15)
 minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-minimizeBtn.Text = "—"  -- Simbol minus
+minimizeBtn.Text = "—"
 minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 minimizeBtn.TextScaled = true
 minimizeBtn.Font = Enum.Font.GothamBold
@@ -96,12 +86,12 @@ local minCorner = Instance.new("UICorner")
 minCorner.CornerRadius = UDim.new(0, 4)
 minCorner.Parent = minimizeBtn
 
--- Tombol Close
+-- Tombol Close (dengan X)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 0, 30)
 closeBtn.Position = UDim2.new(1, -30, 0.5, -15)
 closeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-closeBtn.Text = "✕"  -- Simbol X
+closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.GothamBold
@@ -112,17 +102,22 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 4)
 closeCorner.Parent = closeBtn
 
--- ===========================================
--- CONTAINER UNTUK TOMBOL UTAMA (akan di-minimize)
--- ===========================================
-local buttonContainer = Instance.new("Frame")
-buttonContainer.Size = UDim2.new(1, -20, 0, 120)  -- Tinggi 120 untuk dua tombol
-buttonContainer.Position = UDim2.new(0, 10, 0, 55)  -- Di bawah header
-buttonContainer.BackgroundTransparency = 1
-buttonContainer.Parent = mainFrame
-buttonContainer.ClipsDescendants = true  -- Agar anak-anaknya terpotong saat dikecilkan
+-- Content frame (akan di-minimize, berisi container tombol dan footer)
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1, -20, 0, 150) -- tinggi: 120 (container) + 30 (footer) = 150
+contentFrame.Position = UDim2.new(0, 10, 0, 50) -- di bawah header (50 = 5 header pos y + 40 tinggi header + 5 jarak)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+contentFrame.ClipsDescendants = true
 
--- Tombol 1: Hapus Wave Loop
+-- Container tombol
+local buttonContainer = Instance.new("Frame")
+buttonContainer.Size = UDim2.new(1, 0, 0, 120)
+buttonContainer.Position = UDim2.new(0, 0, 0, 0)
+buttonContainer.BackgroundTransparency = 1
+buttonContainer.Parent = contentFrame
+
+-- Tombol 1
 local button1 = Instance.new("TextButton")
 button1.Size = UDim2.new(1, 0, 0, 50)
 button1.Position = UDim2.new(0, 0, 0, 0)
@@ -138,7 +133,7 @@ local btn1Corner = Instance.new("UICorner")
 btn1Corner.CornerRadius = UDim.new(0, 8)
 btn1Corner.Parent = button1
 
--- Tombol 2: Stop Loop
+-- Tombol 2
 local button2 = Instance.new("TextButton")
 button2.Size = UDim2.new(1, 0, 0, 50)
 button2.Position = UDim2.new(0, 0, 0, 60)
@@ -154,52 +149,83 @@ local btn2Corner = Instance.new("UICorner")
 btn2Corner.CornerRadius = UDim.new(0, 8)
 btn2Corner.Parent = button2
 
--- ===========================================
--- FOOTER (tetap di bawah)
--- ===========================================
+-- Footer
 local footer = Instance.new("TextLabel")
 footer.Size = UDim2.new(1, 0, 0, 30)
-footer.Position = UDim2.new(0, 0, 1, -35)  -- Posisi absolut di mainFrame
+footer.Position = UDim2.new(0, 0, 1, -30) -- di bagian bawah contentFrame
 footer.BackgroundTransparency = 1
 footer.Text = "Azka Script"
 footer.TextColor3 = Color3.fromRGB(180, 180, 180)
 footer.TextScaled = true
 footer.Font = Enum.Font.Gotham
 footer.TextXAlignment = Enum.TextXAlignment.Center
-footer.Parent = mainFrame
+footer.Parent = contentFrame
 
 -- ===========================================
--- FUNGSIONALITAS TOMBOL
+-- FUNGSI DRAG HEADER
+-- ===========================================
+local UserInputService = game:GetService("UserInputService")
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Cek apakah yang diklik adalah tombol (minimize/close) atau turunannya? Kita ingin drag hanya jika klik di area header selain tombol.
+        -- Kita bisa cek apakah target adalah tombol atau bagian dari tombol.
+        local target = input.UserInputObject.Target
+        if target and (target:IsDescendantOf(minimizeBtn) or target:IsDescendantOf(closeBtn)) then
+            return -- jangan drag jika klik tombol
+        end
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- ===========================================
+-- FUNGSI MINIMIZE
 -- ===========================================
 local TweenService = game:GetService("TweenService")
-
--- State minimize: false = terbuka, true = tertutup
 local isMinimized = false
+local originalContentHeight = contentFrame.Size.Y.Offset
 
--- Fungsi untuk animate minimize/maximize
 local function toggleMinimize()
     if isMinimized then
-        -- Maximize: kembalikan ukuran container ke 120
-        local tween = TweenService:Create(buttonContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, 120)})
+        -- Maximize: kembalikan ukuran contentFrame
+        local tween = TweenService:Create(contentFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, originalContentHeight)})
         tween:Play()
     else
-        -- Minimize: kecilkan container hingga tinggi 0
-        local tween = TweenService:Create(buttonContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, 0)})
+        -- Minimize: kecilkan contentFrame hingga 0
+        local tween = TweenService:Create(contentFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, 0)})
         tween:Play()
     end
     isMinimized = not isMinimized
 end
 
--- Event tombol minimize
 minimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 
--- Event tombol close
+-- ===========================================
+-- FUNGSI CLOSE
+-- ===========================================
 closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()  -- Hapus seluruh GUI
+    screenGui:Destroy()
 end)
 
 -- ===========================================
--- FUNGSIONALITAS PENGHAPUSAN WAVE (client-side)
+-- FUNGSIONALITAS WAVE LOOP (client-side)
 -- ===========================================
 local workspace = game:GetService("Workspace")
 local targetNames = {
@@ -227,7 +253,6 @@ button1.MouseButton1Click:Connect(function()
     if not connection then
         connection = workspace.ChildAdded:Connect(onChildAdded)
     end
-    -- Feedback visual
     button1.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
     wait(0.2)
     button1.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -243,4 +268,4 @@ button2.MouseButton1Click:Connect(function()
     button2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 end)
 
-print("GUI " .. guiName .. " berhasil dimuat di CoreGui")
+print("GUI " .. guiName .. " loaded. Drag header to move, minimize and close buttons work.")
