@@ -1,5 +1,5 @@
 -- Script untuk Delta Executor - GUI Panel "AzkaUI" dengan perbaikan lengkap
--- Semua border ungu menyambung, freecam diperbaiki, infinite zoom, dll.
+-- Semua border ungu menyambung, freecam diperbaiki, infinite zoom, layout rapi, minimize berfungsi.
 
 -- =====================================================
 -- 1. Inisialisasi dan Cleanup GUI lama
@@ -46,14 +46,14 @@ local miniFrame
 local currentMenu = "Main"
 local currentTeleportSubMenu = "Custom"
 
--- Variabel untuk WalkSpeed & Boost
+-- WalkSpeed & Boost
 local walkSpeedValue = 30
 local boostValue = 0
 local function getEffectiveWalkSpeed()
     return walkSpeedValue + boostValue
 end
 
--- Variabel fitur
+-- Fitur toggles
 local infJumpEnabled = false
 local noclipEnabled = false
 local instantProximityEnabled = false
@@ -75,15 +75,13 @@ local freecamKeys = {
 local originalCameraSubject = nil
 local originalCameraType = nil
 
--- Camera teleport mode
+-- Camera follow mode (untuk player teleport)
+local cameraFollowActive = false
 local cameraFollowTarget = nil
 local cameraFollowConnection = nil
 
 -- Saved positions
 local savedPositions = {}
-
--- Player list
-local playerList = {}
 
 -- Tabel untuk menyimpan semua koneksi
 local connections = {}
@@ -188,10 +186,16 @@ function startFreecam()
     originalCameraType = Camera.CameraType
     originalCameraSubject = Camera.CameraSubject
     
-    -- Anchor karakter
+    -- Anchor karakter dan set platform stand
     local character = player.Character
-    if character and character.PrimaryPart then
-        character.PrimaryPart.Anchored = true
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.PlatformStand = true
+        end
+        if character.PrimaryPart then
+            character.PrimaryPart.Anchored = true
+        end
     end
     
     -- Set kamera
@@ -226,8 +230,14 @@ function stopFreecam()
     
     -- Unanchor karakter
     local character = player.Character
-    if character and character.PrimaryPart then
-        character.PrimaryPart.Anchored = false
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.PlatformStand = false
+        end
+        if character.PrimaryPart then
+            character.PrimaryPart.Anchored = false
+        end
     end
     
     if freecamConnection then
@@ -241,24 +251,31 @@ function stopFreecam()
     freecamCamera.Parent = nil
 end
 
--- Camera follow function
+-- Camera follow function (untuk player teleport)
 function startCameraFollow(target)
+    -- Hentikan follow sebelumnya
     if cameraFollowConnection then
         cameraFollowConnection:Disconnect()
+        cameraFollowConnection = nil
     end
     
-    -- Simpan state asli
-    originalCameraType = Camera.CameraType
-    originalCameraSubject = Camera.CameraSubject
+    -- Simpan state asli jika belum disimpan
+    if not originalCameraType then
+        originalCameraType = Camera.CameraType
+        originalCameraSubject = Camera.CameraSubject
+    end
     
     -- Set kamera untuk follow
     Camera.CameraType = Enum.CameraType.Scriptable
     Camera.CameraSubject = nil
     
     cameraFollowTarget = target
+    cameraFollowActive = true
+    
     cameraFollowConnection = RunService.RenderStepped:Connect(function()
-        if target and target.Character and target.Character.PrimaryPart then
-            local targetPos = target.Character.PrimaryPart.Position
+        if cameraFollowActive and cameraFollowTarget and cameraFollowTarget.Character and cameraFollowTarget.Character.PrimaryPart then
+            local targetPos = cameraFollowTarget.Character.PrimaryPart.Position
+            -- Pertahankan arah pandang saat ini
             Camera.CFrame = CFrame.new(targetPos, targetPos + Camera.CFrame.LookVector)
         end
     end)
@@ -269,6 +286,7 @@ function stopCameraFollow()
         cameraFollowConnection:Disconnect()
         cameraFollowConnection = nil
     end
+    cameraFollowActive = false
     cameraFollowTarget = nil
     Camera.CameraType = originalCameraType or Enum.CameraType.Custom
     Camera.CameraSubject = originalCameraSubject
@@ -300,11 +318,11 @@ addConnection(UserInputService.InputEnded:Connect(function(input, gameProcessed)
 end))
 
 -- =====================================================
--- 5. Infinite Zoom
+-- 5. Infinite Zoom (setiap frame)
 -- =====================================================
 addConnection(RunService.RenderStepped:Connect(function()
     if infiniteZoomEnabled then
-        Camera.MaxZoomDistance = math.huge
+        Camera.MaxZoomDistance = 1e9
         Camera.MinZoomDistance = 0.5
     else
         Camera.MaxZoomDistance = 400
@@ -358,9 +376,9 @@ local function createMainFrame()
     local frame = Instance.new("Frame")
     frame.Name = "MainFrame"
     frame.Size = UDim2.new(0, 600, 0, 450)
-    frame.Position = UDim2.new(0.5, -300, 0.5, -225)
+    frame.Position = UDim2.new(0.5, -300, 0.5, -225) -- Tengah layar
     frame.BackgroundColor3 = COLOR_BG_DARK
-    frame.BorderSizePixel = 0 -- Nonaktifkan border default
+    frame.BorderSizePixel = 0
     frame.ClipsDescendants = false
     frame.Parent = screenGui
     makeRounded(frame, 12)
@@ -371,7 +389,7 @@ local function createMainFrame()
     -- Title bar
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, -4, 0, 36) -- Kurangi untuk border
+    titleBar.Size = UDim2.new(1, -4, 0, 36)
     titleBar.Position = UDim2.new(0, 2, 0, 2)
     titleBar.BackgroundColor3 = Color3.fromHex("#23232D")
     titleBar.BorderSizePixel = 0
@@ -418,7 +436,7 @@ local function createMainFrame()
     minBtn.Parent = titleBar
     makeRounded(minBtn, 6)
 
-    -- Panel kiri dengan border ungu
+    -- Panel kiri
     local leftPanel = Instance.new("Frame")
     leftPanel.Name = "LeftPanel"
     leftPanel.Size = UDim2.new(0, 130, 0, 380)
@@ -468,7 +486,7 @@ local function createMainFrame()
     btnSet.Parent = leftPanel
     makeRounded(btnSet, 6)
 
-    -- Panel kanan dengan border ungu
+    -- Panel kanan
     local rightPanel = Instance.new("Frame")
     rightPanel.Name = "RightPanel"
     rightPanel.Size = UDim2.new(0, 430, 0, 380)
@@ -872,7 +890,7 @@ local function createMainFrame()
             -- Switch untuk camera only
             local camSwitch = Instance.new("Frame")
             camSwitch.Size = UDim2.new(0, 40, 0, 20)
-            camSwitch.Position = UDim2.new(1, -200, 0.5, -10)
+            camSwitch.Position = UDim2.new(1, -150, 0.5, -10) -- Lebih dekat ke Teleport
             camSwitch.BackgroundColor3 = Color3.fromHex("#32323C")
             camSwitch.BorderSizePixel = 0
             camSwitch.Parent = item
@@ -902,7 +920,7 @@ local function createMainFrame()
             -- Tombol Teleport
             local tpBtn = Instance.new("TextButton")
             tpBtn.Size = UDim2.new(0, 70, 0, 25)
-            tpBtn.Position = UDim2.new(1, -125, 0.5, -12.5)
+            tpBtn.Position = UDim2.new(1, -135, 0.5, -12.5) -- Disesuaikan
             tpBtn.BackgroundColor3 = COLOR_PURPLE
             tpBtn.Text = "Teleport"
             tpBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -914,7 +932,7 @@ local function createMainFrame()
             -- Tombol Delete
             local delBtn = Instance.new("TextButton")
             delBtn.Size = UDim2.new(0, 50, 0, 25)
-            delBtn.Position = UDim2.new(1, -50, 0.5, -12.5)
+            delBtn.Position = UDim2.new(1, -70, 0.5, -12.5) -- Beri jarak dari tepi
             delBtn.BackgroundColor3 = Color3.fromHex("#C83232")
             delBtn.Text = "Delete"
             delBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -926,13 +944,26 @@ local function createMainFrame()
             addConnection(tpBtn.MouseButton1Click:Connect(function()
                 if player.Character and player.Character.PrimaryPart then
                     if camSwitchState then
-                        -- Camera only teleport
+                        -- Camera only teleport: pindahkan kamera ke posisi, lock di sana
                         stopFreecam()
                         stopCameraFollow()
-                        Camera.CFrame = CFrame.new(pos.Position, pos.Position + Camera.CFrame.LookVector)
+                        -- Simpan state asli jika belum
+                        if not originalCameraType then
+                            originalCameraType = Camera.CameraType
+                            originalCameraSubject = Camera.CameraSubject
+                        end
                         Camera.CameraType = Enum.CameraType.Scriptable
+                        Camera.CameraSubject = nil
+                        Camera.CFrame = pos
                     else
-                        -- Full teleport
+                        -- Full teleport: pindahkan player
+                        -- Kembalikan kamera ke normal jika sedang dalam mode camera lock
+                        if originalCameraType then
+                            Camera.CameraType = originalCameraType
+                            Camera.CameraSubject = originalCameraSubject
+                            originalCameraType = nil
+                            originalCameraSubject = nil
+                        end
                         player.Character.PrimaryPart.CFrame = pos
                     end
                 end
@@ -1010,7 +1041,7 @@ local function createMainFrame()
                 -- Switch untuk camera follow
                 local camSwitch = Instance.new("Frame")
                 camSwitch.Size = UDim2.new(0, 40, 0, 20)
-                camSwitch.Position = UDim2.new(1, -200, 0.5, -10)
+                camSwitch.Position = UDim2.new(1, -150, 0.5, -10)
                 camSwitch.BackgroundColor3 = Color3.fromHex("#32323C")
                 camSwitch.BorderSizePixel = 0
                 camSwitch.Parent = item
@@ -1040,7 +1071,7 @@ local function createMainFrame()
                 -- Tombol Teleport
                 local tpBtn = Instance.new("TextButton")
                 tpBtn.Size = UDim2.new(0, 70, 0, 25)
-                tpBtn.Position = UDim2.new(1, -125, 0.5, -12.5)
+                tpBtn.Position = UDim2.new(1, -135, 0.5, -12.5)
                 tpBtn.BackgroundColor3 = COLOR_PURPLE
                 tpBtn.Text = "Teleport"
                 tpBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -1057,6 +1088,10 @@ local function createMainFrame()
                             startCameraFollow(plr)
                         else
                             -- Full teleport
+                            -- Kembalikan kamera ke normal jika sedang follow
+                            if cameraFollowActive then
+                                stopCameraFollow()
+                            end
                             if player.Character and player.Character.PrimaryPart then
                                 player.Character.PrimaryPart.CFrame = plr.Character.PrimaryPart.CFrame * CFrame.new(0, 0, -3)
                             end
@@ -1185,7 +1220,7 @@ local function createMiniFrame(mainPos)
     miniFrame = Instance.new("Frame")
     miniFrame.Name = "MiniFrame"
     miniFrame.Size = UDim2.new(0, 40, 0, 40)
-    miniFrame.Position = mainPos or UDim2.new(1, -50, 0, 50)
+    miniFrame.Position = mainPos or UDim2.new(0.5, -20, 0.5, -20) -- Tengah jika tidak ada posisi
     miniFrame.BackgroundColor3 = COLOR_BG_DARK
     miniFrame.BorderSizePixel = 2
     miniFrame.BorderColor3 = COLOR_PURPLE
@@ -1275,7 +1310,7 @@ end))
 addConnection(RunService.RenderStepped:Connect(function()
     if lockPositionEnabled and not freecamActive and player.Character and player.Character.PrimaryPart then
         player.Character.PrimaryPart.Anchored = true
-    elseif player.Character and player.Character.PrimaryPart then
+    elseif player.Character and player.Character.PrimaryPart and not lockPositionEnabled then
         player.Character.PrimaryPart.Anchored = false
     end
 end))
