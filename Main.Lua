@@ -8,7 +8,6 @@ local coreGui = game:GetService("CoreGui")
 local players = game:GetService("Players")
 local userInput = game:GetService("UserInputService")
 local tweenService = game:GetService("TweenService")
-local runService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
 
 local localPlayer = players.LocalPlayer
@@ -28,7 +27,7 @@ screenGui.Parent = coreGui
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Frame utama dengan ukuran tetap
+-- Frame utama dengan ukuran tetap (lebar 300, tinggi 350)
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 300, 0, 350)
 mainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
@@ -44,7 +43,7 @@ uiCorner.CornerRadius = UDim.new(0, 8)
 uiCorner.Parent = mainFrame
 
 -- ==================================================
--- 3. HEADER (dapat digeser)
+-- 3. HEADER
 -- ==================================================
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, -10, 0, 30)
@@ -53,7 +52,6 @@ header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 header.BorderSizePixel = 0
 header.Parent = mainFrame
 
--- Sudut header
 local headerCorner = Instance.new("UICorner")
 headerCorner.CornerRadius = UDim.new(0, 6)
 headerCorner.Parent = header
@@ -486,7 +484,7 @@ proxToggle.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 10. DRAG HEADER (DIPERBAIKI UNTUK MOBILE & DESKTOP)
+-- 10. DRAG HEADER (DIPERBAIKI TOTAL UNTUK MOBILE & DESKTOP)
 -- ==================================================
 local dragging = false
 local dragStartPos = Vector2.new()
@@ -518,7 +516,7 @@ local function stopDrag()
     dragging = false
 end
 
--- Event untuk mouse
+-- Event untuk mouse (desktop)
 header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         startDrag(input)
