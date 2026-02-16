@@ -1,5 +1,5 @@
 -- Script untuk Delta Executor
--- GUI: Escape Tsunami For Phones (Versi Perbaikan dengan Scroll dan Tombol Fungsional)
+-- GUI: Escape Tsunami For Phones (Versi Final - Semua Tombol Berfungsi)
 
 -- ===========================================
 -- HAPUS GUI LAMA JIKA ADA
@@ -34,7 +34,7 @@ corner.CornerRadius = UDim.new(0, 8)
 corner.Parent = mainFrame
 
 -- ===========================================
--- HEADER (tinggi 30, tanpa ikon)
+-- HEADER (tinggi 30)
 -- ===========================================
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, -10, 0, 30)
@@ -59,7 +59,7 @@ title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = header
 
--- Tombol Minimize (transparan)
+-- Tombol Minimize
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
 minimizeBtn.Position = UDim2.new(1, -60, 0.5, -12.5)
@@ -71,7 +71,7 @@ minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.BorderSizePixel = 0
 minimizeBtn.Parent = header
 
--- Tombol Close (transparan)
+-- Tombol Close
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 25, 0, 25)
 closeBtn.Position = UDim2.new(1, -30, 0.5, -12.5)
@@ -84,7 +84,7 @@ closeBtn.BorderSizePixel = 0
 closeBtn.Parent = header
 
 -- ===========================================
--- SCROLLING KONTEN (menggantikan contentContainer)
+-- SCROLLING KONTEN
 -- ===========================================
 local scrollingFrame = Instance.new("ScrollingFrame")
 scrollingFrame.Size = UDim2.new(1, -20, 1, -55)  -- sisakan ruang untuk header
@@ -93,7 +93,7 @@ scrollingFrame.BackgroundTransparency = 1
 scrollingFrame.BorderSizePixel = 0
 scrollingFrame.ScrollBarThickness = 4
 scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 340)  -- total tinggi konten + spasi
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 340)  -- tinggi konten + spasi
 scrollingFrame.Parent = mainFrame
 scrollingFrame.ClipsDescendants = true
 
@@ -217,12 +217,7 @@ local function createButton(text, yPos, color)
     btn.Font = Enum.Font.GothamBold
     btn.BorderSizePixel = 0
     btn.Parent = buttonContainer
-    btn.ZIndex = 5
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
-    btnCorner.Parent = btn
-    
+    btn.AutoButtonColor = true
     return btn
 end
 
@@ -268,12 +263,13 @@ local function createSwitch(text, yPos)
     toggleBtn.Font = Enum.Font.GothamBold
     toggleBtn.BorderSizePixel = 0
     toggleBtn.Parent = container
-    toggleBtn.ZIndex = 5
+    toggleBtn.AutoButtonColor = true
     
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(0, 12)
     toggleCorner.Parent = toggleBtn
     
+    -- State management
     local state = false
     local function updateToggle()
         if state then
@@ -286,11 +282,15 @@ local function createSwitch(text, yPos)
     end
     updateToggle()
     
-    return toggleBtn, function() return state end
+    -- Return tombol dan fungsi getter/setter
+    return toggleBtn, function() return state end, function(newState)
+        state = newState
+        updateToggle()
+    end
 end
 
-local collectToggle, getCollectState = createSwitch("Instan Collect", 0)
-local proxToggle, getProxState = createSwitch("Instant Proximity", 35)
+local collectToggle, getCollectState, setCollectState = createSwitch("Instan Collect", 0)
+local proxToggle, getProxState, setProxState = createSwitch("Instant Proximity", 35)
 
 -- ===========================================
 -- FUNGSIONALITAS SWITCH
@@ -331,6 +331,7 @@ local function toggleInstantCollect(enabled)
 end
 
 local function setAllProximityPrompts(value)
+    -- Cari semua ProximityPrompt yang sudah ada
     for _, obj in ipairs(collectionService:GetTagged("ProximityPrompt")) do
         if obj:IsA("ProximityPrompt") then
             obj.HoldDuration = value
@@ -360,38 +361,22 @@ local function toggleInstantProximity(enabled)
     end
 end
 
+-- Event untuk switch
 collectToggle.MouseButton1Click:Connect(function()
-    local state = getCollectState()
-    state = not state
-    -- Simpan state secara manual karena closure getCollectState tidak mutable
-    -- Kita akan gunakan atribut State pada tombol
-    collectToggle.State = state
-    if state then
-        collectToggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        collectToggle.Text = "ON"
-    else
-        collectToggle.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-        collectToggle.Text = "OFF"
-    end
-    toggleInstantCollect(state)
+    local current = getCollectState()
+    setCollectState(not current)
+    toggleInstantCollect(not current)
 end)
 
 proxToggle.MouseButton1Click:Connect(function()
-    local state = proxToggle.State or false
-    state = not state
-    proxToggle.State = state
-    if state then
-        proxToggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        proxToggle.Text = "ON"
-    else
-        proxToggle.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-        proxToggle.Text = "OFF"
-    end
-    toggleInstantProximity(state)
+    local current = getProxState()
+    setProxState(not current)
+    toggleInstantProximity(not current)
 end)
 
-collectToggle.State = false
-proxToggle.State = false
+-- Inisialisasi state (OFF)
+setCollectState(false)
+setProxState(false)
 
 -- ===========================================
 -- TOMBOL VIP
@@ -404,6 +389,10 @@ vipBtn.MouseButton1Click:Connect(function()
     else
         print("VIPWalls tidak ditemukan")
     end
+    -- Feedback visual
+    vipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+    task.wait(0.2)
+    vipBtn.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
 end)
 
 -- ===========================================
@@ -457,7 +446,7 @@ stopBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ===========================================
--- DRAG HEADER (hanya jika klik di area non-tombol)
+-- DRAG HEADER (hanya jika klik di background header, bukan di tombol)
 -- ===========================================
 local dragging = false
 local dragStart
@@ -465,9 +454,9 @@ local startPos
 
 header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        -- Cek apakah yang diklik adalah header sendiri (bukan tombol)
+        -- Cek apakah target adalah header itu sendiri atau title (bukan tombol)
         local target = input.Target
-        if target == header or target == title or target == icon then
+        if target == header or target == title then
             dragging = true
             dragStart = input.Position
             startPos = mainFrame.Position
@@ -499,16 +488,17 @@ end)
 local TweenService = game:GetService("TweenService")
 local isMinimized = false
 local originalMainHeight = mainFrame.Size.Y.Offset
-local originalContentHeight = scrollingFrame.Size.Y.Offset
-local minimizedMainHeight = 45
+local minimizedMainHeight = 45  -- header + padding
 
 local function toggleMinimize()
     if isMinimized then
+        -- Maximize
         local tweenMain = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, originalMainHeight)})
         local tweenContent = TweenService:Create(scrollingFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 1, -55)})
         tweenMain:Play()
         tweenContent:Play()
     else
+        -- Minimize
         local tweenMain = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, minimizedMainHeight)})
         local tweenContent = TweenService:Create(scrollingFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, 0)})
         tweenMain:Play()
@@ -529,4 +519,4 @@ end)
 -- ===========================================
 -- SELESAI
 -- ===========================================
-print("GUI Escape Tsunami For Phones berhasil dimuat dengan perbaikan")
+print("GUI Escape Tsunami For Phones berhasil dimuat (semua tombol berfungsi)")
