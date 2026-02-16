@@ -1,7 +1,20 @@
-local Games = loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsannur020-ops/SpeedControl-Azka/refs/heads/main/List%20ID%20Game.Lua"))()
+-- Script Auto Loader (Silent Mode untuk Delta Executor)
+-- Tidak menghasilkan output ke console
 
-local URL = Games[game.PlaceId]
+local gameScripts = {
+    [119987266683883] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/SurviveLAVAforBrainrots"
+    -- Tambahkan ID dan URL lain di sini
+}
 
-if URL then
-  loadstring(game:HttpGet(URL))()
+local currentGameId = game.PlaceId
+local scriptUrl = gameScripts[currentGameId]
+
+if scriptUrl then
+    local success, content = pcall(game.HttpGet, game, scriptUrl)
+    if success and content then
+        local loadSuccess, func = pcall(loadstring, content)
+        if loadSuccess and func then
+            pcall(func)
+        end
+    end
 end
