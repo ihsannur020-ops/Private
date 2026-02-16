@@ -1,5 +1,5 @@
 -- Script untuk Delta Executor
--- GUI: ScriptByAzka_Deepseek dengan draggable header, minimize animasi, dan close
+-- GUI: ScriptByAzka_Deepseek dengan draggable header, minimize animasi (tinggi menyusut), dan close
 
 -- ===========================================
 -- HAPUS GUI LAMA JIKA ADA
@@ -20,13 +20,13 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Frame utama (bisa digerakkan)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 220)  -- Tinggi cukup untuk header + 2 tombol + footer
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
+mainFrame.Size = UDim2.new(0, 320, 0, 210)  -- Ukuran normal (header + konten)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -105)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 mainFrame.Active = true
-mainFrame.Draggable = false  -- Kita akan buat draggable manual via header
+mainFrame.ClipsDescendants = true  -- Agar konten tidak keluar saat animasi
 
 -- Sudut melengkung
 local corner = Instance.new("UICorner")
@@ -114,11 +114,11 @@ closeCorner.Parent = closeBtn
 -- KONTEN UTAMA (akan dianimasikan saat minimize)
 -- ===========================================
 local contentContainer = Instance.new("Frame")
-contentContainer.Size = UDim2.new(1, -20, 0, 140)  -- Tinggi total: 50+50+30 + spasi
+contentContainer.Size = UDim2.new(1, -20, 0, 150)  -- Tinggi pas untuk 2 tombol + footer (50+50+30 + 20 spasi)
 contentContainer.Position = UDim2.new(0, 10, 0, 55)  -- Di bawah header
 contentContainer.BackgroundTransparency = 1
 contentContainer.Parent = mainFrame
-contentContainer.ClipsDescendants = true  -- Agar animasi memotong anak-anaknya
+contentContainer.ClipsDescendants = true
 
 -- Tombol 1: Hapus Wave Loop
 local button1 = Instance.new("TextButton")
@@ -139,7 +139,7 @@ btn1Corner.Parent = button1
 -- Tombol 2: Stop Loop
 local button2 = Instance.new("TextButton")
 button2.Size = UDim2.new(1, 0, 0, 50)
-button2.Position = UDim2.new(0, 0, 0, 60)
+button2.Position = UDim2.new(0, 0, 0, 60)  -- 50 + 10 spasi
 button2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 button2.Text = "Stop Loop"
 button2.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -155,7 +155,7 @@ btn2Corner.Parent = button2
 -- Footer (Azka Script)
 local footer = Instance.new("TextLabel")
 footer.Size = UDim2.new(1, 0, 0, 30)
-footer.Position = UDim2.new(0, 0, 0, 120)  -- Di bawah tombol kedua
+footer.Position = UDim2.new(0, 0, 0, 120)  -- 60+50+10 = 120
 footer.BackgroundTransparency = 1
 footer.Text = "Azka Script"
 footer.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -198,21 +198,27 @@ header.InputEnded:Connect(function(input)
 end)
 
 -- ===========================================
--- FUNGSIONALITAS MINIMIZE (animasi naik/turun)
+-- FUNGSIONALITAS MINIMIZE (animasi naik/turun dengan perubahan tinggi mainFrame)
 -- ===========================================
 local TweenService = game:GetService("TweenService")
 local isMinimized = false
-local originalHeight = contentContainer.Size.Y.Offset
+local originalMainHeight = mainFrame.Size.Y.Offset
+local originalContentHeight = contentContainer.Size.Y.Offset
+local minimizedMainHeight = 50  -- Tinggi saat minimize: header (40) + padding atas 5 + padding bawah 5
 
 local function toggleMinimize()
 	if isMinimized then
-		-- Maximize: kembalikan ke tinggi semula
-		local tween = TweenService:Create(contentContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, originalHeight)})
-		tween:Play()
+		-- Maximize: kembalikan ukuran mainFrame dan contentContainer
+		local tweenMain = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 320, 0, originalMainHeight)})
+		local tweenContent = TweenService:Create(contentContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, originalContentHeight)})
+		tweenMain:Play()
+		tweenContent:Play()
 	else
-		-- Minimize: kecilkan hingga 0
-		local tween = TweenService:Create(contentContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, 0)})
-		tween:Play()
+		-- Minimize: kecilkan mainFrame dan contentContainer
+		local tweenMain = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 320, 0, minimizedMainHeight)})
+		local tweenContent = TweenService:Create(contentContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -20, 0, 0)})
+		tweenMain:Play()
+		tweenContent:Play()
 	end
 	isMinimized = not isMinimized
 end
@@ -271,4 +277,4 @@ button2.MouseButton1Click:Connect(function()
 	button2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 end)
 
-print("GUI " .. guiName .. " berhasil dimuat dengan draggable header dan minimize animasi")
+print("GUI " .. guiName .. " berhasil dimuat dengan draggable header dan minimize animasi (tinggi menyusut)")
