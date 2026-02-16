@@ -12,7 +12,7 @@ local runService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
 
 local localPlayer = players.LocalPlayer
-local guiName = "EscapeTsunamiGUI"
+local guiName = "EscapeTsunami_ScriptByAzka.UI_Utama"
 
 -- Hapus GUI lama jika ada
 if coreGui:FindFirstChild(guiName) then
@@ -560,3 +560,4 @@ print("==================")
 -- SELESAI
 -- ==================================================
 print("GUI Escape Tsunami For Phones berhasil dimuat. Semua fitur diperbaiki.")
+
