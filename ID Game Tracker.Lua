@@ -1,5 +1,6 @@
 -- Script untuk Delta Executor
 -- Menampilkan ID Game (Place ID & Job ID) secara real-time dalam GUI sederhana
+-- Dilengkapi tombol salin ID
 
 -- Memuat layanan yang diperlukan
 local Players = game:GetService("Players")
@@ -28,8 +29,8 @@ end
 
 -- Membuat frame utama (dapat digeser)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 120)
-frame.Position = UDim2.new(0.5, -125, 0.5, -60)  -- Posisi tengah layar
+frame.Size = UDim2.new(0, 250, 0, 150)  -- Tinggi ditambah untuk tombol
+frame.Position = UDim2.new(0.5, -125, 0.5, -75)  -- Posisi tengah layar
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BackgroundTransparency = 0.2
 frame.BorderSizePixel = 2
@@ -62,6 +63,17 @@ idLabel.TextWrapped = true
 idLabel.Text = "Memuat..."
 idLabel.Parent = frame
 
+-- Tombol salin ID
+local copyBtn = Instance.new("TextButton")
+copyBtn.Size = UDim2.new(0.8, -10, 0, 30)
+copyBtn.Position = UDim2.new(0.1, 0, 0, 90)  -- Di bawah label ID
+copyBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)  -- Biru steel
+copyBtn.Text = "Salin ID"
+copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+copyBtn.Font = Enum.Font.SourceSansBold
+copyBtn.TextSize = 16
+copyBtn.Parent = frame
+
 -- Tombol tutup (X)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 20, 0, 20)
@@ -83,6 +95,31 @@ local function updateID()
     -- Baris baru untuk memisahkan Place ID dan Job ID
     idLabel.Text = "Place ID: " .. tostring(placeId) .. "\nJob ID: " .. tostring(jobId)
 end
+
+-- Fungsi untuk menyalin teks ke clipboard (menggunakan setclipboard jika ada)
+local function copyToClipboard(text)
+    local success, err = pcall(function()
+        setclipboard(text)  -- Fungsi umum di executor
+    end)
+    if not success then
+        -- Fallback: tidak bisa menyalin, tampilkan pesan
+        warn("Gagal menyalin: " .. tostring(err))
+        copyBtn.Text = "Gagal!"
+        task.wait(1)
+        copyBtn.Text = "Salin ID"
+    else
+        copyBtn.Text = "Tersalin!"
+        task.wait(1)
+        copyBtn.Text = "Salin ID"
+    end
+end
+
+-- Event klik tombol salin
+copyBtn.MouseButton1Click:Connect(function()
+    -- Gabungkan Place ID dan Job ID dalam format yang rapi
+    local textToCopy = "Place ID: " .. tostring(game.PlaceId or "Tidak tersedia") .. "\nJob ID: " .. tostring(game.JobId or "Tidak tersedia")
+    copyToClipboard(textToCopy)
+end)
 
 -- Memperbarui ID setiap detik (real-time)
 spawn(function()
