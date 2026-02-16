@@ -5,7 +5,8 @@ local gameScripts = {
     [134763881293027] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/StealFromBrainrots",
     [138048509924404] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/SaveBrainrotfromLava",
     [78326551441316]  = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapeGettingCrushedForBrainrots",
-    [135094773390024] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapePoliceForBrainrots"
+    [135094773390024] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapePoliceForBrainrots",
+    [131623223084840] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapeTsunamiForBrainrots"
     -- Tambahkan ID dan URL lain di sini
 }
 
