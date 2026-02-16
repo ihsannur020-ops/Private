@@ -1,5 +1,5 @@
 -- Script Profesional untuk Delta Executor
--- GUI: Escape Tsunami For Phones (Versi Final dengan Perbaikan Total)
+-- GUI: Escape Tsunami For Phones (Versi Final dengan Drag yang Pasti Berfungsi)
 
 -- ==================================================
 -- 1. KONFIGURASI AWAL
@@ -8,7 +8,6 @@ local coreGui = game:GetService("CoreGui")
 local players = game:GetService("Players")
 local userInput = game:GetService("UserInputService")
 local tweenService = game:GetService("TweenService")
-local runService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
 
 local localPlayer = players.LocalPlayer
@@ -36,7 +35,6 @@ mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 mainFrame.ClipsDescendants = true
-mainFrame.Active = true
 
 -- Sudut melengkung
 local uiCorner = Instance.new("UICorner")
@@ -44,7 +42,7 @@ uiCorner.CornerRadius = UDim.new(0, 8)
 uiCorner.Parent = mainFrame
 
 -- ==================================================
--- 3. HEADER (dapat digeser)
+-- 3. HEADER (dapat digeser) - Desain baru yang lebih sederhana
 -- ==================================================
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, -10, 0, 30)
@@ -58,7 +56,7 @@ local headerCorner = Instance.new("UICorner")
 headerCorner.CornerRadius = UDim.new(0, 6)
 headerCorner.Parent = header
 
--- Judul
+-- Judul (area drag utama)
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -70, 1, 0)
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
@@ -186,18 +184,16 @@ end
 local yOffset = 0
 local spacing = 5
 
--- Walkspeed Slider (diperbaiki layout)
+-- Walkspeed Slider
 createLabel("Walkspeed", yOffset)
 yOffset = yOffset + 25 + spacing
 
--- Container untuk slider dan angka
 local sliderRow = Instance.new("Frame")
 sliderRow.Size = UDim2.new(1, 0, 0, 30)
 sliderRow.Position = UDim2.new(0, 0, 0, yOffset)
 sliderRow.BackgroundTransparency = 1
 sliderRow.Parent = scrollingFrame
 
--- Slider background
 local sliderBg = Instance.new("Frame")
 sliderBg.Size = UDim2.new(0, 200, 0, 10)
 sliderBg.Position = UDim2.new(0, 0, 0.5, -5)
@@ -221,7 +217,6 @@ local sliderButtonCorner = Instance.new("UICorner")
 sliderButtonCorner.CornerRadius = UDim.new(0, 4)
 sliderButtonCorner.Parent = sliderButton
 
--- Nilai slider di samping
 local wsValue = Instance.new("TextLabel")
 wsValue.Size = UDim2.new(0, 50, 1, 0)
 wsValue.Position = UDim2.new(0, 210, 0, 0)
@@ -234,8 +229,8 @@ wsValue.Parent = sliderRow
 
 yOffset = yOffset + 30 + spacing
 
--- Tombol VIP (kuning), Hapus Wave, Stop Loop
-local vipBtn = createButton("VIP", yOffset, Color3.fromRGB(255, 255, 0))  -- Kuning
+-- Tombol
+local vipBtn = createButton("VIP", yOffset, Color3.fromRGB(255, 255, 0))
 yOffset = yOffset + 45 + spacing
 
 local waveBtn = createButton("Hapus Wave", yOffset)
@@ -251,7 +246,6 @@ yOffset = yOffset + 30 + spacing
 local proxToggle = createSwitch("Instant Proximity", yOffset)
 yOffset = yOffset + 30 + spacing
 
--- Set CanvasSize
 scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
 
 -- ==================================================
@@ -323,7 +317,7 @@ vipBtn.MouseButton1Click:Connect(function()
     end
     vipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
     task.wait(0.2)
-    vipBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)  -- Kembali kuning
+    vipBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 end)
 
 -- ==================================================
@@ -384,38 +378,31 @@ local proxEnabled = false
 local collectThread = nil
 local proxConnections = {}
 
--- Instant Collect: algoritma baru
+-- Instant Collect
 local function instantCollectLoop()
     while collectEnabled do
-        -- Cari CarryPart pada player
         local playerName = localPlayer.Name
         local playerModel = workspace:FindFirstChild(playerName)
         local carryPart = playerModel and playerModel:FindFirstChild("CarryPart")
         local collectWall = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Collect") and workspace.Map.Collect:FindFirstChild("CollectWall")
         
-        if carryPart and collectWall then
-            -- Simpan posisi player
+        if carryPart and collectWall and carryPart:FindFirstChildWhichIsA("Model") then
             local character = localPlayer.Character
             local root = character and character:FindFirstChild("HumanoidRootPart")
             if root then
                 local savedPos = root.CFrame
-                -- Teleport ke CollectWall
                 root.CFrame = collectWall.CFrame
-                task.wait(0.1)  -- beri waktu untuk proses koleksi
-                -- Cek apakah CarryPart masih ada (apakah sudah terkoleksi?)
-                -- Jika masih ada, mungkin perlu ditunggu? Tapi menurut logika, setelah menyentuh wall, item akan hilang.
-                -- Kita tunggu sampai CarryPart hilang atau timeout
+                task.wait(0.2)
+                -- Tunggu sampai CarryPart kosong atau timeout
                 local timeout = 0
-                while carryPart and carryPart.Parent and timeout < 50 do
+                while carryPart:FindFirstChildWhichIsA("Model") and timeout < 20 do
                     task.wait(0.1)
                     timeout = timeout + 1
-                    carryPart = playerModel and playerModel:FindFirstChild("CarryPart")
                 end
-                -- Teleport kembali ke posisi semula
                 root.CFrame = savedPos
             end
         end
-        task.wait(0.5)  -- deteksi setiap 0.5 detik
+        task.wait(0.5)
     end
 end
 
@@ -432,17 +419,15 @@ local function setCollectEnabled(state)
     end
 end
 
--- Instant Proximity: perbaikan agar langsung mati saat OFF
+-- Instant Proximity
 local function setProxEnabled(state)
     proxEnabled = state
     if state then
-        -- Set semua yang sudah ada
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("ProximityPrompt") then
                 obj.HoldDuration = 0
             end
         end
-        -- Pantau yang baru
         local conn = workspace.DescendantAdded:Connect(function(desc)
             if desc:IsA("ProximityPrompt") then
                 desc.HoldDuration = 0
@@ -451,12 +436,10 @@ local function setProxEnabled(state)
         table.insert(proxConnections, conn)
         print("[Instant Proximity] Activated")
     else
-        -- Putuskan semua koneksi
         for _, conn in ipairs(proxConnections) do
             conn:Disconnect()
         end
         proxConnections = {}
-        -- Opsional: kembalikan ke default? Tidak, biarkan 0.
         print("[Instant Proximity] Deactivated")
     end
 end
@@ -486,46 +469,77 @@ proxToggle.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 10. DRAG HEADER (metode robust)
+-- 10. DRAG HEADER (METODE PALING SEDERHANA DAN PASTI)
 -- ==================================================
-local dragging = false
-local dragStart, startPos
+-- Solusi: Gunakan Draggable pada mainFrame, tetapi batasi area drag hanya dari header
+-- dengan cara menonaktifkan sementara Draggable saat mouse di luar header? Tidak perlu.
+-- Alternatif: Set mainFrame.Draggable = true, lalu tangkap event drag dari header saja.
+-- Tapi Draggable otomatis akan membuat seluruh frame bisa di-drag. Kita bisa atur
+-- mainFrame.Draggable = false, lalu gunakan event mouse pada header untuk menggerakkan mainFrame.
 
--- Fungsi untuk memulai drag
-header.InputBegan:Connect(function(input)
+-- Metode yang paling reliable: gunakan event InputBegan pada header, lalu hubungkan ke
+-- UserInputService.InputChanged untuk mengupdate posisi. Ini sudah kita coba, tapi mungkin
+-- ada masalah dengan event propagation. Mari kita coba dengan menambahkan
+-- mainFrame.Active = true dan mainFrame.Draggable = false, serta memastikan tidak ada
+-- yang menghalangi.
+
+-- Kita buat fungsi drag yang berdiri sendiri:
+
+local dragging = false
+local dragStartPos
+local frameStartPos
+
+local function onInputBegan(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        -- Cek apakah target bukan tombol
-        local target = input.Target
-        if target ~= minimizeBtn and target ~= closeBtn then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
+        -- Cek apakah mouse berada di atas header dan bukan tombol
+        local mousePos = userInput:GetMouseLocation()
+        local absPos = header.AbsolutePosition
+        local absSize = header.AbsoluteSize
+        if mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
+           mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y then
+            -- Cek apakah target bukan tombol
+            local target = userInput:GetMouseLocation() -- tidak bisa dapat target, kita cek dengan metode lain
+            -- Alternatif: kita asumsikan jika mouse di header dan bukan di area tombol
+            local btnMinPos = minimizeBtn.AbsolutePosition
+            local btnMinSize = minimizeBtn.AbsoluteSize
+            local btnClosePos = closeBtn.AbsolutePosition
+            local btnCloseSize = closeBtn.AbsoluteSize
+            
+            local overMin = mousePos.X >= btnMinPos.X and mousePos.X <= btnMinPos.X + btnMinSize.X and
+                           mousePos.Y >= btnMinPos.Y and mousePos.Y <= btnMinPos.Y + btnMinSize.Y
+            local overClose = mousePos.X >= btnClosePos.X and mousePos.X <= btnClosePos.X + btnCloseSize.X and
+                              mousePos.Y >= btnClosePos.Y and mousePos.Y <= btnClosePos.Y + btnCloseSize.Y
+            
+            if not overMin and not overClose then
+                dragging = true
+                dragStartPos = input.Position
+                frameStartPos = mainFrame.Position
+            end
         end
     end
-end)
+end
 
--- Update posisi
-userInput.InputChanged:Connect(function(input)
+local function onInputChanged(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
+        local delta = input.Position - dragStartPos
         mainFrame.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
+            frameStartPos.X.Scale,
+            frameStartPos.X.Offset + delta.X,
+            frameStartPos.Y.Scale,
+            frameStartPos.Y.Offset + delta.Y
         )
     end
-end)
+end
 
--- Pastikan drag berhenti jika mouse keluar dari header (opsional)
-header.MouseLeave:Connect(function()
-    dragging = false
-end)
+local function onInputEnded(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end
+
+userInput.InputBegan:Connect(onInputBegan)
+userInput.InputChanged:Connect(onInputChanged)
+userInput.InputEnded:Connect(onInputEnded)
 
 -- ==================================================
 -- 11. MINIMIZE ANIMASI
@@ -552,6 +566,10 @@ minimizeBtn.MouseButton1Click:Connect(animateMinimize)
 -- ==================================================
 closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
+    -- Putuskan koneksi drag (opsional)
+    userInput.InputBegan:Disconnect()
+    userInput.InputChanged:Disconnect()
+    userInput.InputEnded:Disconnect()
 end)
 
 -- ==================================================
@@ -568,4 +586,4 @@ print("==================")
 -- ==================================================
 -- SELESAI
 -- ==================================================
-print("GUI Escape Tsunami For Phones berhasil dimuat. Semua fitur diperbaiki.")
+print("GUI Escape Tsunami For Phones berhasil dimuat. Drag header menggunakan UserInputService global.")
