@@ -238,7 +238,7 @@ yOffset = yOffset + 30 + spacing
 local vipBtn = createButton("VIP", yOffset, Color3.fromRGB(255, 255, 0))  -- Kuning
 yOffset = yOffset + 45 + spacing
 
-local waveBtn = createButton("Hapus Wave", yOffset)
+local waveBtn = createButton("OFF Wave", yOffset)
 yOffset = yOffset + 45 + spacing
 
 local stopBtn = createButton("Stop Loop", yOffset)
@@ -560,5 +560,6 @@ print("==================")
 -- SELESAI
 -- ==================================================
 print("GUI Escape Tsunami For Phones berhasil dimuat. Semua fitur diperbaiki.")
+
 
 
