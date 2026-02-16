@@ -1,5 +1,5 @@
 -- Script Profesional untuk Delta Executor
--- GUI: Escape Tsunami For Phones (Versi Stabil)
+-- GUI: Escape Tsunami For Phones (Versi Stabil dengan Perbaikan Drag dan Instant Collect)
 
 -- ==================================================
 -- 1. KONFIGURASI AWAL
@@ -104,14 +104,14 @@ scrollingFrame.BackgroundTransparency = 1
 scrollingFrame.BorderSizePixel = 0
 scrollingFrame.ScrollBarThickness = 4
 scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)  -- akan diatur nanti
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollingFrame.Parent = mainFrame
-scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y  -- otomatis menyesuaikan konten
+scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 -- ==================================================
 -- 5. MEMBUAT KONTEN DALAM SCROLLINGFRAME
 -- ==================================================
-local function createLabel(text, parent, yPos, fontSize)
+local function createLabel(text, parent, yPos)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 0, 25)
     label.Position = UDim2.new(0, 0, 0, yPos)
@@ -226,7 +226,7 @@ wsValue.TextScaled = true
 wsValue.Font = Enum.Font.GothamBold
 wsValue.Parent = scrollingFrame
 
-yOffset = yOffset + 30 + spacing  -- tambah tinggi slider
+yOffset = yOffset + 30 + spacing
 
 -- 5b. Tombol VIP, Hapus Wave, Stop Loop
 local vipBtn = createButton("VIP", scrollingFrame, yOffset, Color3.fromRGB(128, 0, 128))
@@ -301,7 +301,7 @@ end)
 
 -- Update ketika karakter berganti
 localPlayer.CharacterAdded:Connect(function()
-    task.wait(1) -- tunggu humanoid
+    task.wait(1)
     updateWalkspeed(currentSpeed)
 end)
 
@@ -316,14 +316,13 @@ vipBtn.MouseButton1Click:Connect(function()
     else
         print("[VIP] VIPWalls tidak ditemukan")
     end
-    -- Feedback
     vipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
     task.wait(0.2)
     vipBtn.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
 end)
 
 -- ==================================================
--- 8. FUNGSIONALITAS WAVE LOOP (Hapus Wave & Stop Loop)
+-- 8. FUNGSIONALITAS WAVE LOOP
 -- ==================================================
 local targetNames = {
     "SuperSlow", "Slow", "Medium", "Fast", "SuperFast", "Lightning"
@@ -384,6 +383,7 @@ local proxConnections = {}
 local function setCollectEnabled(state)
     collectEnabled = state
     if state then
+        -- Cari path sesuai deskripsi game
         local playerName = localPlayer.Name
         local carryPart = workspace:FindFirstChild(playerName) and workspace[playerName]:FindFirstChild("CarryPart")
         local collectWall = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Collect") and workspace.Map.Collect:FindFirstChild("CollectWall")
@@ -391,16 +391,28 @@ local function setCollectEnabled(state)
         if carryPart and collectWall then
             collectConnection = carryPart.ChildAdded:Connect(function(child)
                 if child:IsA("Model") then
+                    -- Pastikan model memiliki PrimaryPart atau bagian pertama
                     local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
                     if primary then
+                        -- Pindahkan seluruh model ke posisi CollectWall agar menyentuh
                         child:SetPrimaryPartCFrame(collectWall.CFrame)
+                        -- Alternatif: jika tidak ada PrimaryPart, pindahkan semua bagian
+                        if not child.PrimaryPart then
+                            for _, part in ipairs(child:GetChildren()) do
+                                if part:IsA("BasePart") then
+                                    part.CFrame = collectWall.CFrame
+                                end
+                            end
+                        end
                         print("[Instant Collect] Model dipindahkan ke CollectWall")
+                    else
+                        warn("[Instant Collect] Model tidak memiliki part")
                     end
                 end
             end)
             print("[Instant Collect] Activated")
         else
-            warn("[Instant Collect] CarryPart atau CollectWall tidak ditemukan")
+            warn("[Instant Collect] CarryPart atau CollectWall tidak ditemukan. Pastikan struktur: workspace.[NamaPlayer].CarryPart dan workspace.Map.Collect.CollectWall")
         end
     else
         if collectConnection then
@@ -415,7 +427,7 @@ end
 local function setProxEnabled(state)
     proxEnabled = state
     if state then
-        -- Set semua yang sudah ada
+        -- Set semua ProximityPrompt yang sudah ada
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("ProximityPrompt") then
                 obj.HoldDuration = 0
@@ -434,7 +446,6 @@ local function setProxEnabled(state)
             conn:Disconnect()
         end
         proxConnections = {}
-        -- Tidak mengembalikan nilai default, biarkan 0
         print("[Instant Proximity] Deactivated")
     end
 end
@@ -465,7 +476,7 @@ proxToggle.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 10. DRAG HEADER
+-- 10. DRAG HEADER (hanya di area judul, tidak di tombol)
 -- ==================================================
 local dragging = false
 local dragStart, startPos
@@ -473,7 +484,8 @@ local dragStart, startPos
 header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         local target = input.Target
-        if target == header or target == titleLabel then
+        -- Hanya mulai drag jika target bukan tombol (minimize/close) dan merupakan bagian dari header atau title
+        if target ~= minimizeBtn and target ~= closeBtn and (target == header or target == titleLabel) then
             dragging = true
             dragStart = input.Position
             startPos = mainFrame.Position
@@ -504,19 +516,17 @@ end)
 -- ==================================================
 local isMinimized = false
 local originalHeight = mainFrame.Size.Y.Offset
-local minimizedHeight = 45  -- header + padding
+local minimizedHeight = 45
 
 local function animateMinimize()
     if isMinimized then
         -- Maximize
+        scrollingFrame.Visible = true
         local tween = tweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, originalHeight)})
         tween:Play()
-        tween.Completed:Connect(function()
-            scrollingFrame.Visible = true
-        end)
     else
         -- Minimize
-        scrollingFrame.Visible = false  -- sembunyikan konten agar tidak terlihat saat mengecil
+        scrollingFrame.Visible = false
         local tween = tweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, minimizedHeight)})
         tween:Play()
     end
@@ -535,4 +545,4 @@ end)
 -- ==================================================
 -- 13. INISIALISASI SELESAI
 -- ==================================================
-print("GUI Escape Tsunami For Phones berhasil dimuat (Profesional Edition)")
+print("GUI Escape Tsunami For Phones berhasil dimuat. Drag hanya di area judul. Instant Collect aktif jika struktur game sesuai.")
