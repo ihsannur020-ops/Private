@@ -1,5 +1,5 @@
 -- Script Profesional untuk Delta Executor
--- GUI: Escape Tsunami For Phones (Versi Final dengan Drag Fix untuk Mobile)
+-- GUI: Escape Tsunami For Phones (Versi Final dengan Drag Fix dan Tombol Responsif)
 
 -- ==================================================
 -- 1. KONFIGURASI AWAL
@@ -186,7 +186,7 @@ end
 local yOffset = 0
 local spacing = 5
 
--- Walkspeed Slider (diperbaiki layout)
+-- Walkspeed Slider
 createLabel("Walkspeed", yOffset)
 yOffset = yOffset + 25 + spacing
 
@@ -486,17 +486,16 @@ proxToggle.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 10. DRAG HEADER (DIPERBAIKI UNTUK MOBILE)
+-- 10. DRAG HEADER (DIPERBAIKI UNTUK MOBILE & DESKTOP)
 -- ==================================================
 local dragging = false
 local dragStartPos = Vector2.new()
 local frameStartPos = UDim2.new()
 
--- Fungsi untuk memulai drag (mendukung mouse dan touch)
 local function startDrag(input)
-    -- Cek apakah target bukan tombol minimize/close
+    -- Periksa apakah target adalah tombol minimize/close atau turunannya
     local target = input.Target
-    if target == minimizeBtn or target == closeBtn then
+    if target and (target:IsDescendantOf(minimizeBtn) or target:IsDescendantOf(closeBtn)) then
         return
     end
     dragging = true
@@ -504,7 +503,6 @@ local function startDrag(input)
     frameStartPos = mainFrame.Position
 end
 
--- Fungsi untuk memperbarui posisi saat drag
 local function updateDrag(input)
     if not dragging then return end
     local delta = input.Position - dragStartPos
@@ -516,12 +514,11 @@ local function updateDrag(input)
     )
 end
 
--- Fungsi untuk mengakhiri drag
 local function stopDrag()
     dragging = false
 end
 
--- Koneksi untuk input mouse
+-- Event untuk mouse
 header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         startDrag(input)
@@ -534,7 +531,7 @@ header.InputEnded:Connect(function(input)
     end
 end)
 
--- Koneksi untuk input sentuhan (mobile)
+-- Event untuk sentuhan (mobile)
 header.TouchBegan:Connect(function(touch, gameProcessed)
     if gameProcessed then return end
     startDrag(touch)
@@ -550,17 +547,16 @@ header.TouchEnded:Connect(function(touch, gameProcessed)
     stopDrag()
 end)
 
--- Update posisi saat mouse bergerak (untuk desktop)
+-- Update posisi saat mouse bergerak (desktop)
 userInput.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement) then
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         updateDrag(input)
     end
 end)
 
--- Pastikan drag berhenti jika input dibatalkan (misal: sentuhan di luar)
+-- Hentikan drag jika sentuhan berakhir di luar header (opsional)
 userInput.TouchEnded:Connect(function(touch, gameProcessed)
     if gameProcessed then return end
-    -- Hanya hentikan jika touch yang memulai drag (tidak ada cara mudah, jadi hentikan semua)
     stopDrag()
 end)
 
@@ -605,4 +601,4 @@ print("==================")
 -- ==================================================
 -- SELESAI
 -- ==================================================
-print("GUI Escape Tsunami For Phones berhasil dimuat. Drag support mouse dan touch.")
+print("GUI Escape Tsunami For Phones berhasil dimuat. Drag support mouse dan touch, tombol berfungsi.")
