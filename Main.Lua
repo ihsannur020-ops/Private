@@ -1,5 +1,5 @@
 -- Script Profesional untuk Delta Executor
--- GUI: Escape Tsunami For Phones (Versi Final dengan Drag Header yang Sempurna)
+-- GUI: Escape Tsunami For Phones (Versi Final dengan Drag Header Sempurna)
 
 -- ==================================================
 -- 1. KONFIGURASI AWAL
@@ -469,33 +469,36 @@ proxToggle.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 10. DRAG HEADER (METODE PALING SEDERHANA DAN PASTI)
+-- 10. DRAG HEADER (METODE UMUM DI SCRIPT ROBLOX)
 -- ==================================================
--- Gunakan event MouseButton1Down pada header untuk memulai drag.
--- Tombol minimize/close memiliki event sendiri sehingga tidak akan memicu drag.
+-- Menggunakan event MouseButton1Down pada header dan UserInputService untuk drag.
 local dragging = false
-local dragStart
-local startPos
+local dragStartPos
+local frameStartPos
 
+-- Fungsi untuk memulai drag
 header.MouseButton1Down:Connect(function()
+    -- Pastikan mouse tidak di atas tombol (walau event header tidak akan terpicu jika di tombol)
     dragging = true
-    dragStart = userInput:GetMouseLocation()
-    startPos = mainFrame.Position
+    dragStartPos = userInput:GetMouseLocation()
+    frameStartPos = mainFrame.Position
 end)
 
-userInput.InputChanged:Connect(function(input)
+-- Update posisi saat mouse bergerak
+local moveConnection = userInput.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
+        local delta = input.Position - dragStartPos
         mainFrame.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
+            frameStartPos.X.Scale,
+            frameStartPos.X.Offset + delta.X,
+            frameStartPos.Y.Scale,
+            frameStartPos.Y.Offset + delta.Y
         )
     end
 end)
 
-userInput.InputEnded:Connect(function(input)
+-- Hentikan drag saat mouse dilepas
+local endConnection = userInput.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
@@ -525,6 +528,9 @@ minimizeBtn.MouseButton1Click:Connect(animateMinimize)
 -- 12. CLOSE
 -- ==================================================
 closeBtn.MouseButton1Click:Connect(function()
+    -- Putuskan koneksi drag
+    moveConnection:Disconnect()
+    endConnection:Disconnect()
     screenGui:Destroy()
 end)
 
@@ -542,4 +548,4 @@ print("==================")
 -- ==================================================
 -- SELESAI
 -- ==================================================
-print("GUI Escape Tsunami For Phones berhasil dimuat. Drag header menggunakan event MouseButton1Down.")
+print("GUI Escape Tsunami For Phones berhasil dimuat. Drag header berfungsi.")
