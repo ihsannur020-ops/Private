@@ -1,5 +1,6 @@
 -- Script UI untuk Delta Executor
 -- Game: Survive LAVA for Brainrots
+-- GUI: SurviveLAVA_ByAzka
 
 -- ==================================================
 -- 1. KONFIGURASI AWAL
@@ -7,11 +8,11 @@
 local coreGui = game:GetService("CoreGui")
 local players = game:GetService("Players")
 local userInput = game:GetService("UserInputService")
-local runService = game:GetService("RunService")
 local tweenService = game:GetService("TweenService")
+local runService = game:GetService("RunService")
 
 local localPlayer = players.LocalPlayer
-local guiName = "[SurviveLAVA_ByAzka]"
+local guiName = "SurviveLAVA_ByAzka"
 
 -- Hapus GUI lama jika ada
 if coreGui:FindFirstChild(guiName) then
@@ -29,8 +30,8 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Frame utama (dapat digeser)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 400)  -- diperbesar untuk konten
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -200)
+mainFrame.Size = UDim2.new(0, 350, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 2
@@ -39,24 +40,21 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- Sudut melengkung untuk frame utama
 local uiCorner = Instance.new("UICorner")
 uiCorner.CornerRadius = UDim.new(0, 8)
 uiCorner.Parent = mainFrame
 
--- Judul UI
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -70, 0, 30)
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
-title.Text = "Survive LAVA Brainrots"
+title.Text = "Survive LAVA"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 18
+title.TextSize = 20
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = mainFrame
 
--- Tombol Minimize
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
 minimizeBtn.Position = UDim2.new(1, -65, 0, 5)
@@ -68,7 +66,6 @@ minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.BorderSizePixel = 0
 minimizeBtn.Parent = mainFrame
 
--- Tombol Close
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 0, 30)
 closeBtn.Position = UDim2.new(1, -30, 0, 5)
@@ -80,9 +77,7 @@ closeBtn.Font = Enum.Font.GothamBold
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = mainFrame
 
--- ==================================================
--- 3. SCROLLING FRAME UNTUK KONTEN
--- ==================================================
+-- Scrolling frame untuk konten
 local scrollingFrame = Instance.new("ScrollingFrame")
 scrollingFrame.Size = UDim2.new(1, -20, 1, -55)
 scrollingFrame.Position = UDim2.new(0, 10, 0, 45)
@@ -94,15 +89,12 @@ scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollingFrame.Parent = mainFrame
 scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
--- Layout untuk menyusun container secara vertikal
 local scrollLayout = Instance.new("UIListLayout")
 scrollLayout.Parent = scrollingFrame
 scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 scrollLayout.Padding = UDim.new(0, 10)
 
--- ==================================================
--- 4. MEMBUAT KONTAINER
--- ==================================================
+-- Fungsi membuat container
 local function createContainer(name)
     local container = Instance.new("Frame")
     container.Name = name
@@ -114,22 +106,20 @@ local function createContainer(name)
     local layout = Instance.new("UIListLayout")
     layout.Parent = container
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 8)
+    layout.Padding = UDim.new(0, 6)
 
     return container
 end
 
--- Buat container: Slider, Tombol, Switch
 local slideContainer = createContainer("SlideContainer")
 local buttonContainer = createContainer("ButtonContainer")
 local switchContainer = createContainer("SwitchContainer")
 
 -- ==================================================
--- 5. FUNGSI-FUNGSI UI
+-- 3. FUNGSI-FUNGSI UI (Sama seperti sebelumnya)
 -- ==================================================
 local UI = {}
 
--- Fungsi slider (sama seperti template, disesuaikan)
 function UI.AddSlider(config)
     local container = slideContainer
     local text = config.Text or "Slider"
@@ -137,16 +127,14 @@ function UI.AddSlider(config)
     local max = config.Max or 100
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
-    local unit = config.Unit or ""
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 40)
+    frame.Size = UDim2.new(1, 0, 0, 30)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
-    -- Label teks
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -70, 0, 20)
+    label.Size = UDim2.new(1, -60, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -155,22 +143,20 @@ function UI.AddSlider(config)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    -- Nilai slider
     local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0, 60, 0, 20)
-    valueLabel.Position = UDim2.new(1, -60, 0, 0)
+    valueLabel.Size = UDim2.new(0, 50, 1, 0)
+    valueLabel.Position = UDim2.new(1, -50, 0, 0)
     valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(default) .. unit
+    valueLabel.Text = tostring(default)
     valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     valueLabel.Font = Enum.Font.Gotham
     valueLabel.TextSize = 14
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
     valueLabel.Parent = frame
 
-    -- Track slider
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, 0, 0, 4)
-    track.Position = UDim2.new(0, 0, 1, -10)
+    track.Position = UDim2.new(0, 0, 1, -8)
     track.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     track.BorderSizePixel = 0
     track.Parent = frame
@@ -189,7 +175,6 @@ function UI.AddSlider(config)
     thumb.BorderSizePixel = 0
     thumb.Parent = track
 
-    -- Sudut melingkar
     local thumbCorner = Instance.new("UICorner")
     thumbCorner.CornerRadius = UDim.new(0, 6)
     thumbCorner.Parent = thumb
@@ -197,7 +182,6 @@ function UI.AddSlider(config)
     trackCorner.CornerRadius = UDim.new(0, 2)
     trackCorner.Parent = track
 
-    -- Interaksi slider
     local dragging = false
     thumb.MouseButton1Down:Connect(function()
         dragging = true
@@ -217,7 +201,7 @@ function UI.AddSlider(config)
             local percent = relativeX / trackSize.X
             local value = min + (max - min) * percent
             value = math.floor(value * 100) / 100
-            valueLabel.Text = tostring(value) .. unit
+            valueLabel.Text = tostring(value)
             fill.Size = UDim2.new(percent, 0, 1, 0)
             thumb.Position = UDim2.new(percent, -6, 0, -4)
             callback(value)
@@ -227,14 +211,13 @@ function UI.AddSlider(config)
     return frame
 end
 
--- Fungsi tombol (sama seperti template)
 function UI.AddButton(config)
     local container = buttonContainer
     local text = config.Text or "Button"
     local callback = config.Callback or function() end
 
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 0, 35)
+    button.Size = UDim2.new(1, 0, 0, 30)
     button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -259,10 +242,9 @@ function UI.AddButton(config)
     return button
 end
 
--- Fungsi toggle (checkbox) untuk switch
-function UI.AddToggle(config)
+function UI.AddSwitch(config)
     local container = switchContainer
-    local text = config.Text or "Toggle"
+    local text = config.Text or "Switch"
     local default = config.Default or false
     local callback = config.Callback or function() end
 
@@ -271,9 +253,8 @@ function UI.AddToggle(config)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
-    -- Label
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -40, 1, 0)
+    label.Size = UDim2.new(1, -60, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -282,41 +263,39 @@ function UI.AddToggle(config)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    -- Kotak toggle
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 24, 0, 24)
-    toggleBtn.Position = UDim2.new(1, -24, 0.5, -12)
-    toggleBtn.BackgroundColor3 = default and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(80, 80, 80)
-    toggleBtn.Text = ""
-    toggleBtn.BorderSizePixel = 0
-    toggleBtn.Parent = frame
+    local switchBtn = Instance.new("TextButton")
+    switchBtn.Size = UDim2.new(0, 50, 0, 24)
+    switchBtn.Position = UDim2.new(1, -50, 0.5, -12)
+    switchBtn.BackgroundColor3 = default and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 80)
+    switchBtn.Text = ""
+    switchBtn.BorderSizePixel = 0
+    switchBtn.Parent = frame
 
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 4)
-    toggleCorner.Parent = toggleBtn
+    local switchCorner = Instance.new("UICorner")
+    switchCorner.CornerRadius = UDim.new(0, 12)
+    switchCorner.Parent = switchBtn
 
-    -- Centang (label)
-    local checkLabel = Instance.new("TextLabel")
-    checkLabel.Size = UDim2.new(1, 0, 1, 0)
-    checkLabel.BackgroundTransparency = 1
-    checkLabel.Text = default and "✓" or ""
-    checkLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    checkLabel.Font = Enum.Font.GothamBold
-    checkLabel.TextSize = 18
-    checkLabel.Visible = default
-    checkLabel.Parent = toggleBtn
+    local circle = Instance.new("Frame")
+    circle.Size = UDim2.new(0, 20, 0, 20)
+    circle.Position = default and UDim2.new(1, -24, 0.5, -10) or UDim2.new(0, 4, 0.5, -10)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    circle.BorderSizePixel = 0
+    circle.Parent = switchBtn
+
+    local circleCorner = Instance.new("UICorner")
+    circleCorner.CornerRadius = UDim.new(0, 10)
+    circleCorner.Parent = circle
 
     local state = default
 
-    local function updateState()
-        toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(80, 80, 80)
-        checkLabel.Visible = state
-        checkLabel.Text = state and "✓" or ""
+    local function updateSwitch()
+        switchBtn.BackgroundColor3 = state and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 80)
+        circle.Position = state and UDim2.new(1, -24, 0.5, -10) or UDim2.new(0, 4, 0.5, -10)
     end
 
-    toggleBtn.MouseButton1Click:Connect(function()
+    switchBtn.MouseButton1Click:Connect(function()
         state = not state
-        updateState()
+        updateSwitch()
         callback(state)
     end)
 
@@ -324,7 +303,7 @@ function UI.AddToggle(config)
 end
 
 -- ==================================================
--- 6. MINIMIZED FRAME
+-- 4. MINIMIZED FRAME
 -- ==================================================
 local minimizedFrame = Instance.new("Frame")
 minimizedFrame.Size = UDim2.new(0, 50, 0, 50)
@@ -397,9 +376,7 @@ userInput.InputEnded:Connect(function(input)
     end
 end)
 
--- ==================================================
--- 7. FUNGSI MINIMIZE DAN CLOSE
--- ==================================================
+-- Minimize dan Close
 minimizeBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
     minimizedFrame.Visible = true
@@ -410,72 +387,10 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 8. LOGIKA GAME
+-- 5. FUNGSI-FUNGSI GAME (LOGIKA)
 -- ==================================================
 
--- Fungsi utilitas
-local function getCharacter()
-    return localPlayer.Character or localPlayer.CharacterAdded:Wait()
-end
-
-local function teleportTo(position)
-    local char = getCharacter()
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.CFrame = CFrame.new(position)
-    end
-end
-
-local function findBrainrotByName(name)
-    -- Cari di semua folder di workspace.GameFolder.Brainrots
-    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
-    if not brainrotsFolder then return nil end
-
-    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            local target = folder:FindFirstChild(name)
-            if target then
-                return target
-            end
-        end
-    end
-    return nil
-end
-
-local function interactWithProximity(model)
-    -- Coba cari ProximityPrompt di model
-    local prompt = model:FindFirstChildOfClass("ProximityPrompt") or model:FindFirstChild("ProximityPrompt", true)
-    if prompt then
-        prompt:Fire()
-        return true
-    end
-    return false
-end
-
-local function waitForCarry(timeout)
-    local char = getCharacter()
-    local start = tick()
-    while tick() - start < timeout do
-        if char:GetAttribute("CarryingBrainrot") then
-            return true
-        end
-        task.wait(0.1)
-    end
-    return false
-end
-
-local function getPlayerPlot()
-    return localPlayer:GetAttribute("Plot") -- misal "Plot1", "Plot2", dll
-end
-
-local plotCoordinates = {
-    ["1"] = Vector3.new(100.205, 7, 83.222),
-    ["2"] = Vector3.new(50.205, 7, 83.221),
-    ["3"] = Vector3.new(0.205, 7, 83.221),
-    ["4"] = Vector3.new(-49.795, 7, 83.221),
-    ["5"] = Vector3.new(-99.795, 7, 83.221)
-}
-
+-- Data Rebirths
 local rebirthData = {
     [1] = "BonecaAmbalabu",
     [2] = "CactoHipopotamo",
@@ -491,154 +406,248 @@ local rebirthData = {
     [12] = "CrazylonePizaione"
 }
 
--- Fungsi untuk tombol Rebirths Need
-local function rebirthsNeed()
-    local leaderstats = localPlayer:FindFirstChild("leaderstats")
-    if not leaderstats then
-        warn("leaderstats tidak ditemukan")
+-- Data Plot
+local plotPositions = {
+    [1] = Vector3.new(100.205, 7, 83.222),
+    [2] = Vector3.new(50.205, 7, 83.221),
+    [3] = Vector3.new(0.205, 7, 83.221),
+    [4] = Vector3.new(-49.795, 7, 83.221),
+    [5] = Vector3.new(-99.795, 7, 83.221)
+}
+
+local homePoint = Vector3.new(-153, 28, 34) -- Titik setelah timeout
+
+-- Fungsi untuk mendapatkan model player
+local function getPlayerModel()
+    return workspace:FindFirstChild(localPlayer.Name)
+end
+
+-- Fungsi untuk teleport
+local function teleport(position)
+    local character = localPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(position)
+    end
+end
+
+-- Fungsi untuk mendapatkan plot player saat ini
+local function getCurrentPlot()
+    local plotAttr = localPlayer:GetAttribute("Plot")
+    if plotAttr then
+        -- PlotNumber biasanya string seperti "Plot1", ambil angkanya
+        local num = tonumber(plotAttr:match("%d+"))
+        return num
+    end
+    return nil
+end
+
+-- Fungsi teleport ke plot berdasarkan nomor
+local function teleportToPlot(plotNumber)
+    if plotNumber and plotPositions[plotNumber] then
+        teleport(plotPositions[plotNumber])
+    end
+end
+
+-- Fungsi teleport ke plot player saat ini
+local function teleportToHome()
+    local plot = getCurrentPlot()
+    if plot then
+        teleportToPlot(plot)
+    else
+        warn("Tidak dapat menemukan plot player")
+    end
+end
+
+-- Fungsi untuk interaksi dengan brainrot (simulasi hold E)
+local function interactWithBrainrot(brainrotModel)
+    if not brainrotModel then return false end
+    -- Cari ProximityPrompt di dalam model
+    local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then
+        -- Pastikan jarak cukup dekat (sudah diteleport)
+        prompt:InputHoldBegin()
+        -- Tunggu sebentar (simulasi hold)
+        task.wait(1)
+        prompt:InputHoldEnd()
+        return true
+    else
+        -- Alternatif: cari objek dengan nama "Prompt" atau coba panggil event
+        -- Beberapa game menggunakan ClickDetector
+        local clickDetector = brainrotModel:FindFirstChildWhichIsA("ClickDetector", true)
+        if clickDetector then
+            fireclickdetector(clickDetector)
+            return true
+        end
+    end
+    return false
+end
+
+-- Fungsi untuk menunggu atribut CarryingBrainrot
+local function waitForCarrying(timeout)
+    local playerModel = getPlayerModel()
+    if not playerModel then return false end
+    local start = tick()
+    while tick() - start < timeout do
+        if playerModel:GetAttribute("CarryingBrainrot") == true then
+            return true
+        end
+        task.wait(0.1)
+    end
+    return false
+end
+
+-- Fungsi untuk proses Rebirths Need
+local function processRebirthNeed()
+    local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
+    if not rebirths then
+        warn("Tidak menemukan leaderstats.Rebirths")
         return
     end
-    local rebirthsVal = leaderstats:FindFirstChild("Rebirths")
-    if not rebirthsVal then
-        warn("Rebirths tidak ditemukan di leaderstats")
-        return
-    end
-    local rebirths = rebirthsVal.Value
-    local brainrotName = rebirthData[rebirths]
+    local value = rebirths.Value
+    local brainrotName = rebirthData[value]
     if not brainrotName then
-        warn("Tidak ada brainrot untuk rebirths " .. tostring(rebirths))
+        warn("Tidak ada data brainrot untuk rebirths " .. tostring(value))
         return
     end
 
-    local brainrot = findBrainrotByName(brainrotName)
-    if not brainrot then
-        warn("Brainrot " .. brainrotName .. " tidak ditemukan di folder")
+    -- Cari brainrot di workspace.GameFolder.Brainrots
+    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
+    if not brainrotsFolder then
+        warn("Tidak menemukan folder Brainrots")
+        return
+    end
+
+    -- Cari di semua subfolder (rarity)
+    local targetModel = nil
+    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            local model = folder:FindFirstChild(brainrotName)
+            if model then
+                targetModel = model
+                break
+            end
+        end
+    end
+
+    if not targetModel then
+        warn("Brainrot " .. brainrotName .. " tidak ditemukan")
         return
     end
 
     -- Teleport ke brainrot
-    teleportTo(brainrot:GetPivot().Position)
-
-    -- Tunggu sebentar sampai dekat
-    task.wait(1)
+    teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0)) -- sedikit di atas
+    task.wait(0.5)
 
     -- Interaksi
-    if not interactWithProximity(brainrot) then
-        warn("Tidak dapat menemukan ProximityPrompt")
-    end
+    interactWithBrainrot(targetModel)
 
     -- Tunggu carrying
-    local carried = waitForCarry(6)
-    if not carried then
-        warn("Gagal membawa brainrot dalam 6 detik")
-    end
-
-    -- Teleport ke titik kumpul
-    teleportTo(Vector3.new(-153, 28, 34))
-    task.wait(1)
-
-    -- Dapatkan plot
-    local plot = getPlayerPlot()
-    if plot and plotCoordinates[plot] then
-        teleportTo(plotCoordinates[plot])
-    else
-        warn("Plot tidak valid: " .. tostring(plot))
+    local success = waitForCarrying(6)
+    if not success then
+        -- Timeout: teleport ke home point lalu ke plot
+        teleport(homePoint)
+        task.wait(0.5)
+        local plot = getCurrentPlot()
+        if plot then
+            teleportToPlot(plot)
+        else
+            warn("Tidak bisa mendapatkan plot")
+        end
     end
 end
 
--- Fungsi untuk To Home
-local function toHome()
-    local plot = getPlayerPlot()
-    if plot and plotCoordinates[plot] then
-        teleportTo(plotCoordinates[plot])
-    else
-        warn("Plot tidak valid")
-    end
-end
-
--- Fungsi untuk auto farm berdasarkan tipe
-local autoFarmRunning = false
-local autoFarmState = {
-    godly = false,
-    celestial = false,
-    secret = false
+-- State untuk auto switches
+local autoStates = {
+    Godly = false,
+    Celestial = false,
+    Secret = false
 }
 
-local function getRandomBrainrotFromFolder(folderName)
+-- Fungsi untuk auto collect berdasarkan tipe
+local function autoCollect(typeName)
+    local folderName = typeName
     local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
-    if not brainrotsFolder then return nil end
+    if not brainrotsFolder then return false end
+
     local targetFolder = brainrotsFolder:FindFirstChild(folderName)
-    if not targetFolder then return nil end
-    local children = targetFolder:GetChildren()
-    if #children == 0 then return nil end
-    return children[math.random(1, #children)]
-end
+    if not targetFolder then return false end
 
-local function processAutoFarm(typeName)
-    local folderName = typeName == "godly" and "Godly" or (typeName == "celestial" and "Celestial" or "Secret")
-    local brainrot = getRandomBrainrotFromFolder(folderName)
-    if not brainrot then
-        return false -- tidak ada brainrot
+    -- Kumpulkan semua model di folder (bisa ada beberapa)
+    local models = {}
+    for _, child in ipairs(targetFolder:GetChildren()) do
+        if child:IsA("Model") then
+            table.insert(models, child)
+        end
     end
+    if #models == 0 then return false end
 
-    teleportTo(brainrot:GetPivot().Position)
-    task.wait(1)
-    interactWithProximity(brainrot)
-    waitForCarry(6) -- abaikan hasil, lanjut
-    teleportTo(Vector3.new(-153, 28, 34))
-    task.wait(1)
-    local plot = getPlayerPlot()
-    if plot and plotCoordinates[plot] then
-        teleportTo(plotCoordinates[plot])
+    -- Pilih salah satu secara acak
+    local targetModel = models[math.random(1, #models)]
+
+    -- Teleport ke model
+    teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
+    task.wait(0.5)
+
+    -- Interaksi
+    interactWithBrainrot(targetModel)
+
+    -- Tunggu carrying
+    local success = waitForCarrying(6)
+    if not success then
+        teleport(homePoint)
+        task.wait(0.5)
+        local plot = getCurrentPlot()
+        if plot then
+            teleportToPlot(plot)
+        else
+            warn("Tidak bisa mendapatkan plot")
+        end
     end
-    task.wait(1)
     return true
 end
 
-local function autoFarmLoop()
-    while autoFarmRunning do
-        -- Urutan prioritas: godly -> celestial -> secret
-        local types = {}
-        if autoFarmState.godly then table.insert(types, "godly") end
-        if autoFarmState.celestial then table.insert(types, "celestial") end
-        if autoFarmState.secret then table.insert(types, "secret") end
+-- Loop utama untuk auto dengan urutan prioritas
+local function startAutoLoop()
+    while true do
+        -- Urutan prioritas: Godly, Celestial, Secret (hanya yang aktif)
+        local order = {}
+        if autoStates.Godly then table.insert(order, "Godly") end
+        if autoStates.Celestial then table.insert(order, "Celestial") end
+        if autoStates.Secret then table.insert(order, "Secret") end
 
-        local anySuccess = false
-        for _, t in ipairs(types) do
-            if not autoFarmRunning then break end
-            local success = pcall(processAutoFarm, t)
-            if success then
-                anySuccess = true
-                -- Jika berhasil, kita lanjut ke akhir loop (istirahat sebentar)
-                break
+        if #order == 0 then
+            task.wait(1)
+            continue
+        end
+
+        for _, typeName in ipairs(order) do
+            if autoStates[typeName] then -- cek lagi mungkin berubah saat loop
+                local found = autoCollect(typeName)
+                if not found then
+                    -- Jika tidak ada, lanjut ke tipe berikutnya
+                end
+                -- Tunggu sebentar sebelum lanjut ke tipe berikutnya
+                task.wait(0.5)
             end
         end
-
-        if not anySuccess then
-            -- Tidak ada brainrot yang tersedia, tunggu sebentar
-            task.wait(5)
-        else
-            task.wait(1) -- jeda antar siklus
-        end
+        task.wait(0.5)
     end
 end
 
 -- ==================================================
--- 9. MEMBUAT ELEMEN UI SESUAI PERMINTAAN
+-- 6. MENAMBAH ELEMEN UI SESUAI PERMINTAAN
 -- ==================================================
 
--- Slider WalkSpeed
+-- Slider Walkspeed
 UI.AddSlider({
-    Text = "WalkSpeed",
+    Text = "Walkspeed",
     Min = 16,
     Max = 300,
     Default = 16,
-    Unit = "",
     Callback = function(value)
-        local char = getCharacter()
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = value
+        local character = localPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = value
         end
     end
 })
@@ -647,10 +656,10 @@ UI.AddSlider({
 UI.AddButton({
     Text = "Remove Lava",
     Callback = function()
-        local lavas = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Lavas")
-        if lavas then
-            lavas:Destroy()
-            print("Lavas dihapus")
+        local lavasFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Lavas")
+        if lavasFolder then
+            lavasFolder:Destroy()
+            print("Lava dihapus")
         else
             warn("Folder Lavas tidak ditemukan")
         end
@@ -661,10 +670,10 @@ UI.AddButton({
 UI.AddButton({
     Text = "Remove VIP",
     Callback = function()
-        local vipDoors = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("VIPDoors")
-        if vipDoors then
-            vipDoors:Destroy()
-            print("VIPDoors dihapus")
+        local vipFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("VIPDoors")
+        if vipFolder then
+            vipFolder:Destroy()
+            print("VIP Doors dihapus")
         else
             warn("Folder VIPDoors tidak ditemukan")
         end
@@ -674,64 +683,111 @@ UI.AddButton({
 -- Tombol Rebirths Need
 UI.AddButton({
     Text = "Rebirths Need",
-    Callback = rebirthsNeed
+    Callback = processRebirthNeed
 })
 
 -- Tombol To Home
 UI.AddButton({
     Text = "To Home",
-    Callback = toHome
+    Callback = teleportToHome
 })
 
--- Toggle Auto Godly
-UI.AddToggle({
+-- Switch Auto Godly (dengan desain kotak centang)
+-- Kita modifikasi sedikit untuk membuat switch berbentuk kotak centang
+local function createCheckbox(config)
+    local container = switchContainer
+    local text = config.Text or "Checkbox"
+    local default = config.Default or false
+    local callback = config.Callback or function() end
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = container
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+
+    local checkBtn = Instance.new("TextButton")
+    checkBtn.Size = UDim2.new(0, 24, 0, 24)
+    checkBtn.Position = UDim2.new(1, -30, 0.5, -12)
+    checkBtn.BackgroundColor3 = default and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
+    checkBtn.Text = ""
+    checkBtn.BorderSizePixel = 0
+    checkBtn.Parent = frame
+
+    local checkCorner = Instance.new("UICorner")
+    checkCorner.CornerRadius = UDim.new(0, 4)
+    checkCorner.Parent = checkBtn
+
+    local checkMark = Instance.new("TextLabel")
+    checkMark.Size = UDim2.new(1, 0, 1, 0)
+    checkMark.BackgroundTransparency = 1
+    checkMark.Text = default and "✓" or ""
+    checkMark.TextColor3 = Color3.fromRGB(255, 255, 255)
+    checkMark.TextSize = 18
+    checkMark.Font = Enum.Font.GothamBold
+    checkMark.Parent = checkBtn
+
+    local state = default
+
+    local function updateCheck()
+        checkBtn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
+        checkMark.Text = state and "✓" or ""
+    end
+
+    checkBtn.MouseButton1Click:Connect(function()
+        state = not state
+        updateCheck()
+        callback(state)
+    end)
+
+    return frame
+end
+
+-- Ganti dengan checkbox
+createCheckbox({
     Text = "Auto Godly",
     Default = false,
     Callback = function(state)
-        autoFarmState.godly = state
-        if state and not autoFarmRunning then
-            autoFarmRunning = true
-            task.spawn(autoFarmLoop)
-        elseif not state and not autoFarmState.godly and not autoFarmState.celestial and not autoFarmState.secret then
-            autoFarmRunning = false
-        end
+        autoStates.Godly = state
+        print("Auto Godly:", state)
     end
 })
 
--- Toggle Auto Celestial
-UI.AddToggle({
+createCheckbox({
     Text = "Auto Celestial",
     Default = false,
     Callback = function(state)
-        autoFarmState.celestial = state
-        if state and not autoFarmRunning then
-            autoFarmRunning = true
-            task.spawn(autoFarmLoop)
-        elseif not state and not autoFarmState.godly and not autoFarmState.celestial and not autoFarmState.secret then
-            autoFarmRunning = false
-        end
+        autoStates.Celestial = state
+        print("Auto Celestial:", state)
     end
 })
 
--- Toggle Auto Secret
-UI.AddToggle({
+createCheckbox({
     Text = "Auto Secret",
     Default = false,
     Callback = function(state)
-        autoFarmState.secret = state
-        if state and not autoFarmRunning then
-            autoFarmRunning = true
-            task.spawn(autoFarmLoop)
-        elseif not state and not autoFarmState.godly and not autoFarmState.celestial and not autoFarmState.secret then
-            autoFarmRunning = false
-        end
+        autoStates.Secret = state
+        print("Auto Secret:", state)
     end
 })
 
 -- ==================================================
--- 10. EXPOSE FUNGSI KE GLOBAL
+-- 7. MULAI AUTO LOOP
+-- ==================================================
+task.spawn(startAutoLoop)
+
+-- ==================================================
+-- 8. EXPOSE UI KE GLOBAL
 -- ==================================================
 _G[guiName] = UI
 
-print("GUI [SurviveLAVA] berhasil dimuat. Gunakan _G['" .. guiName .. "'] untuk menambahkan elemen tambahan.")
-print("Contoh: _G['" .. guiName .. "'].AddButton({Text = 'Tes', Callback = function() print('ok') end})")
+print("GUI Survive LAVA berhasil dimuat. Gunakan _G['" .. guiName .. "'] untuk menambahkan elemen.")
