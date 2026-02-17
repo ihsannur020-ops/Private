@@ -6,11 +6,9 @@
 -- ==================================================
 local coreGui = game:GetService("CoreGui")
 local players = game:GetService("Players")
-local userInput = game:GetService("UserInputService")
-local workspace = game:GetService("Workspace")
 
 local localPlayer = players.LocalPlayer
-local guiName = "[{NamaGame}_ByAzka]"
+local guiName = "[NamaGame_ByAzka]"
 
 -- Hapus GUI lama jika ada
 if coreGui:FindFirstChild(guiName) then
@@ -45,42 +43,42 @@ uiCorner.Parent = mainFrame
 
 -- Judul UI (pojok kiri)
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(0, 150, 0, 30)
-title.Position = UDim2.new(0, 10, 0, 5)
+title.Size = UDim2.new(1, -70, 0, 30)  -- sisakan ruang untuk tombol
+title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
 title.Text = "NamaGame"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.SourceSansBold
+title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = mainFrame
 
--- Tombol Minimize (sekarang "+")
+-- Tombol Minimize ( - ) di pojok kanan
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-minimizeBtn.Position = UDim2.new(1, -70, 0, 5)
+minimizeBtn.Position = UDim2.new(1, -65, 0, 5)
 minimizeBtn.BackgroundTransparency = 1
-minimizeBtn.Text = "+"
+minimizeBtn.Text = "-"
 minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeBtn.TextScaled = true
+minimizeBtn.TextSize = 20
 minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.BorderSizePixel = 0
 minimizeBtn.Parent = mainFrame
 
--- Tombol Close
+-- Tombol Close ( X ) di pojok kanan
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -35, 0, 5)
+closeBtn.Position = UDim2.new(1, -30, 0, 5)
 closeBtn.BackgroundTransparency = 1
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextScaled = true
+closeBtn.TextSize = 20
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = mainFrame
 
 -- ==================================================
--- 3. SCROLLING FRAME UNTUK KONTEN
+-- 3. SCROLLING FRAME UNTUK KONTEN (opsional)
 -- ==================================================
 local scrollingFrame = Instance.new("ScrollingFrame")
 scrollingFrame.Size = UDim2.new(1, -20, 1, -55)
@@ -94,32 +92,31 @@ scrollingFrame.Parent = mainFrame
 scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 -- ==================================================
--- 4. MINIMIZED FRAME (KOTAK KECIL DENGAN SUDUT MELINGKAR)
+-- 4. MINIMIZED FRAME (KOTAK KECIL)
 -- ==================================================
 local minimizedFrame = Instance.new("Frame")
 minimizedFrame.Size = UDim2.new(0, 50, 0, 50)
-minimizedFrame.Position = UDim2.new(1, -70, 1, -70) -- pojok kanan bawah
+minimizedFrame.Position = UDim2.new(1, -70, 1, -70)  -- pojok kanan bawah
 minimizedFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-minimizedFrame.BackgroundTransparency = 0
 minimizedFrame.BorderSizePixel = 1
 minimizedFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 minimizedFrame.Active = true
-minimizedFrame.Draggable = true  -- tetap bisa digeser
+minimizedFrame.Draggable = true
 minimizedFrame.Visible = false
 minimizedFrame.Parent = screenGui
 
--- Sudut melingkar (radius 8)
+-- Sudut melingkar (radius 10, kotak dengan sudut membulat)
 local miniCorner = Instance.new("UICorner")
-miniCorner.CornerRadius = UDim.new(0, 8)
+miniCorner.CornerRadius = UDim.new(0, 10)
 miniCorner.Parent = minimizedFrame
 
--- Teks "+" di tengah (tanpa bolt)
+-- Teks "+" di tengah
 local miniLabel = Instance.new("TextLabel")
 miniLabel.Size = UDim2.new(1, 0, 1, 0)
 miniLabel.BackgroundTransparency = 1
 miniLabel.Text = "+"
 miniLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-miniLabel.TextScaled = true
+miniLabel.TextSize = 24   -- ukuran sedang
 miniLabel.Font = Enum.Font.GothamBold
 miniLabel.Parent = minimizedFrame
 
@@ -131,10 +128,13 @@ minimizeBtn.MouseButton1Click:Connect(function()
     minimizedFrame.Visible = true
 end)
 
--- Minimized frame TIDAK bisa diklik untuk kembali (tidak ada event klik)
+minimizedFrame.MouseButton1Click:Connect(function()
+    minimizedFrame.Visible = false
+    mainFrame.Visible = true
+end)
 
 -- ==================================================
--- 6. CLOSE (tetap berfungsi)
+-- 6. CLOSE
 -- ==================================================
 closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
