@@ -120,6 +120,13 @@ miniLabel.TextSize = 24   -- ukuran sedang
 miniLabel.Font = Enum.Font.GothamBold
 miniLabel.Parent = minimizedFrame
 
+-- TextButton transparan untuk menangani klik (agar tidak konflik dengan Draggable)
+local miniButton = Instance.new("TextButton")
+miniButton.Size = UDim2.new(1, 0, 1, 0)
+miniButton.BackgroundTransparency = 1
+miniButton.Text = ""
+miniButton.Parent = minimizedFrame
+
 -- ==================================================
 -- 5. FUNGSI MINIMIZE (TANPA ANIMASI)
 -- ==================================================
@@ -128,7 +135,7 @@ minimizeBtn.MouseButton1Click:Connect(function()
     minimizedFrame.Visible = true
 end)
 
-minimizedFrame.MouseButton1Click:Connect(function()
+miniButton.MouseButton1Click:Connect(function()
     minimizedFrame.Visible = false
     mainFrame.Visible = true
 end)
