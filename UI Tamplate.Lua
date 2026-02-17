@@ -6,6 +6,7 @@
 -- ==================================================
 local coreGui = game:GetService("CoreGui")
 local players = game:GetService("Players")
+local userInput = game:GetService("UserInputService")
 
 local localPlayer = players.LocalPlayer
 local guiName = "[NamaGame_ByAzka]"
@@ -43,7 +44,7 @@ uiCorner.Parent = mainFrame
 
 -- Judul UI (pojok kiri)
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -70, 0, 30)  -- sisakan ruang untuk tombol
+title.Size = UDim2.new(1, -70, 0, 30)
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
 title.Text = "NamaGame"
@@ -92,20 +93,19 @@ scrollingFrame.Parent = mainFrame
 scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 -- ==================================================
--- 4. MINIMIZED FRAME (KOTAK KECIL)
+-- 4. MINIMIZED FRAME (KOTAK KECIL) - DRAG MANUAL
 -- ==================================================
 local minimizedFrame = Instance.new("Frame")
 minimizedFrame.Size = UDim2.new(0, 50, 0, 50)
-minimizedFrame.Position = UDim2.new(1, -70, 1, -70)  -- pojok kanan bawah
+minimizedFrame.Position = UDim2.new(1, -70, 1, -70)
 minimizedFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 minimizedFrame.BorderSizePixel = 1
 minimizedFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 minimizedFrame.Active = true
-minimizedFrame.Draggable = true
 minimizedFrame.Visible = false
 minimizedFrame.Parent = screenGui
 
--- Sudut melingkar (radius 10, kotak dengan sudut membulat)
+-- Sudut melingkar (radius 10)
 local miniCorner = Instance.new("UICorner")
 miniCorner.CornerRadius = UDim.new(0, 10)
 miniCorner.Parent = minimizedFrame
@@ -116,28 +116,59 @@ miniLabel.Size = UDim2.new(1, 0, 1, 0)
 miniLabel.BackgroundTransparency = 1
 miniLabel.Text = "+"
 miniLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-miniLabel.TextSize = 24   -- ukuran sedang
+miniLabel.TextSize = 24
 miniLabel.Font = Enum.Font.GothamBold
 miniLabel.Parent = minimizedFrame
 
--- TextButton transparan untuk menangani klik (agar tidak konflik dengan Draggable)
+-- TextButton transparan untuk menangani klik (restore)
 local miniButton = Instance.new("TextButton")
 miniButton.Size = UDim2.new(1, 0, 1, 0)
 miniButton.BackgroundTransparency = 1
 miniButton.Text = ""
 miniButton.Parent = minimizedFrame
 
+-- Drag manual untuk minimized frame
+local dragging = false
+local dragStartPos
+local frameStartPos
+
+miniButton.MouseButton1Down:Connect(function(input)
+    dragging = true
+    dragStartPos = userInput:GetMouseLocation()
+    frameStartPos = minimizedFrame.Position
+end)
+
+userInput.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local currentPos = userInput:GetMouseLocation()
+        local delta = currentPos - dragStartPos
+        minimizedFrame.Position = UDim2.new(
+            frameStartPos.X.Scale,
+            frameStartPos.X.Offset + delta.X,
+            frameStartPos.Y.Scale,
+            frameStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+userInput.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Klik untuk restore
+miniButton.MouseButton1Click:Connect(function()
+    minimizedFrame.Visible = false
+    mainFrame.Visible = true
+end)
+
 -- ==================================================
--- 5. FUNGSI MINIMIZE (TANPA ANIMASI)
+-- 5. FUNGSI MINIMIZE
 -- ==================================================
 minimizeBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
     minimizedFrame.Visible = true
-end)
-
-miniButton.MouseButton1Click:Connect(function()
-    minimizedFrame.Visible = false
-    mainFrame.Visible = true
 end)
 
 -- ==================================================
