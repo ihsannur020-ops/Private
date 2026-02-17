@@ -120,7 +120,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -10, 1, 0)  -- padding kiri
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = gameName .. " Script"
+titleLabel.Text = gameName .. " "
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextScaled = true
 titleLabel.Font = Enum.Font.GothamBold
@@ -130,14 +130,14 @@ titleLabel.Parent = titleContainer
 -- Container tombol di kanan header
 local buttonContainer = Instance.new("Frame")
 buttonContainer.Size = UDim2.new(0, 60, 1, 0)
-buttonContainer.Position = UDim2.new(1, -60, 0, 0)
+buttonContainer.Position = UDim2.new(0, -60, 0, 0)
 buttonContainer.BackgroundTransparency = 1
 buttonContainer.Parent = header
 
 -- Tombol Minimize
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
-minimizeBtn.Position = UDim2.new(0, 5, 0.5, -12.5)
+minimizeBtn.Position = UDim2.new(0.5, 5, 0.5, -12.5)
 minimizeBtn.BackgroundTransparency = 1
 minimizeBtn.Text = "—"
 minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
