@@ -30,11 +30,11 @@ loadingGui.ResetOnSpawn = false
 loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 loadingGui.Enabled = true
 
--- Background hitam dengan opacity 50%
+-- Background hitam dengan opacity 70% (transparency 0.3)
 local loadingFrame = Instance.new("Frame")
 loadingFrame.Size = UDim2.new(1, 0, 1, 0)
 loadingFrame.BackgroundColor3 = Color3.new(0, 0, 0)
-loadingFrame.BackgroundTransparency = 0.5
+loadingFrame.BackgroundTransparency = 0.3
 loadingFrame.BorderSizePixel = 0
 loadingFrame.Parent = loadingGui
 
@@ -109,19 +109,19 @@ local headerCorner = Instance.new("UICorner")
 headerCorner.CornerRadius = UDim.new(0, 6)
 headerCorner.Parent = header
 
--- Judul (ukurannya akan mempengaruhi lebar mainFrame)
+-- Judul (full width tanpa padding kanan, karena tombol akan di atas teks)
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -70, 1, 0)  -- Sisakan ruang untuk tombol
+titleLabel.Size = UDim2.new(1, 0, 1, 0)  -- penuh, tanpa sisakan ruang
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = gameName .. " Script"  -- Bisa diganti
+titleLabel.Text = gameName .. " Script"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextScaled = true
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = header
 
--- Tombol Minimize
+-- Tombol Minimize (pojok kanan atas)
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
 minimizeBtn.Position = UDim2.new(1, -60, 0.5, -12.5)
@@ -131,9 +131,10 @@ minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 minimizeBtn.TextScaled = true
 minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.BorderSizePixel = 0
+minimizeBtn.ZIndex = 2  -- pastikan di atas judul
 minimizeBtn.Parent = header
 
--- Tombol Close
+-- Tombol Close (pojok kanan atas)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 25, 0, 25)
 closeBtn.Position = UDim2.new(1, -30, 0.5, -12.5)
@@ -143,6 +144,7 @@ closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.BorderSizePixel = 0
+closeBtn.ZIndex = 2
 closeBtn.Parent = header
 
 -- ==================================================
@@ -166,9 +168,9 @@ local minWidth = 100
 local maxWidth = 400
 local paddingLeft = 10
 local paddingRight = 10
-local buttonsWidth = 70  -- ruang untuk minimize dan close
+local buttonsWidth = 70  -- ruang untuk minimize dan close (meskipun tombol di atas, kita tetap butuh ruang agar teks tidak terlalu ke kanan)
 
--- Hitung lebar total, tambahkan padding dan ruang tombol
+-- Hitung lebar total, tambahkan padding dan ruang tombol (opsional, agar teks tidak ketutupan)
 local totalWidth = textWidth + paddingLeft + buttonsWidth + paddingRight
 totalWidth = math.clamp(totalWidth, minWidth, maxWidth)
 
@@ -190,7 +192,7 @@ scrollingFrame.Parent = mainFrame
 -- 7. FUNGSI UPDATE TINGGI MAINFRAME BERDASARKAN KONTEN
 -- ==================================================
 local minHeight = 100
-local maxHeight = 400
+local maxHeight = 500  -- diubah dari 400 menjadi 500
 local headerHeight = 45  -- header + margin
 
 local function updateMainFrameHeight()
@@ -207,11 +209,8 @@ end
 -- Hubungkan ke perubahan canvas size
 scrollingFrame:GetPropertyChangedSignal("CanvasSize"):Connect(updateMainFrameHeight)
 
--- Panggil pertama kali (setelah konten ditambahkan nanti)
--- Untuk sekarang, set tinggi minimal
+-- Set ukuran awal (minimal)
 mainFrame.Size = UDim2.new(0, totalWidth, 0, minHeight)
-
--- Set posisi awal di tengah layar
 mainFrame.Position = UDim2.new(0.5, -totalWidth/2, 0.5, -minHeight/2)
 
 -- ==================================================
@@ -248,45 +247,82 @@ header.InputEnded:Connect(function(input)
 end)
 
 -- ==================================================
--- 9. MINIMIZE DENGAN ANIMASI
+-- 9. MINIMIZE: UI KECIL DENGAN TANDA +
 -- ==================================================
-local isMinimized = false
-local originalSize = mainFrame.Size
-local originalPos = mainFrame.Position
-local minimizedWidth = 70   -- Lebar saat minimize (cukup untuk tombol)
-local minimizedHeight = 30  -- Tinggi hanya header (tanpa konten)
+local minimizedFrame = Instance.new("Frame")
+minimizedFrame.Size = UDim2.new(0, 60, 0, 60)
+minimizedFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+minimizedFrame.BorderSizePixel = 0
+minimizedFrame.Visible = false
+minimizedFrame.Active = true
+minimizedFrame.Parent = screenGui
 
-local function animateMinimize()
-    if isMinimized then
-        -- Restore: munculkan scrolling frame, kembalikan ukuran dan posisi semula
-        scrollingFrame.Visible = true
-        tweenService:Create(mainFrame, TweenInfo.new(0.3), {
-            Size = originalSize,
-            Position = originalPos
-        }):Play()
-        minimizeBtn.Text = "—"
-    else
-        -- Simpan ukuran dan posisi asli
-        originalSize = mainFrame.Size
-        originalPos = mainFrame.Position
-        
-        -- Hitung posisi baru agar sisi kanan tetap
-        local newXOffset = originalPos.X.Offset + (originalSize.X.Offset - minimizedWidth)
-        
-        -- Sembunyikan konten
-        scrollingFrame.Visible = false
-        
-        -- Animasi ke ukuran kecil
-        tweenService:Create(mainFrame, TweenInfo.new(0.3), {
-            Size = UDim2.new(0, minimizedWidth, 0, minimizedHeight),
-            Position = UDim2.new(originalPos.X.Scale, newXOffset, originalPos.Y.Scale, originalPos.Y.Offset)
-        }):Play()
-        minimizeBtn.Text = "□"  -- Ikon restore
+-- Sudut melingkar
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 8)  -- sudut melengkung, bisa juga 30 untuk lingkaran penuh
+minCorner.Parent = minimizedFrame
+
+-- Label +
+local plusLabel = Instance.new("TextLabel")
+plusLabel.Size = UDim2.new(1, 0, 1, 0)
+plusLabel.BackgroundTransparency = 1
+plusLabel.Text = "+"
+plusLabel.TextColor3 = Color3.new(1, 1, 1)
+plusLabel.TextScaled = true
+plusLabel.Font = Enum.Font.GothamBold
+plusLabel.Parent = minimizedFrame
+
+-- Drag untuk minimizedFrame
+local dragMin = false
+local dragStartMin
+local startPosMin
+
+minimizedFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragMin = true
+        dragStartMin = input.Position
+        startPosMin = minimizedFrame.Position
     end
-    isMinimized = not isMinimized
-end
+end)
 
-minimizeBtn.MouseButton1Click:Connect(animateMinimize)
+minimizedFrame.InputChanged:Connect(function(input)
+    if dragMin and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStartMin
+        minimizedFrame.Position = UDim2.new(
+            startPosMin.X.Scale,
+            startPosMin.X.Offset + delta.X,
+            startPosMin.Y.Scale,
+            startPosMin.Y.Offset + delta.Y
+        )
+    end
+end)
+
+minimizedFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragMin = false
+    end
+end)
+
+-- Klik pada minimizedFrame untuk restore
+minimizedFrame.MouseButton1Click:Connect(function()
+    minimizedFrame.Visible = false
+    mainFrame.Visible = true
+end)
+
+-- Tombol minimize pada mainFrame
+minimizeBtn.MouseButton1Click:Connect(function()
+    if mainFrame.Visible then
+        -- Sembunyikan main, tampilkan minimized di posisi yang sama
+        minimizedFrame.Position = mainFrame.Position
+        mainFrame.Visible = false
+        minimizedFrame.Visible = true
+    else
+        -- Jika main sudah tidak terlihat (seharusnya tidak terjadi karena tombol hanya muncul saat main visible)
+        -- fallback: tampilkan main
+        minimizedFrame.Visible = false
+        mainFrame.Visible = true
+    end
+end)
 
 -- ==================================================
 -- 10. CLOSE
@@ -298,8 +334,6 @@ end)
 -- ==================================================
 -- 11. CONTOH PENAMBAHAN KONTEN (opsional)
 -- ==================================================
--- Di sini kamu bisa menambahkan tombol, label, dll ke scrollingFrame
--- Contoh: tambahkan beberapa item untuk menguji tinggi otomatis
 for i = 1, 5 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
