@@ -1,5 +1,3 @@
--- Script Auto Loader untuk Delta Executor (Silent Mode)
--- Daftar mapping Game ID ke URL Script
 local gameScripts = {
     [119987266683883] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/SurviveLAVAforBrainrots",
     [134763881293027] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/StealFromBrainrots",
@@ -8,7 +6,7 @@ local gameScripts = {
     [135094773390024] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapePoliceForBrainrots",
     [71812071769179]  = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapeGuardstoStealBrainrots",
     [131623223084840] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapeTsunamiForBrainrots"
-    -- Tambahkan ID dan URL lain di sini
+    
 }
 
 local currentGameId = game.PlaceId
