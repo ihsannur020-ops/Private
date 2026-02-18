@@ -11,6 +11,7 @@ local userInput = game:GetService("UserInputService")
 local tweenService = game:GetService("TweenService")
 local runService = game:GetService("RunService")
 local replicatedStorage = game:GetService("ReplicatedStorage")
+local virtualUser = game:GetService("VirtualUser")
 
 local localPlayer = players.LocalPlayer
 local guiName = "SurviveLAVA_ByAzka"
@@ -31,8 +32,8 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Frame utama (dapat digeser)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 350, 0, 400)
-mainFrame.Position = UDim2.new(0.5, -175, 0.5, -200)
+mainFrame.Size = UDim2.new(0, 350, 0, 450)  -- diperbesar untuk AFK switch
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 2
@@ -129,10 +130,10 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Frame dengan margin kiri dan kanan agar tidak terlalu mepet
+    -- Frame dengan margin kiri dan kanan
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 30)  -- kurangi 20 pixel total (10 kiri, 10 kanan)
-    frame.Position = UDim2.new(0, 10, 0, 0) -- geser 10 ke kanan
+    frame.Size = UDim2.new(1, -20, 0, 30)
+    frame.Position = UDim2.new(0, 10, 0, 0)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
@@ -203,7 +204,7 @@ function UI.AddSlider(config)
             local relativeX = math.clamp(mousePos.X - trackAbsPos.X, 0, trackSize.X)
             local percent = relativeX / trackSize.X
             local value = min + (max - min) * percent
-            value = math.floor(value + 0.5) -- pembulatan ke integer
+            value = math.floor(value + 0.5)
             valueLabel.Text = tostring(value)
             fill.Size = UDim2.new(percent, 0, 1, 0)
             thumb.Position = UDim2.new(percent, -6, 0, -4)
@@ -489,7 +490,7 @@ local function interactWithBrainrot(brainrotModel)
     return false
 end
 
--- Fungsi untuk mengecek apakah ada player lain dalam radius 3 dari model (PERBAIKAN)
+-- Fungsi untuk mengecek apakah ada player lain dalam radius 3 dari model
 local function isPlayerNearby(model, radius)
     radius = radius or 3
     if not model then return false end
@@ -512,7 +513,7 @@ end
 -- Fungsi untuk mencari model yang tersedia (tanpa player di dekatnya) dalam daftar models
 local function findAvailableModel(models)
     if #models == 0 then return nil end
-    -- Acak urutan untuk menghindari selalu model yang sama
+    -- Acak urutan
     local shuffled = {}
     for i, v in ipairs(models) do shuffled[i] = v end
     for i = #shuffled, 2, -1 do
@@ -559,7 +560,7 @@ local function findModelsInFolder(folderName)
 end
 
 -- ==================================================
--- 6. FUNGSI UNTUK REBIRTH NEED (dengan pengecekan player)
+-- 6. FUNGSI UNTUK REBIRTH NEED
 -- ==================================================
 local function processRebirthNeed()
     local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
@@ -583,35 +584,28 @@ local function processRebirthNeed()
         return
     end
 
-    -- Cari semua model dengan nama tersebut
     local models = findModelsByName(brainrotName)
     if #models == 0 then
         warn("Brainrot " .. brainrotName .. " tidak ditemukan")
         return
     end
 
-    -- Cari model yang tidak ada player di dekatnya
     local targetModel = findAvailableModel(models)
     if not targetModel then
         warn("Semua model " .. brainrotName .. " sedang digunakan oleh player lain")
         return
     end
 
-    -- 1. Teleport ke brainrot
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
 
-    -- 2. Interaksi hold 1.7 detik
     interactWithBrainrot(targetModel)
 
-    -- 3. Tunggu 1.7 detik setelah interaksi
     task.wait(1.7)
 
-    -- 4. Teleport ke titik afterInteractPoint
     teleport(afterInteractPoint)
     task.wait(0.5)
 
-    -- 5. Teleport ke plot player
     local plot = getPlotNumber()
     if plot then
         teleportToPlot(plot)
@@ -622,7 +616,7 @@ local function processRebirthNeed()
 end
 
 -- ==================================================
--- 7. AUTO GODLY, CELESTIAL, SECRET (dengan pengecekan player)
+-- 7. AUTO GODLY, CELESTIAL, SECRET
 -- ==================================================
 local autoStates = {
     Godly = false,
@@ -630,14 +624,12 @@ local autoStates = {
     Secret = false
 }
 
--- Fungsi auto collect berdasarkan tipe (satu siklus), mengembalikan true jika berhasil, false jika skip
 local function autoCollect(typeName)
     local models = findModelsInFolder(typeName)
     if #models == 0 then return false end
 
     local targetModel = findAvailableModel(models)
     if not targetModel then
-        -- Semua model sedang dipakai, skip tipe ini
         return false
     end
 
@@ -661,10 +653,8 @@ local function autoCollect(typeName)
     return true
 end
 
--- Loop utama auto dengan urutan prioritas
 local function startAutoLoop()
     while true do
-        -- Urutan prioritas: Godly, Celestial, Secret (hanya yang aktif)
         local order = {}
         if autoStates.Godly then table.insert(order, "Godly") end
         if autoStates.Celestial then table.insert(order, "Celestial") end
@@ -679,10 +669,8 @@ local function startAutoLoop()
             if autoStates[typeName] then
                 local success = autoCollect(typeName)
                 if not success then
-                    -- Jika tidak ada model tersedia, lanjut ke tipe berikutnya tanpa menunggu
-                    -- (langsung lanjut loop)
+                    -- skip
                 else
-                    -- Jika berhasil, tunggu 1 detik sebelum tipe berikutnya
                     task.wait(1)
                 end
             end
@@ -692,14 +680,16 @@ local function startAutoLoop()
 end
 
 -- ==================================================
--- 8. FUNGSI UNTUK COLLECT CASH DAN UPGRADE ALL
+-- 8. FUNGSI UNTUK COLLECT CASH DAN UPGRADE ALL (REVISI)
 -- ==================================================
 local collectCashEnabled = false
 local upgradeAllEnabled = false
 local instantProximityEnabled = false
+local afkEnabled = false
 
 local placesCache = nil
 
+-- Fungsi untuk mendapatkan data tempat di plot (touch parts dan upgrade buttons)
 local function getPlacesData()
     if placesCache then return placesCache end
     local plotNum = getPlotNumber()
@@ -715,11 +705,12 @@ local function getPlacesData()
     if not places then return nil end
 
     local touchParts = {}
-    local upgradeParts = {}
+    local upgradeButtons = {}  -- menyimpan ImageButton Upgrade
 
     for i = 1, 30 do
         local model = places:FindFirstChild(tostring(i))
         if model then
+            -- Claim.TouchInterest
             local claim = model:FindFirstChild("Claim")
             if claim then
                 local touchInterest = claim:FindFirstChildWhichIsA("TouchTransmitter")
@@ -727,11 +718,16 @@ local function getPlacesData()
                     table.insert(touchParts, claim)
                 end
             end
-            local upgrade = model:FindFirstChild("Upgrade")
-            if upgrade then
-                local clickDetector = upgrade:FindFirstChildWhichIsA("ClickDetector")
-                if clickDetector then
-                    table.insert(upgradeParts, upgrade)
+            -- Upgrade button
+            local upgradePart = model:FindFirstChild("Upgrade")
+            if upgradePart then
+                -- Cari SurfaceGui lalu ImageButton "Upgrade"
+                local surfaceGui = upgradePart:FindFirstChildWhichIsA("SurfaceGui")
+                if surfaceGui then
+                    local upgradeButton = surfaceGui:FindFirstChild("Upgrade")
+                    if upgradeButton and upgradeButton:IsA("ImageButton") then
+                        table.insert(upgradeButtons, upgradeButton)
+                    end
                 end
             end
         end
@@ -739,11 +735,12 @@ local function getPlacesData()
 
     placesCache = {
         touchParts = touchParts,
-        upgradeParts = upgradeParts
+        upgradeButtons = upgradeButtons
     }
     return placesCache
 end
 
+-- Fungsi untuk memicu semua TouchInterest
 local function fireAllTouchInterests()
     local data = getPlacesData()
     if not data then return end
@@ -760,19 +757,21 @@ local function fireAllTouchInterests()
     end
 end
 
+-- Fungsi untuk mengklik semua Upgrade buttons
 local function clickAllUpgrades()
     local data = getPlacesData()
     if not data then return end
 
-    for _, part in ipairs(data.upgradeParts) do
-        local clickDetector = part:FindFirstChildWhichIsA("ClickDetector")
-        if clickDetector then
-            fireclickdetector(clickDetector)
-        end
+    for _, button in ipairs(data.upgradeButtons) do
+        -- Simulasi klik pada ImageButton
+        button:Click()  -- Ini akan memicu event MouseButton1Click
+        -- Alternatif: fire signal
+        -- button.MouseButton1Click:Fire()
         task.wait()
     end
 end
 
+-- Loop untuk Collect Cash
 local function startCollectCashLoop()
     while true do
         if collectCashEnabled then
@@ -782,6 +781,7 @@ local function startCollectCashLoop()
     end
 end
 
+-- Loop untuk Upgrade All
 local function startUpgradeAllLoop()
     while true do
         if upgradeAllEnabled then
@@ -792,10 +792,41 @@ local function startUpgradeAllLoop()
 end
 
 -- ==================================================
--- 9. MENAMBAH ELEMEN UI
+-- 9. FUNGSI AFK
+-- ==================================================
+-- Simple AFK script: periodically move character slightly or simulate key press
+local function startAFKLoop()
+    while true do
+        if afkEnabled then
+            -- Method 1: Move character forward/backward slightly
+            local character = localPlayer.Character
+            if character and character:FindFirstChild("Humanoid") then
+                local humanoid = character.Humanoid
+                -- Toggle walk direction to prevent AFK kick
+                -- Simulate pressing W for 0.5 seconds
+                local currentPos = character.HumanoidRootPart.Position
+                -- Move a little forward
+                local newPos = currentPos + character.HumanoidRootPart.CFrame.LookVector * 2
+                teleport(newPos)
+                task.wait(0.5)
+                -- Move back
+                teleport(currentPos)
+                task.wait(0.5)
+            end
+            -- Alternative: use VirtualUser to click
+            -- virtualUser:Button1Down(Vector2.new(0,0))
+            -- task.wait(0.5)
+            -- virtualUser:Button1Up(Vector2.new(0,0))
+        end
+        task.wait(30) -- lakukan setiap 30 detik
+    end
+end
+
+-- ==================================================
+-- 10. MENAMBAH ELEMEN UI
 -- ==================================================
 
--- Slider Walkspeed (dengan integer dan margin)
+-- Slider Walkspeed
 UI.AddSlider({
     Text = "Walkspeed",
     Min = 16,
@@ -837,7 +868,7 @@ UI.AddButton({
     end
 })
 
--- Tombol Rebirths Need (dengan logika baru)
+-- Tombol Rebirths Need
 UI.AddButton({
     Text = "Rebirths Need",
     Callback = processRebirthNeed
@@ -885,6 +916,7 @@ createCheckbox({
     Default = false,
     Callback = function(state)
         instantProximityEnabled = state
+        -- Note: tidak mempengaruhi auto karena auto sudah fixed 1.7 detik
         print("Instant Proximity:", state)
     end
 })
@@ -902,7 +934,7 @@ createCheckbox({
     end
 })
 
--- Switch Upgrade All
+-- Switch Upgrade All (dengan logika baru)
 createCheckbox({
     Text = "Upgrade All",
     Default = false,
@@ -915,15 +947,26 @@ createCheckbox({
     end
 })
 
+-- Switch AFK
+createCheckbox({
+    Text = "AFK",
+    Default = false,
+    Callback = function(state)
+        afkEnabled = state
+        print("AFK:", state)
+    end
+})
+
 -- ==================================================
--- 10. MEMULAI LOOP
+-- 11. MEMULAI LOOP
 -- ==================================================
 task.spawn(startAutoLoop)
 task.spawn(startCollectCashLoop)
 task.spawn(startUpgradeAllLoop)
+task.spawn(startAFKLoop)
 
 -- ==================================================
--- 11. EXPOSE UI KE GLOBAL
+-- 12. EXPOSE UI KE GLOBAL
 -- ==================================================
 _G[guiName] = UI
 
