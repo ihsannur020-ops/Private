@@ -659,18 +659,13 @@ local function startAutoLoop()
         if autoStates.Celestial then table.insert(order, "Celestial") end
         if autoStates.Secret then table.insert(order, "Secret") end
 
-        if #order == 0 then
-            task.wait(1)
-            continue
-        end
-
-        for _, typeName in ipairs(order) do
-            if autoStates[typeName] then
-                local success = autoCollect(typeName)
-                if not success then
-                    -- skip
-                else
-                    task.wait(1)
+        if #order > 0 then  -- ganti dari `if #order == 0 then continue end`
+            for _, typeName in ipairs(order) do
+                if autoStates[typeName] then
+                    local success = autoCollect(typeName)
+                    if success then
+                        task.wait(1)
+                    end
                 end
             end
         end
