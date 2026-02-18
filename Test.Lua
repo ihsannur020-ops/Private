@@ -32,7 +32,7 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Frame utama (dapat digeser)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 350, 0, 450)  -- diperbesar untuk AFK switch
+mainFrame.Size = UDim2.new(0, 350, 0, 450)
 mainFrame.Position = UDim2.new(0.5, -175, 0.5, -225)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.1
@@ -130,7 +130,6 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Frame dengan margin kiri dan kanan
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -20, 0, 30)
     frame.Position = UDim2.new(0, 10, 0, 0)
@@ -757,16 +756,14 @@ local function fireAllTouchInterests()
     end
 end
 
--- Fungsi untuk mengklik semua Upgrade buttons
+-- Fungsi untuk mengklik semua Upgrade buttons (PERBAIKAN)
 local function clickAllUpgrades()
     local data = getPlacesData()
     if not data then return end
 
     for _, button in ipairs(data.upgradeButtons) do
-        -- Simulasi klik pada ImageButton
-        button:Click()  -- Ini akan memicu event MouseButton1Click
-        -- Alternatif: fire signal
-        -- button.MouseButton1Click:Fire()
+        -- Simulasi klik dengan memicu event MouseButton1Click
+        button.MouseButton1Click:Fire()
         task.wait()
     end
 end
@@ -794,31 +791,21 @@ end
 -- ==================================================
 -- 9. FUNGSI AFK
 -- ==================================================
--- Simple AFK script: periodically move character slightly or simulate key press
 local function startAFKLoop()
     while true do
         if afkEnabled then
-            -- Method 1: Move character forward/backward slightly
             local character = localPlayer.Character
             if character and character:FindFirstChild("Humanoid") then
                 local humanoid = character.Humanoid
-                -- Toggle walk direction to prevent AFK kick
-                -- Simulate pressing W for 0.5 seconds
                 local currentPos = character.HumanoidRootPart.Position
-                -- Move a little forward
                 local newPos = currentPos + character.HumanoidRootPart.CFrame.LookVector * 2
                 teleport(newPos)
                 task.wait(0.5)
-                -- Move back
                 teleport(currentPos)
                 task.wait(0.5)
             end
-            -- Alternative: use VirtualUser to click
-            -- virtualUser:Button1Down(Vector2.new(0,0))
-            -- task.wait(0.5)
-            -- virtualUser:Button1Up(Vector2.new(0,0))
         end
-        task.wait(30) -- lakukan setiap 30 detik
+        task.wait(30)
     end
 end
 
@@ -916,7 +903,6 @@ createCheckbox({
     Default = false,
     Callback = function(state)
         instantProximityEnabled = state
-        -- Note: tidak mempengaruhi auto karena auto sudah fixed 1.7 detik
         print("Instant Proximity:", state)
     end
 })
