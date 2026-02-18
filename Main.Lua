@@ -1,5 +1,8 @@
--- Remote Console untuk Delta Executor
--- Menampilkan data yang dikirim dan diterima oleh RemoteFunction tertentu
+-- Remote Console untuk Delta Executor (Versi Aman)
+-- Menampilkan data yang dikirim dan diterima oleh RemoteFunction
+
+-- Gunakan pcall untuk menangkap error di seluruh skrip
+local success, err = pcall(function()
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -13,13 +16,13 @@ end
 
 -- ================== KONFIGURASI ==================
 local REMOTE_NAMES = {"Speed", "Rebirth", "Carry", "Brainrots", "SellDialogue", "Upgrade"}
-local MAX_LOG_COUNT = 100  -- Batas maksimal log yang disimpan
-local EVENTS_FOLDER_PATH = "Events"  -- Nama folder di ReplicatedStorage
+local MAX_LOG_COUNT = 100
+local EVENTS_FOLDER_PATH = "Events"
 
 -- ================== FUNGSI SERIALIZE ==================
 local function serialize(val, depth)
     depth = depth or 0
-    if depth > 3 then return "{...}" end  -- Batasi kedalaman untuk menghindari loop
+    if depth > 3 then return "{...}" end
 
     local t = type(val)
     if t == "string" then
@@ -37,10 +40,10 @@ local function serialize(val, depth)
         end
         return "{" .. table.concat(parts, ", ") .. "}"
     elseif t == "userdata" then
-        -- Cek apakah instance Roblox
         local success, className = pcall(function() return val.ClassName end)
-        if success then
-            return string.format("Instance[%s: '%s']", className, val.Name)
+        if success and className then
+            local name = pcall(function() return val.Name end) and val.Name or "?"
+            return string.format("Instance[%s: '%s']", className, name)
         else
             return tostring(val)
         end
@@ -53,11 +56,12 @@ end
 local gui = Instance.new("ScreenGui")
 gui.Name = "RemoteConsole"
 gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Tempatkan di CoreGui jika memungkinkan
+-- Tempatkan di CoreGui jika memungkinkan, fallback ke PlayerGui
 local parentGui = CoreGui
-pcall(function() gui.Parent = parentGui end)
-if not gui.Parent then
+local setParentSuccess = pcall(function() gui.Parent = parentGui end)
+if not setParentSuccess or not gui.Parent then
     gui.Parent = player:WaitForChild("PlayerGui")
 end
 
@@ -78,7 +82,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -10, 0, 30)
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
-title.Text = "Remote Console"
+title.Text = "Remote Console (Delta)"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
@@ -98,7 +102,7 @@ closeBtn.MouseButton1Click:Connect(function()
     gui:Destroy()
 end)
 
--- ================== PANEL KIRI (DAFTAR REMOTE) ==================
+-- Panel kiri (daftar remote)
 local leftPanel = Instance.new("Frame")
 leftPanel.Size = UDim2.new(0, 150, 1, -40)
 leftPanel.Position = UDim2.new(0, 5, 0, 35)
@@ -108,7 +112,6 @@ leftPanel.BorderSizePixel = 1
 leftPanel.BorderColor3 = Color3.fromRGB(100, 100, 100)
 leftPanel.Parent = mainFrame
 
--- Label panel kiri
 local leftTitle = Instance.new("TextLabel")
 leftTitle.Size = UDim2.new(1, 0, 0, 25)
 leftTitle.BackgroundTransparency = 1
@@ -118,7 +121,6 @@ leftTitle.Font = Enum.Font.SourceSansBold
 leftTitle.TextSize = 16
 leftTitle.Parent = leftPanel
 
--- ScrollingFrame untuk tombol remote
 local remoteList = Instance.new("ScrollingFrame")
 remoteList.Size = UDim2.new(1, -10, 1, -30)
 remoteList.Position = UDim2.new(0, 5, 0, 25)
@@ -127,20 +129,18 @@ remoteList.ScrollBarThickness = 8
 remoteList.CanvasSize = UDim2.new(0, 0, 0, 0)
 remoteList.Parent = leftPanel
 
--- UIListLayout untuk mengatur tombol remote
 local listLayout = Instance.new("UIListLayout")
 listLayout.Padding = UDim.new(0, 5)
 listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = remoteList
 
--- Fungsi untuk memperbarui CanvasSize remoteList
 local function updateRemoteListCanvas()
     remoteList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
 end
 listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateRemoteListCanvas)
 
--- ================== PANEL KANAN (LOG CONSOLE) ==================
+-- Panel kanan (log console)
 local rightPanel = Instance.new("Frame")
 rightPanel.Size = UDim2.new(1, -165, 1, -40)
 rightPanel.Position = UDim2.new(0, 160, 0, 35)
@@ -150,7 +150,6 @@ rightPanel.BorderSizePixel = 1
 rightPanel.BorderColor3 = Color3.fromRGB(100, 100, 100)
 rightPanel.Parent = mainFrame
 
--- ScrollingFrame untuk log
 local logScroller = Instance.new("ScrollingFrame")
 logScroller.Size = UDim2.new(1, -10, 1, -10)
 logScroller.Position = UDim2.new(0, 5, 0, 5)
@@ -159,26 +158,22 @@ logScroller.ScrollBarThickness = 8
 logScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
 logScroller.Parent = rightPanel
 
--- UIListLayout untuk log
 local logLayout = Instance.new("UIListLayout")
 logLayout.Padding = UDim.new(0, 3)
 logLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 logLayout.SortOrder = Enum.SortOrder.LayoutOrder
 logLayout.Parent = logScroller
 
--- Fungsi untuk memperbarui CanvasSize logScroller
 local function updateLogCanvas()
     logScroller.CanvasSize = UDim2.new(0, 0, 0, logLayout.AbsoluteContentSize.Y + 10)
 end
 logLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateLogCanvas)
 
 -- ================== DATA LOG DAN FILTER ==================
-local logs = {}  -- Menyimpan semua log
-local filterRemote = nil  -- nil = semua, string = nama remote tertentu
+local logs = {}
+local filterRemote = nil  -- nil = semua, string = nama remote
 
--- Fungsi untuk menambahkan log baru
 local function addLog(remoteName, argsStr, resultStr, isError, timeStr)
-    -- Buat entri log
     local logEntry = {
         name = remoteName,
         time = timeStr,
@@ -187,30 +182,23 @@ local function addLog(remoteName, argsStr, resultStr, isError, timeStr)
         isError = isError
     }
     table.insert(logs, logEntry)
-
-    -- Hapus log tertua jika melebihi batas
     if #logs > MAX_LOG_COUNT then
         table.remove(logs, 1)
     end
-
-    -- Refresh tampilan
     refreshDisplay()
 end
 
--- Fungsi untuk merefresh tampilan log berdasarkan filter
 function refreshDisplay()
-    -- Hapus semua label log
     for _, child in ipairs(logScroller:GetChildren()) do
         if child:IsA("TextLabel") then
             child:Destroy()
         end
     end
 
-    -- Tambahkan log yang sesuai filter
     for _, log in ipairs(logs) do
         if filterRemote == nil or log.name == filterRemote then
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(1, -10, 0, 0)  -- Tinggi akan otomatis
+            label.Size = UDim2.new(1, -10, 0, 0)
             label.BackgroundColor3 = log.isError and Color3.fromRGB(80, 30, 30) or Color3.fromRGB(40, 40, 40)
             label.BackgroundTransparency = 0.3
             label.BorderSizePixel = 1
@@ -221,19 +209,16 @@ function refreshDisplay()
             label.TextSize = 14
             label.TextWrapped = true
             label.RichText = false
-            label.AutomaticSize = Enum.AutomaticSize.Y  -- Tinggi menyesuaikan konten
+            label.AutomaticSize = Enum.AutomaticSize.Y
             label.Parent = logScroller
         end
     end
-
-    -- Perbarui canvas
     updateLogCanvas()
 end
 
 -- ================== MEMBUAT TOMBOL REMOTE ==================
-local buttons = {}  -- Menyimpan tombol untuk referensi
+local buttons = {}
 
--- Fungsi untuk membuat tombol remote
 local function createRemoteButton(name)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 30)
@@ -244,9 +229,10 @@ local function createRemoteButton(name)
     btn.TextSize = 16
     btn.Parent = remoteList
 
-    -- Efek hover
     btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        if filterRemote ~= name then
+            btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
     end)
     btn.MouseLeave:Connect(function()
         if filterRemote == name then
@@ -256,20 +242,20 @@ local function createRemoteButton(name)
         end
     end)
 
-    -- Klik untuk mengatur filter
     btn.MouseButton1Click:Connect(function()
         if filterRemote == name then
-            -- Jika sudah dipilih, reset ke semua
             filterRemote = nil
             for _, b in pairs(buttons) do
                 b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
             end
+            allBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 200)
         else
             filterRemote = name
             for _, b in pairs(buttons) do
                 b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
             end
             btn.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
+            allBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
         end
         refreshDisplay()
     end)
@@ -277,7 +263,7 @@ local function createRemoteButton(name)
     buttons[name] = btn
 end
 
--- Buat tombol "Semua" untuk reset filter
+-- Tombol "Semua"
 local allBtn = Instance.new("TextButton")
 allBtn.Size = UDim2.new(1, -10, 0, 30)
 allBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 200)
@@ -295,33 +281,19 @@ allBtn.MouseButton1Click:Connect(function()
     refreshDisplay()
 end)
 
--- Buat tombol untuk setiap remote
 for _, name in ipairs(REMOTE_NAMES) do
     createRemoteButton(name)
 end
 
--- Set tombol "Semua" aktif di awal
-allBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 200)
-
--- ================== HOOK REMOTEFUNCTION ==================
+-- ================== HOOK REMOTEFUNCTION DENGAN AMAN ==================
 local eventsFolder = ReplicatedStorage:FindFirstChild(EVENTS_FOLDER_PATH)
 if not eventsFolder then
-    warn("Folder Events tidak ditemukan di ReplicatedStorage")
-    -- Tampilkan pesan di console
-    local warnLabel = Instance.new("TextLabel")
-    warnLabel.Size = UDim2.new(1, -10, 0, 30)
-    warnLabel.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
-    warnLabel.Text = "Folder Events tidak ditemukan!"
-    warnLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
-    warnLabel.Font = Enum.Font.SourceSans
-    warnLabel.TextSize = 14
-    warnLabel.Parent = logScroller
+    addLog("SYSTEM", "", "Folder Events tidak ditemukan! Pastikan path benar.", true, os.date("%H:%M:%S"))
 else
-    -- Hook setiap remote yang ada
     for _, name in ipairs(REMOTE_NAMES) do
         local remote = eventsFolder:FindFirstChild(name)
         if remote and remote:IsA("RemoteFunction") then
-            -- Cegah hook ganda (optional)
+            -- Cegah hook ganda
             if remote._hooked then continue end
             remote._hooked = true
 
@@ -330,35 +302,81 @@ else
                 local args = {...}
                 local timeStr = os.date("%H:%M:%S")
                 
-                -- Serialisasi argumen
+                -- Serialisasi argumen dengan aman
                 local argsStr = ""
                 for i, arg in ipairs(args) do
                     if i > 1 then argsStr = argsStr .. ", " end
-                    argsStr = argsStr .. serialize(arg)
+                    local serialized = pcall(serialize, arg) and serialize(arg) or tostring(arg)
+                    argsStr = argsStr .. serialized
                 end
                 if #args == 0 then argsStr = "(no args)" end
 
-                -- Panggil fungsi asli
-                local success, result = pcall(function() return oldInvoke(self, ...) end)
+                -- Panggil fungsi asli dengan pcall
+                local success, result = pcall(function()
+                    return oldInvoke(self, unpack(args))
+                end)
                 
                 if success then
-                    local resultStr = serialize(result)
+                    local resultStr = pcall(serialize, result) and serialize(result) or tostring(result)
                     addLog(name, argsStr, resultStr, false, timeStr)
                     return result
                 else
                     -- result adalah error message
-                    addLog(name, argsStr, serialize(result), true, timeStr)
+                    addLog(name, argsStr, tostring(result), true, timeStr)
                     error(result)  -- Lempar ulang error
                 end
             end
         else
-            warn("RemoteFunction " .. name .. " tidak ditemukan")
+            addLog("SYSTEM", "", "RemoteFunction " .. name .. " tidak ditemukan atau bukan RemoteFunction", true, os.date("%H:%M:%S"))
         end
     end
 end
 
--- Pesan inisialisasi
 addLog("SYSTEM", "", "Console siap. Menunggu aktivitas RemoteFunction...", false, os.date("%H:%M:%S"))
 
--- ================== SELESAI ==================
-print("Remote Console berhasil dijalankan")
+print("Remote Console berhasil dijalankan (versi aman)")
+
+end) -- penutup pcall
+
+if not success then
+    warn("Terjadi error saat menjalankan Remote Console: " .. tostring(err))
+    -- Tampilkan UI sederhana untuk memberi tahu error
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ErrorNotification"
+    gui.ResetOnSpawn = false
+    pcall(function() gui.Parent = game:GetService("CoreGui") end)
+    if not gui.Parent then
+        gui.Parent = Players.LocalPlayer and Players.LocalPlayer:WaitForChild("PlayerGui")
+    end
+    if gui.Parent then
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0, 400, 0, 100)
+        frame.Position = UDim2.new(0.5, -200, 0.5, -50)
+        frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        frame.BorderSizePixel = 2
+        frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+        frame.Parent = gui
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, -20, 1, -20)
+        label.Position = UDim2.new(0, 10, 0, 10)
+        label.BackgroundTransparency = 1
+        label.Text = "Error: " .. tostring(err) .. "\n\nCek apakah game mendukung dan coba jalankan ulang."
+        label.TextColor3 = Color3.fromRGB(255, 100, 100)
+        label.Font = Enum.Font.SourceSans
+        label.TextSize = 16
+        label.TextWrapped = true
+        label.Parent = frame
+        
+        local closeBtn = Instance.new("TextButton")
+        closeBtn.Size = UDim2.new(0, 60, 0, 25)
+        closeBtn.Position = UDim2.new(0.5, -30, 1, -30)
+        closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        closeBtn.Text = "Tutup"
+        closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        closeBtn.Font = Enum.Font.SourceSans
+        closeBtn.TextSize = 16
+        closeBtn.Parent = frame
+        closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+    end
+end
