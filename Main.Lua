@@ -1,5 +1,6 @@
--- Remote Console untuk Delta Executor (Versi Aman)
+-- Remote Console untuk Delta Executor (Versi Fix)
 -- Menampilkan data yang dikirim dan diterima oleh RemoteFunction
+-- DENGAN PERBAIKAN: Tidak menambahkan properti ke instance Roblox (menghindari error "invalid member")
 
 -- Gunakan pcall untuk menangkap error di seluruh skrip
 local success, err = pcall(function()
@@ -82,7 +83,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -10, 0, 30)
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
-title.Text = "Remote Console (Delta)"
+title.Text = "Remote Console (Delta Fix)"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
@@ -286,6 +287,9 @@ for _, name in ipairs(REMOTE_NAMES) do
 end
 
 -- ================== HOOK REMOTEFUNCTION DENGAN AMAN ==================
+-- Tabel untuk melacak remote yang sudah di-hook (tanpa properti di instance)
+local hookedRemotes = {}
+
 local eventsFolder = ReplicatedStorage:FindFirstChild(EVENTS_FOLDER_PATH)
 if not eventsFolder then
     addLog("SYSTEM", "", "Folder Events tidak ditemukan! Pastikan path benar.", true, os.date("%H:%M:%S"))
@@ -293,15 +297,19 @@ else
     for _, name in ipairs(REMOTE_NAMES) do
         local remote = eventsFolder:FindFirstChild(name)
         if remote and remote:IsA("RemoteFunction") then
-            -- Cegah hook ganda
-            if remote._hooked then continue end
-            remote._hooked = true
+            -- Cek apakah sudah di-hook menggunakan tabel
+            if hookedRemotes[remote] then
+                continue
+            end
 
+            -- Simpan fungsi asli
             local oldInvoke = remote.Invoke
+
+            -- Ganti dengan fungsi baru
             remote.Invoke = function(self, ...)
                 local args = {...}
                 local timeStr = os.date("%H:%M:%S")
-                
+
                 -- Serialisasi argumen dengan aman
                 local argsStr = ""
                 for i, arg in ipairs(args) do
@@ -313,28 +321,31 @@ else
 
                 -- Panggil fungsi asli dengan pcall
                 local success, result = pcall(function()
-                    return oldInvoke(self, unpack(args))
+                    return oldInvoke(self, ...)
                 end)
-                
+
                 if success then
                     local resultStr = pcall(serialize, result) and serialize(result) or tostring(result)
                     addLog(name, argsStr, resultStr, false, timeStr)
                     return result
                 else
-                    -- result adalah error message
                     addLog(name, argsStr, tostring(result), true, timeStr)
                     error(result)  -- Lempar ulang error
                 end
             end
+
+            -- Tandai sudah di-hook di tabel (bukan di instance)
+            hookedRemotes[remote] = true
+            addLog("SYSTEM", "", "Berhasil hook " .. name, false, os.date("%H:%M:%S"))
         else
-            addLog("SYSTEM", "", "RemoteFunction " .. name .. " tidak ditemukan atau bukan RemoteFunction", true, os.date("%H:%M:%S"))
+            addLog("SYSTEM", "", "RemoteFunction " .. name .. " tidak ditemukan", true, os.date("%H:%M:%S"))
         end
     end
 end
 
 addLog("SYSTEM", "", "Console siap. Menunggu aktivitas RemoteFunction...", false, os.date("%H:%M:%S"))
 
-print("Remote Console berhasil dijalankan (versi aman)")
+print("Remote Console berhasil dijalankan (versi fix)")
 
 end) -- penutup pcall
 
