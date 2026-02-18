@@ -21,3 +21,6 @@ if scriptUrl then
         end
     end
 end
+
+
+--Saya Buat Code ini untuk mempermudah saya Load script Dari https://github.com/gumanba/Scripts [ Tora Isme ] Agar tidak perlu banyak Loadstring yang di simpan
