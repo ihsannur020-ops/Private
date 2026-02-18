@@ -756,17 +756,26 @@ local function fireAllTouchInterests()
     end
 end
 
--- Fungsi untuk mengklik semua Upgrade buttons (perbaikan: gunakan event MouseButton1Click)
+-- Fungsi untuk mengklik semua Upgrade buttons (perbaikan: gunakan firesignal jika ada)
 local function clickAllUpgrades()
     local data = getPlacesData()
     if not data then return end
 
     for _, button in ipairs(data.upgradeButtons) do
-        -- Simulasi klik dengan memicu event MouseButton1Click
-        -- Pastikan event ada (seharusnya selalu ada untuk GuiButton)
         local event = button.MouseButton1Click
         if event then
-            event:Fire()
+            -- Coba gunakan firesignal (umum di executor) jika tersedia
+            if firesignal then
+                firesignal(event)
+            else
+                -- Fallback ke :Fire() dengan pcall (mungkin tidak berfungsi di beberapa executor)
+                local success, err = pcall(function()
+                    event:Fire()
+                end)
+                if not success then
+                    warn("Gagal memicu event Upgrade button:", err)
+                end
+            end
         end
         task.wait()
     end
