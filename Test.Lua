@@ -29,7 +29,7 @@ screenGui.Parent = coreGui
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Frame utama (dapat digeser)
+-- Frame utama
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 350, 0, 350)
 mainFrame.Position = UDim2.new(0.5, -175, 0.5, -175)
@@ -78,7 +78,7 @@ closeBtn.Font = Enum.Font.GothamBold
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = mainFrame
 
--- Scrolling frame untuk konten
+-- Scrolling frame
 local scrollingFrame = Instance.new("ScrollingFrame")
 scrollingFrame.Size = UDim2.new(1, -20, 1, -55)
 scrollingFrame.Position = UDim2.new(0, 10, 0, 45)
@@ -95,7 +95,7 @@ scrollLayout.Parent = scrollingFrame
 scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 scrollLayout.Padding = UDim.new(0, 10)
 
--- Fungsi membuat container
+-- Container
 local function createContainer(name)
     local container = Instance.new("Frame")
     container.Name = name
@@ -243,7 +243,7 @@ function UI.AddButton(config)
     return button
 end
 
--- Fungsi untuk membuat checkbox (kotak centang)
+-- Fungsi checkbox
 local function createCheckbox(config)
     local container = switchContainer
     local text = config.Text or "Checkbox"
@@ -334,7 +334,7 @@ miniButton.BackgroundTransparency = 1
 miniButton.Text = ""
 miniButton.Parent = minimizedFrame
 
--- Drag untuk minimizedFrame
+-- Drag minimized
 local dragging = false
 local dragStartPos
 local frameStartPos
@@ -387,7 +387,7 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 5. VARIABEL GLOBAL DAN FUNGSI GAME
+-- 5. DATA DAN FUNGSI GAME
 -- ==================================================
 
 -- Data Rebirths
@@ -417,10 +417,10 @@ local plotPositions = {
 
 local homePoint = Vector3.new(-153, 28, 34)
 
--- Variabel plot number yang disimpan (diisi pertama kali)
+-- Variabel plot number yang disimpan
 local currentPlotNumber = nil
 
--- Fungsi untuk mendapatkan plot number dari atribut player, dan menyimpannya
+-- Fungsi untuk mendapatkan plot number
 local function getPlotNumber()
     if currentPlotNumber then return currentPlotNumber end
     local plotAttr = localPlayer:GetAttribute("Plot")
@@ -434,11 +434,6 @@ local function getPlotNumber()
     return nil
 end
 
--- Fungsi untuk mendapatkan model player
-local function getPlayerModel()
-    return workspace:FindFirstChild(localPlayer.Name)
-end
-
 -- Fungsi teleport
 local function teleport(position)
     local character = localPlayer.Character
@@ -447,42 +442,38 @@ local function teleport(position)
     end
 end
 
--- Fungsi teleport ke plot berdasarkan nomor
+-- Fungsi teleport ke home lalu ke plot
+local function teleportHomeThenPlot()
+    teleport(homePoint)
+    task.wait(0.5)
+    local plot = getPlotNumber()
+    if plot then
+        teleportToPlot(plot)
+    else
+        warn("Tidak dapat menemukan plot player")
+    end
+end
+
+-- Fungsi teleport ke plot
 local function teleportToPlot(plotNumber)
     if plotNumber and plotPositions[plotNumber] then
         teleport(plotPositions[plotNumber])
     end
 end
 
--- Fungsi teleport ke plot player saat ini
-local function teleportToHome()
-    teleport(homePoint)
-end
-
--- Variabel untuk durasi hold proximity (default 6 detik, bisa 0 jika instant)
-local proximityHoldDuration = 6 -- detik
-local instantProximityEnabled = false
-
--- Fungsi interaksi dengan brainrot (dengan durasi hold)
-local function interactWithBrainrot(brainrotModel, holdDuration)
+-- Fungsi interaksi dengan brainrot (hold 5 detik)
+local function interactWithBrainrot(brainrotModel)
     if not brainrotModel then return false end
-    holdDuration = holdDuration or proximityHoldDuration
     -- Cari ProximityPrompt
     local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
     if prompt then
-        if holdDuration > 0 then
-            prompt:InputHoldBegin()
-            task.wait(holdDuration)
-            prompt:InputHoldEnd()
-        else
-            -- Instant: langsung trigger
-            prompt:InputHoldBegin()
-            task.wait(0.1)
-            prompt:InputHoldEnd()
-        end
+        -- Simulasi hold E selama 5 detik
+        prompt:InputHoldBegin()
+        task.wait(5)
+        prompt:InputHoldEnd()
         return true
     else
-        -- Alternatif ClickDetector
+        -- Alternatif ClickDetector (tapi tidak ada hold)
         local clickDetector = brainrotModel:FindFirstChildWhichIsA("ClickDetector", true)
         if clickDetector then
             fireclickdetector(clickDetector)
@@ -493,7 +484,7 @@ local function interactWithBrainrot(brainrotModel, holdDuration)
 end
 
 -- ==================================================
--- 6. FUNGSI UNTUK REBIRTH NEED
+-- 6. FUNGSI REBIRTH NEED (tombol)
 -- ==================================================
 local function processRebirthNeed()
     local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
@@ -535,14 +526,14 @@ local function processRebirthNeed()
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
 
-    -- Interaksi dengan durasi default (6 detik atau sesuai instant)
+    -- Interaksi (hold 5 detik)
     interactWithBrainrot(targetModel)
 
-    -- Tunggu 6 detik (tanpa mengecek atribut)
-    task.wait(6)
+    -- Tunggu 5 detik (sesuai deskripsi: setelah interaksi, tunggu 5 detik)
+    task.wait(5)
 
-    -- Teleport ke home point
-    teleportToHome()
+    -- Teleport home lalu plot
+    teleportHomeThenPlot()
 end
 
 -- ==================================================
@@ -554,8 +545,9 @@ local autoStates = {
     Secret = false
 }
 
--- Fungsi auto collect berdasarkan tipe
-local function autoCollect(typeName)
+-- Fungsi untuk melakukan satu siklus auto collect berdasarkan tipe
+-- Mengembalikan true jika ada model dan diproses, false jika tidak ada
+local function performAutoCollect(typeName)
     local folderName = typeName
     local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
     if not brainrotsFolder then return false end
@@ -563,6 +555,7 @@ local function autoCollect(typeName)
     local targetFolder = brainrotsFolder:FindFirstChild(folderName)
     if not targetFolder then return false end
 
+    -- Kumpulkan semua model di folder
     local models = {}
     for _, child in ipairs(targetFolder:GetChildren()) do
         if child:IsA("Model") then
@@ -571,25 +564,29 @@ local function autoCollect(typeName)
     end
     if #models == 0 then return false end
 
+    -- Pilih salah satu secara acak
     local targetModel = models[math.random(1, #models)]
 
+    -- Teleport ke model
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
 
+    -- Interaksi (hold 5 detik)
     interactWithBrainrot(targetModel)
 
-    -- Tunggu 6 detik
-    task.wait(6)
+    -- Tunggu 5 detik
+    task.wait(5)
 
-    -- Teleport ke home point
-    teleportToHome()
+    -- Teleport home lalu plot
+    teleportHomeThenPlot()
 
     return true
 end
 
--- Loop utama auto
+-- Loop utama auto (dengan prioritas Godly -> Celestial -> Secret)
 local function startAutoLoop()
     while true do
+        -- Urutan prioritas
         local order = {}
         if autoStates.Godly then table.insert(order, "Godly") end
         if autoStates.Celestial then table.insert(order, "Celestial") end
@@ -601,11 +598,15 @@ local function startAutoLoop()
         end
 
         for _, typeName in ipairs(order) do
+            -- Cek lagi switch mungkin berubah saat loop
             if autoStates[typeName] then
-                autoCollect(typeName)
-                task.wait(0.5)
+                performAutoCollect(typeName)
+                -- Setelah selesai satu tipe, lanjut ke tipe berikutnya (tanpa jeda khusus)
             end
+            -- Sedikit jeda antar tipe
+            task.wait(0.5)
         end
+        -- Sedikit jeda sebelum mengulang dari awal
         task.wait(0.5)
     end
 end
@@ -613,15 +614,12 @@ end
 -- ==================================================
 -- 8. FUNGSI UNTUK COLLECT CASH DAN UPGRADE ALL
 -- ==================================================
-
--- Variabel state untuk switch baru
 local collectCashEnabled = false
 local upgradeAllEnabled = false
 
--- Menyimpan referensi ke tempat-tempat (1-30) untuk menghindari pencarian ulang
-local placesCache = nil -- akan diisi {touchParts = {}, upgradeParts = {}}
+-- Cache untuk places
+local placesCache = nil
 
--- Fungsi untuk mendapatkan data tempat di plot
 local function getPlacesData()
     if placesCache then return placesCache end
     local plotNum = getPlotNumber()
@@ -639,7 +637,6 @@ local function getPlacesData()
     local touchParts = {}
     local upgradeParts = {}
 
-    -- Loop model 1 sampai 30
     for i = 1, 30 do
         local model = places:FindFirstChild(tostring(i))
         if model then
@@ -648,13 +645,12 @@ local function getPlacesData()
             if claim then
                 local touchInterest = claim:FindFirstChildWhichIsA("TouchTransmitter")
                 if touchInterest then
-                    table.insert(touchParts, claim) -- part yang memiliki TouchTransmitter
+                    table.insert(touchParts, claim)
                 end
             end
             -- Upgrade
             local upgrade = model:FindFirstChild("Upgrade")
             if upgrade then
-                -- Mungkin ada ClickDetector
                 local clickDetector = upgrade:FindFirstChildWhichIsA("ClickDetector")
                 if clickDetector then
                     table.insert(upgradeParts, upgrade)
@@ -670,7 +666,6 @@ local function getPlacesData()
     return placesCache
 end
 
--- Fungsi untuk memicu semua TouchInterest
 local function fireAllTouchInterests()
     local data = getPlacesData()
     if not data then return end
@@ -681,14 +676,12 @@ local function fireAllTouchInterests()
     if not rootPart then return end
 
     for _, part in ipairs(data.touchParts) do
-        -- Gunakan firetouchinterest untuk simulasi sentuhan
-        firetouchinterest(rootPart, part, 0) -- touch began
-        firetouchinterest(rootPart, part, 1) -- touch ended
-        task.wait() -- sedikit jeda agar tidak overload
+        firetouchinterest(rootPart, part, 0)
+        firetouchinterest(rootPart, part, 1)
+        task.wait()
     end
 end
 
--- Fungsi untuk mengklik semua Upgrade
 local function clickAllUpgrades()
     local data = getPlacesData()
     if not data then return end
@@ -702,23 +695,21 @@ local function clickAllUpgrades()
     end
 end
 
--- Loop untuk Collect Cash
 local function startCollectCashLoop()
     while true do
         if collectCashEnabled then
             fireAllTouchInterests()
         end
-        task.wait(1) -- setiap 1 detik
+        task.wait(1)
     end
 end
 
--- Loop untuk Upgrade All
 local function startUpgradeAllLoop()
     while true do
         if upgradeAllEnabled then
             clickAllUpgrades()
         end
-        task.wait(1) -- setiap 1 detik
+        task.wait(1)
     end
 end
 
@@ -777,7 +768,9 @@ UI.AddButton({
 -- Tombol To Home
 UI.AddButton({
     Text = "To Home",
-    Callback = teleportToHome
+    Callback = function()
+        teleportHomeThenPlot()
+    end
 })
 
 -- Switch Auto Godly
@@ -810,14 +803,13 @@ createCheckbox({
     end
 })
 
--- Switch Instant Proximity
+-- Switch Instant Proximity (tidak dipakai dalam logika baru, tapi tetap ada untuk kompatibilitas)
 createCheckbox({
     Text = "Instant Proximity",
     Default = false,
     Callback = function(state)
-        instantProximityEnabled = state
-        proximityHoldDuration = state and 0 or 6
-        print("Instant Proximity:", state)
+        -- Tidak digunakan karena durasi hold sudah fixed 5 detik
+        print("Instant Proximity tidak berpengaruh dalam versi ini")
     end
 })
 
@@ -828,7 +820,6 @@ createCheckbox({
     Callback = function(state)
         collectCashEnabled = state
         if state then
-            -- Pastikan cache terisi
             getPlacesData()
         end
         print("Collect Cash:", state)
