@@ -7,7 +7,7 @@ local replicatedStorage = game:GetService("ReplicatedStorage")
 local virtualUser = game:GetService("VirtualUser")
 
 local localPlayer = players.LocalPlayer
-local guiName = "SurviveLAVAForBrainrot_ScriptByAzka"
+local guiName = "SurviveLAVA_ByAzka"
 
 if coreGui:FindFirstChild(guiName) then
     coreGui:FindFirstChild(guiName):Destroy()
@@ -51,7 +51,7 @@ minimizeBtn.Position = UDim2.new(1, -65, 0, 5)
 minimizeBtn.BackgroundTransparency = 1
 minimizeBtn.Text = "-"
 minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeBtn.TextSize = 20
+minimizeBtn.TextSize = 40
 minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.BorderSizePixel = 0
 minimizeBtn.Parent = mainFrame
@@ -305,7 +305,7 @@ miniLabel.Size = UDim2.new(1, 0, 1, 0)
 miniLabel.BackgroundTransparency = 1
 miniLabel.Text = "+"
 miniLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-miniLabel.TextSize = 24
+miniLabel.TextSize = 50
 miniLabel.Font = Enum.Font.GothamBold
 miniLabel.Parent = minimizedFrame
 
