@@ -467,7 +467,7 @@ end
 -- Fungsi interaksi dengan brainrot (hold selama durasi tertentu)
 local function interactWithBrainrot(brainrotModel, holdDuration)
     if not brainrotModel then return false end
-    holdDuration = holdDuration or 5
+    holdDuration = holdDuration or 3
     -- Cari ProximityPrompt
     local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
     if prompt then
