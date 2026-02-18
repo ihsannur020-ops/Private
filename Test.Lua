@@ -46,7 +46,7 @@ uiCorner.CornerRadius = UDim.new(0, 8)
 uiCorner.Parent = mainFrame
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -70, 0, 30)
+title.Size = UDim2.new(1, -100, 0, 30)  -- dikurangi untuk memberi ruang tombol
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
 title.Text = "Survive LAVA For Brainrot"
@@ -56,24 +56,26 @@ title.TextSize = 18
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = mainFrame
 
+-- Tombol Minimize diperbesar
 local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-minimizeBtn.Position = UDim2.new(1, -65, 0, 5)
+minimizeBtn.Size = UDim2.new(0, 40, 0, 40)
+minimizeBtn.Position = UDim2.new(1, -85, 0, 5)
 minimizeBtn.BackgroundTransparency = 1
 minimizeBtn.Text = "-"
 minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeBtn.TextSize = 28 -- diperbesar
+minimizeBtn.TextSize = 30
 minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.BorderSizePixel = 0
 minimizeBtn.Parent = mainFrame
 
+-- Tombol Close diperbesar
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -30, 0, 5)
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -40, 0, 5)
 closeBtn.BackgroundTransparency = 1
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 20
+closeBtn.TextSize = 30
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.BorderSizePixel = 0
 closeBtn.Parent = mainFrame
@@ -129,10 +131,10 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Frame dengan margin kiri 5 dan kanan 5 agar lebih rapi
+    -- Frame dengan margin kiri dan kanan 15
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 30)  -- kurangi 10 pixel total (5 kiri, 5 kanan)
-    frame.Position = UDim2.new(0, 5, 0, 0) -- geser 5 ke kanan
+    frame.Size = UDim2.new(1, -30, 0, 30)
+    frame.Position = UDim2.new(0, 15, 0, 0)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
@@ -305,11 +307,11 @@ local function createCheckbox(config)
 end
 
 -- ==================================================
--- 4. MINIMIZED FRAME
+-- 4. MINIMIZED FRAME (diperbesar)
 -- ==================================================
 local minimizedFrame = Instance.new("Frame")
-minimizedFrame.Size = UDim2.new(0, 50, 0, 50)
-minimizedFrame.Position = UDim2.new(1, -70, 1, -70)
+minimizedFrame.Size = UDim2.new(0, 70, 0, 70)
+minimizedFrame.Position = UDim2.new(1, -90, 1, -90)
 minimizedFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 minimizedFrame.BorderSizePixel = 1
 minimizedFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -326,7 +328,7 @@ miniLabel.Size = UDim2.new(1, 0, 1, 0)
 miniLabel.BackgroundTransparency = 1
 miniLabel.Text = "+"
 miniLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-miniLabel.TextSize = 32 -- diperbesar
+miniLabel.TextSize = 40
 miniLabel.Font = Enum.Font.GothamBold
 miniLabel.Parent = minimizedFrame
 
@@ -468,6 +470,26 @@ local function teleportToHome()
     end
 end
 
+-- Fungsi untuk mendapatkan posisi model (dari part mana pun)
+local function getModelPosition(model)
+    if model:IsA("BasePart") then
+        return model.Position
+    elseif model:IsA("Model") then
+        if model.PrimaryPart then
+            return model.PrimaryPart.Position
+        else
+            -- cari part pertama
+            local parts = model:GetDescendants()
+            for _, part in ipairs(parts) do
+                if part:IsA("BasePart") then
+                    return part.Position
+                end
+            end
+        end
+    end
+    return nil
+end
+
 -- Fungsi interaksi dengan brainrot (hold 1.7 detik)
 local function interactWithBrainrot(brainrotModel)
     if not brainrotModel then return false end
@@ -493,21 +515,19 @@ end
 local function isPlayerNearby(model, radius)
     radius = radius or 3
     if not model then return false end
-    -- Dapatkan posisi model (gunakan PrimaryPart jika ada, atau Pivot)
-    local modelPos
-    if model:IsA("Model") and model.PrimaryPart then
-        modelPos = model.PrimaryPart.Position
-    else
-        modelPos = model:GetPivot().Position
-    end
-
+    local modelPos = getModelPosition(model)
+    if not modelPos then return false end
     for _, player in ipairs(players:GetPlayers()) do
         if player ~= localPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local dist = (character.HumanoidRootPart.Position - modelPos).Magnitude
-                if dist <= radius then
-                    return true
+            local char = player.Character
+            if char then
+                -- Cari HumanoidRootPart atau part mana pun
+                local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChildWhichIsA("BasePart")
+                if root then
+                    local dist = (root.Position - modelPos).Magnitude
+                    if dist <= radius then
+                        return true
+                    end
                 end
             end
         end
@@ -801,7 +821,7 @@ end
 -- 9. MENAMBAH ELEMEN UI
 -- ==================================================
 
--- Slider Walkspeed (dengan margin 5)
+-- Slider Walkspeed (dengan margin baru)
 UI.AddSlider({
     Text = "Walkspeed",
     Min = 16,
