@@ -1,562 +1,364 @@
--- Script Profesional untuk Delta Executor
--- GUI: Escape Tsunami For Phones (Versi Final dengan Perbaikan Total)
+-- Remote Console untuk Delta Executor
+-- Menampilkan data yang dikirim dan diterima oleh RemoteFunction tertentu
 
--- ==================================================
--- 1. KONFIGURASI AWAL
--- ==================================================
-local coreGui = game:GetService("CoreGui")
-local players = game:GetService("Players")
-local userInput = game:GetService("UserInputService")
-local tweenService = game:GetService("TweenService")
-local runService = game:GetService("RunService")
-local workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
 
-local localPlayer = players.LocalPlayer
-local guiName = "EscapeTsunamiForPhone_ScriptByAzka.UI_Utama"
-
--- Hapus GUI lama jika ada
-if coreGui:FindFirstChild(guiName) then
-    coreGui:FindFirstChild(guiName):Destroy()
+if not player then
+    warn("Tidak dapat menemukan pemain lokal.")
+    return
 end
 
--- ==================================================
--- 2. MEMBUAT ELEMEN DASAR GUI
--- ==================================================
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = guiName
-screenGui.Parent = coreGui
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- ================== KONFIGURASI ==================
+local REMOTE_NAMES = {"Speed", "Rebirth", "Carry", "Brainrots", "SellDialogue", "Upgrade"}
+local MAX_LOG_COUNT = 100  -- Batas maksimal log yang disimpan
+local EVENTS_FOLDER_PATH = "Events"  -- Nama folder di ReplicatedStorage
 
--- Frame utama dengan ukuran tetap
+-- ================== FUNGSI SERIALIZE ==================
+local function serialize(val, depth)
+    depth = depth or 0
+    if depth > 3 then return "{...}" end  -- Batasi kedalaman untuk menghindari loop
+
+    local t = type(val)
+    if t == "string" then
+        return string.format("%q", val)
+    elseif t == "number" or t == "boolean" then
+        return tostring(val)
+    elseif t == "nil" then
+        return "nil"
+    elseif t == "table" then
+        local parts = {}
+        for k, v in pairs(val) do
+            local ks = serialize(k, depth + 1)
+            local vs = serialize(v, depth + 1)
+            table.insert(parts, string.format("[%s] = %s", ks, vs))
+        end
+        return "{" .. table.concat(parts, ", ") .. "}"
+    elseif t == "userdata" then
+        -- Cek apakah instance Roblox
+        local success, className = pcall(function() return val.ClassName end)
+        if success then
+            return string.format("Instance[%s: '%s']", className, val.Name)
+        else
+            return tostring(val)
+        end
+    else
+        return tostring(val)
+    end
+end
+
+-- ================== MEMBUAT UI CONSOLE ==================
+local gui = Instance.new("ScreenGui")
+gui.Name = "RemoteConsole"
+gui.ResetOnSpawn = false
+
+-- Tempatkan di CoreGui jika memungkinkan
+local parentGui = CoreGui
+pcall(function() gui.Parent = parentGui end)
+if not gui.Parent then
+    gui.Parent = player:WaitForChild("PlayerGui")
+end
+
+-- Frame utama (dapat digeser)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 350)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
-mainFrame.ClipsDescendants = true
+mainFrame.Size = UDim2.new(0, 700, 0, 450)
+mainFrame.Position = UDim2.new(0.5, -350, 0.5, -225)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(200, 200, 200)
 mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = gui
 
--- Sudut melengkung
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 8)
-uiCorner.Parent = mainFrame
+-- Judul UI
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -10, 0, 30)
+title.Position = UDim2.new(0, 5, 0, 5)
+title.BackgroundTransparency = 1
+title.Text = "Remote Console"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = mainFrame
 
--- ==================================================
--- 3. HEADER (dapat digeser)
--- ==================================================
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, -10, 0, 30)
-header.Position = UDim2.new(0, 5, 0, 5)
-header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-header.BorderSizePixel = 0
-header.Parent = mainFrame
-
--- Sudut header
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 6)
-headerCorner.Parent = header
-
--- Judul
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -70, 1, 0)
-titleLabel.Position = UDim2.new(0, 10, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Escape Tsunami For Phones"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextScaled = true
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = header
-
--- Tombol Minimize
-local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
-minimizeBtn.Position = UDim2.new(1, -60, 0.5, -12.5)
-minimizeBtn.BackgroundTransparency = 1
-minimizeBtn.Text = "—"
-minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeBtn.TextScaled = true
-minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.BorderSizePixel = 0
-minimizeBtn.Parent = header
-
--- Tombol Close
+-- Tombol tutup
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 25, 0, 25)
-closeBtn.Position = UDim2.new(1, -30, 0.5, -12.5)
-closeBtn.BackgroundTransparency = 1
+closeBtn.Position = UDim2.new(1, -30, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextScaled = true
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.BorderSizePixel = 0
-closeBtn.Parent = header
-
--- ==================================================
--- 4. SCROLLING FRAME UNTUK KONTEN
--- ==================================================
-local scrollingFrame = Instance.new("ScrollingFrame")
-scrollingFrame.Size = UDim2.new(1, -20, 1, -55)
-scrollingFrame.Position = UDim2.new(0, 10, 0, 45)
-scrollingFrame.BackgroundTransparency = 1
-scrollingFrame.BorderSizePixel = 0
-scrollingFrame.ScrollBarThickness = 4
-scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-scrollingFrame.Parent = mainFrame
-scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
--- ==================================================
--- 5. MEMBUAT KONTEN DALAM SCROLLINGFRAME
--- ==================================================
-local function createLabel(text, yPos)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 25)
-    label.Position = UDim2.new(0, 0, 0, yPos)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextScaled = true
-    label.Font = Enum.Font.GothamBold
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = scrollingFrame
-    return label
-end
-
-local function createButton(text, yPos, color)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 45)
-    btn.Position = UDim2.new(0, 0, 0, yPos)
-    btn.BackgroundColor3 = color or Color3.fromRGB(40, 40, 40)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextScaled = true
-    btn.Font = Enum.Font.GothamBold
-    btn.BorderSizePixel = 0
-    btn.Parent = scrollingFrame
-    btn.AutoButtonColor = true
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
-    btnCorner.Parent = btn
-    
-    return btn
-end
-
-local function createSwitch(text, yPos)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 0, 30)
-    container.Position = UDim2.new(0, 0, 0, yPos)
-    container.BackgroundTransparency = 1
-    container.Parent = scrollingFrame
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 200, 1, 0)
-    label.Position = UDim2.new(0, 0, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextScaled = true
-    label.Font = Enum.Font.GothamBold
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = container
-    
-    local toggle = Instance.new("TextButton")
-    toggle.Size = UDim2.new(0, 50, 0, 25)
-    toggle.Position = UDim2.new(1, -60, 0.5, -12.5)
-    toggle.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    toggle.Text = "OFF"
-    toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggle.TextScaled = true
-    toggle.Font = Enum.Font.GothamBold
-    toggle.BorderSizePixel = 0
-    toggle.Parent = container
-    toggle.AutoButtonColor = true
-    
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 12)
-    toggleCorner.Parent = toggle
-    
-    return toggle
-end
-
--- Mulai menempatkan konten
-local yOffset = 0
-local spacing = 5
-
--- Walkspeed Slider (diperbaiki layout)
-createLabel("Walkspeed", yOffset)
-yOffset = yOffset + 25 + spacing
-
--- Container untuk slider dan angka
-local sliderRow = Instance.new("Frame")
-sliderRow.Size = UDim2.new(1, 0, 0, 30)
-sliderRow.Position = UDim2.new(0, 0, 0, yOffset)
-sliderRow.BackgroundTransparency = 1
-sliderRow.Parent = scrollingFrame
-
--- Slider background
-local sliderBg = Instance.new("Frame")
-sliderBg.Size = UDim2.new(0, 200, 0, 10)
-sliderBg.Position = UDim2.new(0, 0, 0.5, -5)
-sliderBg.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-sliderBg.BorderSizePixel = 0
-sliderBg.Parent = sliderRow
-
-local sliderCorner = Instance.new("UICorner")
-sliderCorner.CornerRadius = UDim.new(0, 5)
-sliderCorner.Parent = sliderBg
-
-local sliderButton = Instance.new("TextButton")
-sliderButton.Size = UDim2.new(0, 15, 0, 20)
-sliderButton.Position = UDim2.new(0, 0, 0.5, -10)
-sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderButton.Text = ""
-sliderButton.BorderSizePixel = 0
-sliderButton.Parent = sliderBg
-
-local sliderButtonCorner = Instance.new("UICorner")
-sliderButtonCorner.CornerRadius = UDim.new(0, 4)
-sliderButtonCorner.Parent = sliderButton
-
--- Nilai slider di samping
-local wsValue = Instance.new("TextLabel")
-wsValue.Size = UDim2.new(0, 50, 1, 0)
-wsValue.Position = UDim2.new(0, 210, 0, 0)
-wsValue.BackgroundTransparency = 1
-wsValue.Text = "30"
-wsValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-wsValue.TextScaled = true
-wsValue.Font = Enum.Font.GothamBold
-wsValue.Parent = sliderRow
-
-yOffset = yOffset + 30 + spacing
-
--- Tombol VIP (kuning), Hapus Wave, Stop Loop
-local vipBtn = createButton("VIP", yOffset, Color3.fromRGB(255, 255, 0))  -- Kuning
-yOffset = yOffset + 45 + spacing
-
-local waveBtn = createButton("OFF Wave", yOffset)
-yOffset = yOffset + 45 + spacing
-
-local stopBtn = createButton("Stop Loop", yOffset)
-yOffset = yOffset + 45 + spacing * 2
-
--- Switch
-local collectToggle = createSwitch("Instan Collect", yOffset)
-yOffset = yOffset + 30 + spacing
-
-local proxToggle = createSwitch("Instant Proximity", yOffset)
-yOffset = yOffset + 30 + spacing
-
--- Set CanvasSize
-scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
-
--- ==================================================
--- 6. FUNGSIONALITAS WALKSPEED SLIDER
--- ==================================================
-local minSpeed = 30
-local maxSpeed = 200
-local currentSpeed = 30
-
-local function getCharacter()
-    return localPlayer.Character or localPlayer.CharacterAdded:Wait()
-end
-
-local function updateWalkspeed(value)
-    value = math.clamp(value, minSpeed, maxSpeed)
-    currentSpeed = value
-    wsValue.Text = tostring(math.floor(value))
-    local char = getCharacter()
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid.WalkSpeed = value
-    end
-    local percent = (value - minSpeed) / (maxSpeed - minSpeed)
-    sliderButton.Position = UDim2.new(percent, -7, 0.5, -10)
-end
-
-updateWalkspeed(30)
-
-local sliderDragging = false
-sliderButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = true
-    end
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.TextSize = 18
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function()
+    gui:Destroy()
 end)
 
-sliderButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = false
+-- ================== PANEL KIRI (DAFTAR REMOTE) ==================
+local leftPanel = Instance.new("Frame")
+leftPanel.Size = UDim2.new(0, 150, 1, -40)
+leftPanel.Position = UDim2.new(0, 5, 0, 35)
+leftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+leftPanel.BackgroundTransparency = 0.2
+leftPanel.BorderSizePixel = 1
+leftPanel.BorderColor3 = Color3.fromRGB(100, 100, 100)
+leftPanel.Parent = mainFrame
+
+-- Label panel kiri
+local leftTitle = Instance.new("TextLabel")
+leftTitle.Size = UDim2.new(1, 0, 0, 25)
+leftTitle.BackgroundTransparency = 1
+leftTitle.Text = "Remote List"
+leftTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+leftTitle.Font = Enum.Font.SourceSansBold
+leftTitle.TextSize = 16
+leftTitle.Parent = leftPanel
+
+-- ScrollingFrame untuk tombol remote
+local remoteList = Instance.new("ScrollingFrame")
+remoteList.Size = UDim2.new(1, -10, 1, -30)
+remoteList.Position = UDim2.new(0, 5, 0, 25)
+remoteList.BackgroundTransparency = 1
+remoteList.ScrollBarThickness = 8
+remoteList.CanvasSize = UDim2.new(0, 0, 0, 0)
+remoteList.Parent = leftPanel
+
+-- UIListLayout untuk mengatur tombol remote
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 5)
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = remoteList
+
+-- Fungsi untuk memperbarui CanvasSize remoteList
+local function updateRemoteListCanvas()
+    remoteList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+end
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateRemoteListCanvas)
+
+-- ================== PANEL KANAN (LOG CONSOLE) ==================
+local rightPanel = Instance.new("Frame")
+rightPanel.Size = UDim2.new(1, -165, 1, -40)
+rightPanel.Position = UDim2.new(0, 160, 0, 35)
+rightPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+rightPanel.BackgroundTransparency = 0.2
+rightPanel.BorderSizePixel = 1
+rightPanel.BorderColor3 = Color3.fromRGB(100, 100, 100)
+rightPanel.Parent = mainFrame
+
+-- ScrollingFrame untuk log
+local logScroller = Instance.new("ScrollingFrame")
+logScroller.Size = UDim2.new(1, -10, 1, -10)
+logScroller.Position = UDim2.new(0, 5, 0, 5)
+logScroller.BackgroundTransparency = 1
+logScroller.ScrollBarThickness = 8
+logScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
+logScroller.Parent = rightPanel
+
+-- UIListLayout untuk log
+local logLayout = Instance.new("UIListLayout")
+logLayout.Padding = UDim.new(0, 3)
+logLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+logLayout.SortOrder = Enum.SortOrder.LayoutOrder
+logLayout.Parent = logScroller
+
+-- Fungsi untuk memperbarui CanvasSize logScroller
+local function updateLogCanvas()
+    logScroller.CanvasSize = UDim2.new(0, 0, 0, logLayout.AbsoluteContentSize.Y + 10)
+end
+logLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateLogCanvas)
+
+-- ================== DATA LOG DAN FILTER ==================
+local logs = {}  -- Menyimpan semua log
+local filterRemote = nil  -- nil = semua, string = nama remote tertentu
+
+-- Fungsi untuk menambahkan log baru
+local function addLog(remoteName, argsStr, resultStr, isError, timeStr)
+    -- Buat entri log
+    local logEntry = {
+        name = remoteName,
+        time = timeStr,
+        args = argsStr,
+        result = resultStr,
+        isError = isError
+    }
+    table.insert(logs, logEntry)
+
+    -- Hapus log tertua jika melebihi batas
+    if #logs > MAX_LOG_COUNT then
+        table.remove(logs, 1)
     end
-end)
 
-userInput.InputChanged:Connect(function(input)
-    if sliderDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local mousePos = userInput:GetMouseLocation()
-        local absPos = sliderBg.AbsolutePosition
-        local absSize = sliderBg.AbsoluteSize
-        local relativeX = mousePos.X - absPos.X
-        local percent = math.clamp(relativeX / absSize.X, 0, 1)
-        local newSpeed = minSpeed + (maxSpeed - minSpeed) * percent
-        updateWalkspeed(newSpeed)
-    end
-end)
-
-localPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    updateWalkspeed(currentSpeed)
-end)
-
--- ==================================================
--- 7. FUNGSIONALITAS TOMBOL VIP
--- ==================================================
-vipBtn.MouseButton1Click:Connect(function()
-    local vipWalls = workspace:FindFirstChild("VIPWalls")
-    if vipWalls then
-        vipWalls:Destroy()
-        print("[VIP] VIPWalls dihapus")
-    else
-        print("[VIP] VIPWalls tidak ditemukan")
-    end
-    vipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-    task.wait(0.2)
-    vipBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)  -- Kembali kuning
-end)
-
--- ==================================================
--- 8. FUNGSIONALITAS WAVE LOOP
--- ==================================================
-local targetNames = {
-    "SuperSlow", "Slow", "Medium", "Fast", "SuperFast", "Lightning"
-}
-
-local waveConnection = nil
-
-local function deleteExistingModels()
-    for _, child in ipairs(workspace:GetChildren()) do
-        if child:IsA("Model") then
-            if table.find(targetNames, child.Name) then
-                child:Destroy()
-            end
-            if child.Name:upper():find("GOD") then
-                child:Destroy()
-            end
-        end
-    end
+    -- Refresh tampilan
+    refreshDisplay()
 end
 
-local function onChildAdded(child)
-    if child:IsA("Model") then
-        if table.find(targetNames, child.Name) or child.Name:upper():find("GOD") then
+-- Fungsi untuk merefresh tampilan log berdasarkan filter
+function refreshDisplay()
+    -- Hapus semua label log
+    for _, child in ipairs(logScroller:GetChildren()) do
+        if child:IsA("TextLabel") then
             child:Destroy()
         end
     end
+
+    -- Tambahkan log yang sesuai filter
+    for _, log in ipairs(logs) do
+        if filterRemote == nil or log.name == filterRemote then
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -10, 0, 0)  -- Tinggi akan otomatis
+            label.BackgroundColor3 = log.isError and Color3.fromRGB(80, 30, 30) or Color3.fromRGB(40, 40, 40)
+            label.BackgroundTransparency = 0.3
+            label.BorderSizePixel = 1
+            label.BorderColor3 = Color3.fromRGB(80, 80, 80)
+            label.Text = string.format("[%s] [%s] Args: %s | Return: %s", log.time, log.name, log.args, log.result)
+            label.TextColor3 = log.isError and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(220, 220, 220)
+            label.Font = Enum.Font.SourceSans
+            label.TextSize = 14
+            label.TextWrapped = true
+            label.RichText = false
+            label.AutomaticSize = Enum.AutomaticSize.Y  -- Tinggi menyesuaikan konten
+            label.Parent = logScroller
+        end
+    end
+
+    -- Perbarui canvas
+    updateLogCanvas()
 end
 
-waveBtn.MouseButton1Click:Connect(function()
-    deleteExistingModels()
-    if not waveConnection then
-        waveConnection = workspace.ChildAdded:Connect(onChildAdded)
+-- ================== MEMBUAT TOMBOL REMOTE ==================
+local buttons = {}  -- Menyimpan tombol untuk referensi
+
+-- Fungsi untuk membuat tombol remote
+local function createRemoteButton(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 16
+    btn.Parent = remoteList
+
+    -- Efek hover
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    end)
+    btn.MouseLeave:Connect(function()
+        if filterRemote == name then
+            btn.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end
+    end)
+
+    -- Klik untuk mengatur filter
+    btn.MouseButton1Click:Connect(function()
+        if filterRemote == name then
+            -- Jika sudah dipilih, reset ke semua
+            filterRemote = nil
+            for _, b in pairs(buttons) do
+                b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            end
+        else
+            filterRemote = name
+            for _, b in pairs(buttons) do
+                b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
+        end
+        refreshDisplay()
+    end)
+
+    buttons[name] = btn
+end
+
+-- Buat tombol "Semua" untuk reset filter
+local allBtn = Instance.new("TextButton")
+allBtn.Size = UDim2.new(1, -10, 0, 30)
+allBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 200)
+allBtn.Text = "Semua"
+allBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+allBtn.Font = Enum.Font.SourceSansBold
+allBtn.TextSize = 16
+allBtn.Parent = remoteList
+allBtn.MouseButton1Click:Connect(function()
+    filterRemote = nil
+    for _, b in pairs(buttons) do
+        b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     end
-    waveBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-    task.wait(0.2)
-    waveBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    allBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 200)
+    refreshDisplay()
 end)
 
-stopBtn.MouseButton1Click:Connect(function()
-    if waveConnection then
-        waveConnection:Disconnect()
-        waveConnection = nil
-    end
-    stopBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-    task.wait(0.2)
-    stopBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-end)
+-- Buat tombol untuk setiap remote
+for _, name in ipairs(REMOTE_NAMES) do
+    createRemoteButton(name)
+end
 
--- ==================================================
--- 9. FUNGSIONALITAS SWITCH
--- ==================================================
-local collectEnabled = false
-local proxEnabled = false
-local collectThread = nil
-local proxConnections = {}
+-- Set tombol "Semua" aktif di awal
+allBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 200)
 
--- Instant Collect: algoritma baru
-local function instantCollectLoop()
-    while collectEnabled do
-        -- Cari CarryPart pada player
-        local playerName = localPlayer.Name
-        local playerModel = workspace:FindFirstChild(playerName)
-        local carryPart = playerModel and playerModel:FindFirstChild("CarryPart")
-        local collectWall = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Collect") and workspace.Map.Collect:FindFirstChild("CollectWall")
-        
-        if carryPart and collectWall then
-            -- Simpan posisi player
-            local character = localPlayer.Character
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if root then
-                local savedPos = root.CFrame
-                -- Teleport ke CollectWall
-                root.CFrame = collectWall.CFrame
-                task.wait(0.1)  -- beri waktu untuk proses koleksi
-                -- Cek apakah CarryPart masih ada (apakah sudah terkoleksi?)
-                -- Jika masih ada, mungkin perlu ditunggu? Tapi menurut logika, setelah menyentuh wall, item akan hilang.
-                -- Kita tunggu sampai CarryPart hilang atau timeout
-                local timeout = 0
-                while carryPart and carryPart.Parent and timeout < 50 do
-                    task.wait(0.1)
-                    timeout = timeout + 1
-                    carryPart = playerModel and playerModel:FindFirstChild("CarryPart")
+-- ================== HOOK REMOTEFUNCTION ==================
+local eventsFolder = ReplicatedStorage:FindFirstChild(EVENTS_FOLDER_PATH)
+if not eventsFolder then
+    warn("Folder Events tidak ditemukan di ReplicatedStorage")
+    -- Tampilkan pesan di console
+    local warnLabel = Instance.new("TextLabel")
+    warnLabel.Size = UDim2.new(1, -10, 0, 30)
+    warnLabel.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
+    warnLabel.Text = "Folder Events tidak ditemukan!"
+    warnLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+    warnLabel.Font = Enum.Font.SourceSans
+    warnLabel.TextSize = 14
+    warnLabel.Parent = logScroller
+else
+    -- Hook setiap remote yang ada
+    for _, name in ipairs(REMOTE_NAMES) do
+        local remote = eventsFolder:FindFirstChild(name)
+        if remote and remote:IsA("RemoteFunction") then
+            -- Cegah hook ganda (optional)
+            if remote._hooked then continue end
+            remote._hooked = true
+
+            local oldInvoke = remote.Invoke
+            remote.Invoke = function(self, ...)
+                local args = {...}
+                local timeStr = os.date("%H:%M:%S")
+                
+                -- Serialisasi argumen
+                local argsStr = ""
+                for i, arg in ipairs(args) do
+                    if i > 1 then argsStr = argsStr .. ", " end
+                    argsStr = argsStr .. serialize(arg)
                 end
-                -- Teleport kembali ke posisi semula
-                root.CFrame = savedPos
+                if #args == 0 then argsStr = "(no args)" end
+
+                -- Panggil fungsi asli
+                local success, result = pcall(function() return oldInvoke(self, ...) end)
+                
+                if success then
+                    local resultStr = serialize(result)
+                    addLog(name, argsStr, resultStr, false, timeStr)
+                    return result
+                else
+                    -- result adalah error message
+                    addLog(name, argsStr, serialize(result), true, timeStr)
+                    error(result)  -- Lempar ulang error
+                end
             end
+        else
+            warn("RemoteFunction " .. name .. " tidak ditemukan")
         end
-        task.wait(0.5)  -- deteksi setiap 0.5 detik
     end
 end
 
-local function setCollectEnabled(state)
-    collectEnabled = state
-    if state then
-        if collectThread then collectThread = nil end
-        collectThread = coroutine.wrap(instantCollectLoop)
-        collectThread()
-        print("[Instant Collect] Activated")
-    else
-        collectEnabled = false
-        print("[Instant Collect] Deactivated")
-    end
-end
+-- Pesan inisialisasi
+addLog("SYSTEM", "", "Console siap. Menunggu aktivitas RemoteFunction...", false, os.date("%H:%M:%S"))
 
--- Instant Proximity: perbaikan agar langsung mati saat OFF
-local function setProxEnabled(state)
-    proxEnabled = state
-    if state then
-        -- Set semua yang sudah ada
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("ProximityPrompt") then
-                obj.HoldDuration = 0
-            end
-        end
-        -- Pantau yang baru
-        local conn = workspace.DescendantAdded:Connect(function(desc)
-            if desc:IsA("ProximityPrompt") then
-                desc.HoldDuration = 0
-            end
-        end)
-        table.insert(proxConnections, conn)
-        print("[Instant Proximity] Activated")
-    else
-        -- Putuskan semua koneksi
-        for _, conn in ipairs(proxConnections) do
-            conn:Disconnect()
-        end
-        proxConnections = {}
-        -- Opsional: kembalikan ke default? Tidak, biarkan 0.
-        print("[Instant Proximity] Deactivated")
-    end
-end
-
-collectToggle.MouseButton1Click:Connect(function()
-    collectEnabled = not collectEnabled
-    setCollectEnabled(collectEnabled)
-    if collectEnabled then
-        collectToggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        collectToggle.Text = "ON"
-    else
-        collectToggle.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-        collectToggle.Text = "OFF"
-    end
-end)
-
-proxToggle.MouseButton1Click:Connect(function()
-    proxEnabled = not proxEnabled
-    setProxEnabled(proxEnabled)
-    if proxEnabled then
-        proxToggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        proxToggle.Text = "ON"
-    else
-        proxToggle.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-        proxToggle.Text = "OFF"
-    end
-end)
-
--- ==================================================
--- 10. FUNGSIONALITAS DRAG (header bisa digerakkan)
--- ==================================================
-local dragging = false
-local dragStart
-local startPos
-
-header.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = mainFrame.Position
-	end
-end)
-
-header.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStart
-		mainFrame.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
-	end
-end)
-
-header.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-	end
-end)
-
--- ==================================================
--- 11. MINIMIZE ANIMASI
--- ==================================================
-local isMinimized = false
-local originalHeight = mainFrame.Size.Y.Offset
-local minimizedHeight = 45
-
-local function animateMinimize()
-    if isMinimized then
-        scrollingFrame.Visible = true
-        tweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 300, 0, originalHeight)}):Play()
-    else
-        scrollingFrame.Visible = false
-        tweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 300, 0, minimizedHeight)}):Play()
-    end
-    isMinimized = not isMinimized
-end
-
-minimizeBtn.MouseButton1Click:Connect(animateMinimize)
-
--- ==================================================
--- 12. CLOSE
--- ==================================================
-closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
-
--- ==================================================
--- 13. DEBUG PATHS
--- ==================================================
-print("=== Path Check ===")
-local playerName = localPlayer.Name
-local carryPart = workspace:FindFirstChild(playerName) and workspace[playerName]:FindFirstChild("CarryPart")
-local collectWall = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Collect") and workspace.Map.Collect:FindFirstChild("CollectWall")
-print("CarryPart found:", carryPart ~= nil)
-print("CollectWall found:", collectWall ~= nil)
-print("==================")
-
--- ==================================================
--- SELESAI
--- ==================================================
-print("GUI Escape Tsunami For Phones berhasil dimuat. Semua fitur diperbaiki.")
+-- ================== SELESAI ==================
+print("Remote Console berhasil dijalankan")
