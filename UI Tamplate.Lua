@@ -427,14 +427,3 @@ _G[guiName] = UI
 
 print("GUI [NamaGame] Library berhasil dimuat. Gunakan _G['" .. guiName .. "'] untuk menambahkan elemen.")
 print("Contoh: _G['" .. guiName .. "'].AddButton({Text = 'Klik Saya', Callback = function() print('diklik') end})")
-
--- ==================================================
--- CONTOH PENGGUNAAN (HAPUS ATAU COMMENT BLOK INI JIKA TIDAK INGIN DEFAULT)
--- ==================================================
---[[
-UI.AddSlider({Text = "Kecepatan", Min = 0, Max = 100, Default = 50, Callback = function(v) print("Slider:", v) end})
-UI.AddButton({Text = "Tes Tombol", Callback = function() print("Tombol ditekan") end})
-UI.AddSwitch({Text = "Aktifkan Fitur", Default = true, Callback = function(s) print("Switch:", s) end})
-]]
-
--- SELESAI
