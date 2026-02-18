@@ -129,10 +129,9 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Frame dengan margin kiri dan kanan agar tidak terlalu mepet
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 30)  -- kurangi 20 pixel total (10 kiri, 10 kanan)
-    frame.Position = UDim2.new(0, 10, 0, 0) -- geser 10 ke kanan
+    frame.Size = UDim2.new(1, -20, 0, 30)
+    frame.Position = UDim2.new(0, 10, 0, 0)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
@@ -203,7 +202,7 @@ function UI.AddSlider(config)
             local relativeX = math.clamp(mousePos.X - trackAbsPos.X, 0, trackSize.X)
             local percent = relativeX / trackSize.X
             local value = min + (max - min) * percent
-            value = math.floor(value + 0.5) -- pembulatan ke integer terdekat
+            value = math.floor(value + 0.5)
             valueLabel.Text = tostring(value)
             fill.Size = UDim2.new(percent, 0, 1, 0)
             thumb.Position = UDim2.new(percent, -6, 0, -4)
@@ -421,7 +420,7 @@ local plotPositions = {
 -- Titik teleport setelah interaksi
 local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
 
--- Variabel plot number yang disimpan (diisi pertama kali)
+-- Variabel plot number yang disimpan
 local currentPlotNumber = nil
 
 -- Fungsi untuk mendapatkan plot number dari atribut player, dan menyimpannya
@@ -468,10 +467,10 @@ local function teleportToHome()
     end
 end
 
--- Fungsi interaksi dengan brainrot (hold selama durasi tertentu)
-local function interactWithBrainrot(brainrotModel, holdDuration)
+-- Fungsi interaksi dengan brainrot (hold 1.7 detik)
+local function interactWithBrainrot(brainrotModel)
     if not brainrotModel then return false end
-    holdDuration = holdDuration or 1.7
+    local holdDuration = 1.7
     -- Cari ProximityPrompt
     local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
     if prompt then
@@ -489,8 +488,76 @@ local function interactWithBrainrot(brainrotModel, holdDuration)
     return false
 end
 
+-- Fungsi untuk mengecek apakah ada player lain dalam radius 3 dari model
+local function isPlayerNearby(model, radius)
+    radius = radius or 3
+    if not model then return false end
+    local modelPos = model:GetPivot().Position
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= localPlayer then
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local dist = (char.HumanoidRootPart.Position - modelPos).Magnitude
+                if dist <= radius then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+-- Fungsi untuk mencari model yang tersedia (tanpa player di dekatnya) dalam daftar models
+local function findAvailableModel(models)
+    if #models == 0 then return nil end
+    -- Acak urutan untuk menghindari selalu model yang sama
+    local shuffled = {}
+    for i, v in ipairs(models) do shuffled[i] = v end
+    for i = #shuffled, 2, -1 do
+        local j = math.random(i)
+        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+    end
+    for _, model in ipairs(shuffled) do
+        if not isPlayerNearby(model) then
+            return model
+        end
+    end
+    return nil
+end
+
+-- Fungsi untuk mencari semua model dengan nama tertentu di seluruh folder Brainrots
+local function findModelsByName(name)
+    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
+    if not brainrotsFolder then return {} end
+    local models = {}
+    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            local model = folder:FindFirstChild(name)
+            if model then
+                table.insert(models, model)
+            end
+        end
+    end
+    return models
+end
+
+-- Fungsi untuk mencari semua model dalam folder tertentu
+local function findModelsInFolder(folderName)
+    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
+    if not brainrotsFolder then return {} end
+    local targetFolder = brainrotsFolder:FindFirstChild(folderName)
+    if not targetFolder then return {} end
+    local models = {}
+    for _, child in ipairs(targetFolder:GetChildren()) do
+        if child:IsA("Model") then
+            table.insert(models, child)
+        end
+    end
+    return models
+end
+
 -- ==================================================
--- 6. FUNGSI UNTUK REBIRTH NEED (Sesuai instruksi baru)
+-- 6. FUNGSI UNTUK REBIRTH NEED (dengan pengecekan player)
 -- ==================================================
 local function processRebirthNeed()
     local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
@@ -503,7 +570,6 @@ local function processRebirthNeed()
         warn("Nilai rebirths bukan angka")
         return
     end
-    -- Index rebirthData = value + 1
     local index = value + 1
     if index > 12 then
         warn("Rebirths " .. value .. " -> Tunggu Update")
@@ -515,26 +581,17 @@ local function processRebirthNeed()
         return
     end
 
-    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
-    if not brainrotsFolder then
-        warn("Tidak menemukan folder Brainrots")
+    -- Cari semua model dengan nama tersebut
+    local models = findModelsByName(brainrotName)
+    if #models == 0 then
+        warn("Brainrot " .. brainrotName .. " tidak ditemukan")
         return
     end
 
-    -- Cari di semua subfolder (rarity)
-    local targetModel = nil
-    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            local model = folder:FindFirstChild(brainrotName)
-            if model then
-                targetModel = model
-                break
-            end
-        end
-    end
-
+    -- Cari model yang tidak ada player di dekatnya
+    local targetModel = findAvailableModel(models)
     if not targetModel then
-        warn("Brainrot " .. brainrotName .. " tidak ditemukan")
+        warn("Semua model " .. brainrotName .. " sedang digunakan oleh player lain")
         return
     end
 
@@ -543,7 +600,7 @@ local function processRebirthNeed()
     task.wait(0.5)
 
     -- 2. Interaksi hold 1.7 detik
-    interactWithBrainrot(targetModel, 1.7)
+    interactWithBrainrot(targetModel)
 
     -- 3. Tunggu 1.7 detik setelah interaksi
     task.wait(1.7)
@@ -563,7 +620,7 @@ local function processRebirthNeed()
 end
 
 -- ==================================================
--- 7. AUTO GODLY, CELESTIAL, SECRET (dengan logika baru)
+-- 7. AUTO GODLY, CELESTIAL, SECRET (dengan pengecekan player)
 -- ==================================================
 local autoStates = {
     Godly = false,
@@ -571,42 +628,27 @@ local autoStates = {
     Secret = false
 }
 
--- Fungsi auto collect berdasarkan tipe (satu siklus)
+-- Fungsi auto collect berdasarkan tipe (satu siklus), mengembalikan true jika berhasil, false jika skip
 local function autoCollect(typeName)
-    local folderName = typeName
-    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
-    if not brainrotsFolder then return false end
-
-    local targetFolder = brainrotsFolder:FindFirstChild(folderName)
-    if not targetFolder then return false end
-
-    -- Kumpulkan semua model di folder
-    local models = {}
-    for _, child in ipairs(targetFolder:GetChildren()) do
-        if child:IsA("Model") then
-            table.insert(models, child)
-        end
-    end
+    local models = findModelsInFolder(typeName)
     if #models == 0 then return false end
 
-    -- Pilih salah satu secara acak
-    local targetModel = models[math.random(1, #models)]
+    local targetModel = findAvailableModel(models)
+    if not targetModel then
+        -- Semua model sedang dipakai, skip tipe ini
+        return false
+    end
 
-    -- 1. Teleport ke model
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
 
-    -- 2. Interaksi hold 1.7 detik
-    interactWithBrainrot(targetModel, 1.7)
+    interactWithBrainrot(targetModel)
 
-    -- 3. Tunggu 1.7 detik
     task.wait(1.7)
 
-    -- 4. Teleport ke titik afterInteractPoint
     teleport(afterInteractPoint)
     task.wait(0.5)
 
-    -- 5. Teleport ke plot player
     local plot = getPlotNumber()
     if plot then
         teleportToPlot(plot)
@@ -632,13 +674,17 @@ local function startAutoLoop()
         end
 
         for _, typeName in ipairs(order) do
-            if autoStates[typeName] then -- cek lagi mungkin berubah saat loop
-                autoCollect(typeName)
-                -- Setelah selesai satu siklus, tunggu 1 detik sebelum lanjut ke tipe berikutnya
-                task.wait(1)
+            if autoStates[typeName] then
+                local success = autoCollect(typeName)
+                if not success then
+                    -- Jika tidak ada model tersedia, lanjut ke tipe berikutnya tanpa menunggu
+                    -- (langsung lanjut loop)
+                else
+                    -- Jika berhasil, tunggu 1 detik sebelum tipe berikutnya
+                    task.wait(1)
+                end
             end
         end
-        -- Setelah semua tipe aktif diproses, tunggu 1 detik sebelum mengulang dari awal
         task.wait(1)
     end
 end
@@ -747,7 +793,7 @@ end
 -- 9. MENAMBAH ELEMEN UI
 -- ==================================================
 
--- Slider Walkspeed (dengan integer dan margin)
+-- Slider Walkspeed
 UI.AddSlider({
     Text = "Walkspeed",
     Min = 16,
