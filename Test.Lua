@@ -418,7 +418,7 @@ local plotPositions = {
     [5] = Vector3.new(-99.795, 7, 83.221)
 }
 
--- Titik teleport setelah interaksi (tempat meletakkan brainrot)
+-- Titik teleport setelah interaksi
 local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
 
 -- Variabel plot number yang disimpan (diisi pertama kali)
@@ -471,7 +471,7 @@ end
 -- Fungsi interaksi dengan brainrot (hold selama durasi tertentu)
 local function interactWithBrainrot(brainrotModel, holdDuration)
     if not brainrotModel then return false end
-    holdDuration = holdDuration or 1.5
+    holdDuration = holdDuration or 1.7
     -- Cari ProximityPrompt
     local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
     if prompt then
@@ -490,7 +490,7 @@ local function interactWithBrainrot(brainrotModel, holdDuration)
 end
 
 -- ==================================================
--- 6. FUNGSI UNTUK REBIRTH NEED (dengan durasi 1.5 detik)
+-- 6. FUNGSI UNTUK REBIRTH NEED (Sesuai instruksi baru)
 -- ==================================================
 local function processRebirthNeed()
     local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
@@ -503,7 +503,7 @@ local function processRebirthNeed()
         warn("Nilai rebirths bukan angka")
         return
     end
-    -- Index = value + 1
+    -- Index rebirthData = value + 1
     local index = value + 1
     if index > 12 then
         warn("Rebirths " .. value .. " -> Tunggu Update")
@@ -542,11 +542,11 @@ local function processRebirthNeed()
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
 
-    -- 2. Interaksi hold 1.5 detik
-    interactWithBrainrot(targetModel, 1.5)
+    -- 2. Interaksi hold 1.7 detik
+    interactWithBrainrot(targetModel, 1.7)
 
-    -- 3. Tunggu 1.5 detik setelah interaksi
-    task.wait(1.5)
+    -- 3. Tunggu 1.7 detik setelah interaksi
+    task.wait(1.7)
 
     -- 4. Teleport ke titik afterInteractPoint
     teleport(afterInteractPoint)
@@ -563,7 +563,7 @@ local function processRebirthNeed()
 end
 
 -- ==================================================
--- 7. AUTO GODLY, CELESTIAL, SECRET (dengan durasi 1.5 detik)
+-- 7. AUTO GODLY, CELESTIAL, SECRET (dengan logika baru)
 -- ==================================================
 local autoStates = {
     Godly = false,
@@ -580,6 +580,7 @@ local function autoCollect(typeName)
     local targetFolder = brainrotsFolder:FindFirstChild(folderName)
     if not targetFolder then return false end
 
+    -- Kumpulkan semua model di folder
     local models = {}
     for _, child in ipairs(targetFolder:GetChildren()) do
         if child:IsA("Model") then
@@ -588,18 +589,24 @@ local function autoCollect(typeName)
     end
     if #models == 0 then return false end
 
+    -- Pilih salah satu secara acak
     local targetModel = models[math.random(1, #models)]
 
+    -- 1. Teleport ke model
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
 
-    interactWithBrainrot(targetModel, 1.5)
+    -- 2. Interaksi hold 1.7 detik
+    interactWithBrainrot(targetModel, 1.7)
 
-    task.wait(1.5)
+    -- 3. Tunggu 1.7 detik
+    task.wait(1.7)
 
+    -- 4. Teleport ke titik afterInteractPoint
     teleport(afterInteractPoint)
     task.wait(0.5)
 
+    -- 5. Teleport ke plot player
     local plot = getPlotNumber()
     if plot then
         teleportToPlot(plot)
@@ -610,9 +617,10 @@ local function autoCollect(typeName)
     return true
 end
 
--- Loop utama auto
+-- Loop utama auto dengan urutan prioritas
 local function startAutoLoop()
     while true do
+        -- Urutan prioritas: Godly, Celestial, Secret (hanya yang aktif)
         local order = {}
         if autoStates.Godly then table.insert(order, "Godly") end
         if autoStates.Celestial then table.insert(order, "Celestial") end
@@ -624,12 +632,14 @@ local function startAutoLoop()
         end
 
         for _, typeName in ipairs(order) do
-            if autoStates[typeName] then
+            if autoStates[typeName] then -- cek lagi mungkin berubah saat loop
                 autoCollect(typeName)
-                task.wait(1) -- jeda antar tipe
+                -- Setelah selesai satu siklus, tunggu 1 detik sebelum lanjut ke tipe berikutnya
+                task.wait(1)
             end
         end
-        task.wait(1) -- jeda sebelum loop ulang
+        -- Setelah semua tipe aktif diproses, tunggu 1 detik sebelum mengulang dari awal
+        task.wait(1)
     end
 end
 
