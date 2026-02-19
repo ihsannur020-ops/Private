@@ -453,7 +453,7 @@ local function teleportTo(position)
 end
 
 -- ==================================================
--- 10. TOMBOL-Tombol
+-- 10. TOMBOL-TOMBOL
 -- ==================================================
 UI.AddButton({
     Text = "VIP",
@@ -599,95 +599,104 @@ local function interactWithBrainrot(brainrotModel)
     
     local clickDetector = brainrotModel:FindFirstChildWhichIsA("ClickDetector", true)
     if clickDetector then
-        fireclickdetector(clickDetector)
-        return true
+        -- Aman menggunakan pcall untuk fireclickdetector (mungkin tidak tersedia di beberapa executor)
+        local success = pcall(function()
+            fireclickdetector(clickDetector)
+        end)
+        if success then
+            return true
+        else
+            warn("fireclickdetector gagal dipanggil, mungkin tidak didukung executor.")
+        end
     end
     
     return false
 end
 
--- Loop utama prioritas
+-- Loop utama prioritas (tanpa goto, menggunakan flag acted)
 coroutine.wrap(function()
     while true do
+        local acted = false
+
+        -- Jika tidak ada auto yang aktif, tunggu 1 detik
         if not (autoCelestialEnabled or autoGodEnabled or autoSecretEnabled) then
             task.wait(1)
-            goto continue
-        end
-
-        -- Prioritas 1: Celestial
-        if autoCelestialEnabled then
-            local zones = {"Zone16", "Zone15"}
-            local models = getModelsFromZones(zones)
-            local target = findAvailableModel(models)
-            if target then
-                local rootPart = target:FindFirstChild("RootPart")
-                if rootPart then
-                    teleportTo(rootPart.Position)
-                    task.wait(0.5)
-                    local success = interactWithBrainrot(target)
-                    if success then
-                        task.wait(0.25)
-                        teleportTo(intermediatePos)
-                        if PlotPlayer and baseCoordinates[PlotPlayer] then
-                            teleportTo(baseCoordinates[PlotPlayer])
+            acted = true  -- set acted true agar tidak wait 2 di akhir
+        else
+            -- Prioritas 1: Celestial
+            if autoCelestialEnabled then
+                local zones = {"Zone16", "Zone15"}
+                local models = getModelsFromZones(zones)
+                local target = findAvailableModel(models)
+                if target then
+                    local rootPart = target:FindFirstChild("RootPart")
+                    if rootPart then
+                        teleportTo(rootPart.Position)
+                        task.wait(0.5)
+                        local success = interactWithBrainrot(target)
+                        if success then
+                            task.wait(0.25)
+                            teleportTo(intermediatePos)
+                            if PlotPlayer and baseCoordinates[PlotPlayer] then
+                                teleportTo(baseCoordinates[PlotPlayer])
+                            end
                         end
                     end
+                    acted = true
                 end
-                task.wait(1)
-                goto continue
+            end
+
+            -- Prioritas 2: God (hanya jika belum acted)
+            if not acted and autoGodEnabled then
+                local zones = {"Zone14", "Zone13"}
+                local models = getModelsFromZones(zones)
+                local target = findAvailableModel(models)
+                if target then
+                    local rootPart = target:FindFirstChild("RootPart")
+                    if rootPart then
+                        teleportTo(rootPart.Position)
+                        task.wait(0.5)
+                        local success = interactWithBrainrot(target)
+                        if success then
+                            task.wait(0.25)
+                            teleportTo(intermediatePos)
+                            if PlotPlayer and baseCoordinates[PlotPlayer] then
+                                teleportTo(baseCoordinates[PlotPlayer])
+                            end
+                        end
+                    end
+                    acted = true
+                end
+            end
+
+            -- Prioritas 3: Secret (hanya jika belum acted)
+            if not acted and autoSecretEnabled then
+                local zones = {"Zone12", "Zone11"}
+                local models = getModelsFromZones(zones)
+                local target = findAvailableModel(models)
+                if target then
+                    local rootPart = target:FindFirstChild("RootPart")
+                    if rootPart then
+                        teleportTo(rootPart.Position)
+                        task.wait(0.5)
+                        local success = interactWithBrainrot(target)
+                        if success then
+                            task.wait(0.25)
+                            teleportTo(intermediatePos)
+                            if PlotPlayer and baseCoordinates[PlotPlayer] then
+                                teleportTo(baseCoordinates[PlotPlayer])
+                            end
+                        end
+                    end
+                    acted = true
+                end
             end
         end
 
-        -- Prioritas 2: God
-        if autoGodEnabled then
-            local zones = {"Zone14", "Zone13"}
-            local models = getModelsFromZones(zones)
-            local target = findAvailableModel(models)
-            if target then
-                local rootPart = target:FindFirstChild("RootPart")
-                if rootPart then
-                    teleportTo(rootPart.Position)
-                    task.wait(0.5)
-                    local success = interactWithBrainrot(target)
-                    if success then
-                        task.wait(0.25)
-                        teleportTo(intermediatePos)
-                        if PlotPlayer and baseCoordinates[PlotPlayer] then
-                            teleportTo(baseCoordinates[PlotPlayer])
-                        end
-                    end
-                end
-                task.wait(1)
-                goto continue
-            end
+        -- Jika tidak ada aksi sama sekali, tunggu 2 detik sebelum iterasi berikutnya
+        if not acted then
+            task.wait(2)
         end
-
-        -- Prioritas 3: Secret
-        if autoSecretEnabled then
-            local zones = {"Zone12", "Zone11"}
-            local models = getModelsFromZones(zones)
-            local target = findAvailableModel(models)
-            if target then
-                local rootPart = target:FindFirstChild("RootPart")
-                if rootPart then
-                    teleportTo(rootPart.Position)
-                    task.wait(0.5)
-                    local success = interactWithBrainrot(target)
-                    if success then
-                        task.wait(0.25)
-                        teleportTo(intermediatePos)
-                        if PlotPlayer and baseCoordinates[PlotPlayer] then
-                            teleportTo(baseCoordinates[PlotPlayer])
-                        end
-                    end
-                end
-                task.wait(1)
-                goto continue
-            end
-        end
-
-        task.wait(2)
-        ::continue::
     end
 end)()
 
