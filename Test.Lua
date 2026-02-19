@@ -1,5 +1,5 @@
 -- Script UI untuk Delta Executor
--- GUI: [ Escape Getting Crushed For Brainrots ] - Library Version
+-- GUI: Jump to Steal Brainrots - Library Version
 
 -- ==================================================
 -- 1. KONFIGURASI AWAL
@@ -8,15 +8,12 @@ local coreGui = game:GetService("CoreGui")
 local players = game:GetService("Players")
 local userInput = game:GetService("UserInputService")
 local runService = game:GetService("RunService")
-local virtualUser = game:GetService("VirtualUser")
 local tweenService = game:GetService("TweenService")
+local teleportService = game:GetService("TeleportService")
 
 local localPlayer = players.LocalPlayer
-local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local rootPart = character:WaitForChild("HumanoidRootPart")
-
-local guiName = "EscapeGettingCrushed_ByAzka"
+local guiName = "JumpToStealBrainrots_ByAzka"
+local displayName = "Jump to Steal Brainrots"
 
 -- Hapus GUI lama jika ada
 if coreGui:FindFirstChild(guiName) then
@@ -34,8 +31,8 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Frame utama (dapat digeser)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 500)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+mainFrame.Size = UDim2.new(0, 350, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 2
@@ -44,24 +41,24 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- Sudut melengkung untuk frame utama
+-- Sudut melengkung
 local uiCorner = Instance.new("UICorner")
 uiCorner.CornerRadius = UDim.new(0, 8)
 uiCorner.Parent = mainFrame
 
--- Judul UI (pojok kiri)
+-- Judul UI
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -70, 0, 30)
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
-title.Text = "Escape Getting Crushed For Brainrots"
+title.Text = displayName
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 16
+title.TextSize = 18
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = mainFrame
 
--- Tombol Minimize ( - ) di pojok kanan
+-- Tombol Minimize
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
 minimizeBtn.Position = UDim2.new(1, -65, 0, 5)
@@ -73,7 +70,7 @@ minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.BorderSizePixel = 0
 minimizeBtn.Parent = mainFrame
 
--- Tombol Close ( X ) di pojok kanan
+-- Tombol Close
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 0, 30)
 closeBtn.Position = UDim2.new(1, -30, 0, 5)
@@ -99,7 +96,7 @@ scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollingFrame.Parent = mainFrame
 scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
--- Layout untuk menyusun container secara vertikal
+-- Layout vertikal
 local scrollLayout = Instance.new("UIListLayout")
 scrollLayout.Parent = scrollingFrame
 scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -124,16 +121,17 @@ local function createContainer(name)
     return container
 end
 
+-- Buat container
 local slideContainer = createContainer("SlideContainer")
 local buttonContainer = createContainer("ButtonContainer")
-local switchContainer = createContainer("SwitchContainer")
+local checkboxContainer = createContainer("CheckboxContainer")  -- Ganti dari switchContainer
 
 -- ==================================================
 -- 5. FUNGSI-FUNGSI UNTUK MENAMBAH ELEMEN
 -- ==================================================
 local UI = {}
 
--- Fungsi slider (tetap sama)
+-- Fungsi untuk membuat slider (opsional, tetap disediakan)
 function UI.AddSlider(config)
     local container = slideContainer
     local text = config.Text or "Slider"
@@ -225,7 +223,7 @@ function UI.AddSlider(config)
     return frame
 end
 
--- Fungsi tombol (tetap sama)
+-- Fungsi untuk membuat tombol
 function UI.AddButton(config)
     local container = buttonContainer
     local text = config.Text or "Button"
@@ -257,10 +255,10 @@ function UI.AddButton(config)
     return button
 end
 
--- Fungsi switch dengan gaya checkbox (kotak dengan centang)
-function UI.AddSwitch(config)
-    local container = switchContainer
-    local text = config.Text or "Switch"
+-- Fungsi untuk membuat checkbox (menggantikan switch)
+function UI.AddCheckbox(config)
+    local container = checkboxContainer
+    local text = config.Text or "Checkbox"
     local default = config.Default or false
     local callback = config.Callback or function() end
 
@@ -269,9 +267,8 @@ function UI.AddSwitch(config)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
-    -- Label
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -40, 1, 0)
+    label.Size = UDim2.new(1, -60, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -280,46 +277,37 @@ function UI.AddSwitch(config)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    -- Kotak checkbox
-    local checkBox = Instance.new("Frame")
-    checkBox.Size = UDim2.new(0, 24, 0, 24)
-    checkBox.Position = UDim2.new(1, -30, 0.5, -12)
-    checkBox.BackgroundColor3 = default and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(60, 60, 60)
-    checkBox.BorderSizePixel = 1
-    checkBox.BorderColor3 = Color3.fromRGB(120, 120, 120)
-    checkBox.Parent = frame
+    local checkBtn = Instance.new("TextButton")
+    checkBtn.Size = UDim2.new(0, 24, 0, 24)
+    checkBtn.Position = UDim2.new(1, -30, 0.5, -12)
+    checkBtn.BackgroundColor3 = default and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
+    checkBtn.Text = ""
+    checkBtn.BorderSizePixel = 0
+    checkBtn.Parent = frame
 
     local checkCorner = Instance.new("UICorner")
     checkCorner.CornerRadius = UDim.new(0, 4)
-    checkCorner.Parent = checkBox
+    checkCorner.Parent = checkBtn
 
-    -- Centang (menggunakan ImageLabel dengan image checkmark)
-    local checkMark = Instance.new("ImageLabel")
-    checkMark.Size = UDim2.new(0, 16, 0, 16)
-    checkMark.Position = UDim2.new(0.5, -8, 0.5, -8)
+    local checkMark = Instance.new("TextLabel")
+    checkMark.Size = UDim2.new(1, 0, 1, 0)
     checkMark.BackgroundTransparency = 1
-    checkMark.Image = "rbxasset://textures/ui/check.png" -- Asset checkmark Roblox
-    checkMark.ImageColor3 = Color3.fromRGB(255, 255, 255)
-    checkMark.Visible = default
-    checkMark.Parent = checkBox
-
-    -- Tombol untuk klik
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 1, 0)
-    button.BackgroundTransparency = 1
-    button.Text = ""
-    button.Parent = frame
+    checkMark.Text = default and "✓" or ""
+    checkMark.TextColor3 = Color3.fromRGB(255, 255, 255)
+    checkMark.TextSize = 18
+    checkMark.Font = Enum.Font.GothamBold
+    checkMark.Parent = checkBtn
 
     local state = default
 
-    local function updateSwitch()
-        checkBox.BackgroundColor3 = state and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(60, 60, 60)
-        checkMark.Visible = state
+    local function updateCheck()
+        checkBtn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
+        checkMark.Text = state and "✓" or ""
     end
 
-    button.MouseButton1Click:Connect(function()
+    checkBtn.MouseButton1Click:Connect(function()
         state = not state
-        updateSwitch()
+        updateCheck()
         callback(state)
     end)
 
@@ -358,7 +346,7 @@ miniButton.BackgroundTransparency = 1
 miniButton.Text = ""
 miniButton.Parent = minimizedFrame
 
--- Drag
+-- Drag untuk minimizedFrame
 local dragging = false
 local dragStartPos
 local frameStartPos
@@ -413,113 +401,159 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==================================================
--- 8. LOGIKA UTAMA (GET PLOT, AUTO, DLL)
+-- 8. INISIALISASI DATA PLOTPLAYER BERDASARKAN BASEID
 -- ==================================================
+local PlotPlayer = nil  -- akan diisi string "Base 1", "Base 2", dll.
 
--- Variabel global untuk menyimpan plot player
-local PlotPlayerSave = nil
-
--- Fungsi untuk mendapatkan plot player dari server (hanya sekali dijalankan)
-local function getPlayerPlot()
-    local replicatedStorage = game:GetService("ReplicatedStorage")
-    local remoteBank = replicatedStorage:FindFirstChild("RemoteBank")
-    if remoteBank then
-        -- Cari fungsi GetPlot
-        local getPlot = remoteBank:FindFirstChild("GetPlot")
-        if getPlot then
-            -- Cek tipe remote
-            if getPlot:IsA("RemoteFunction") then
-                local success, result = pcall(function()
-                    return getPlot:InvokeServer()
-                end)
-                if success and result then
-                    PlotPlayerSave = result
-                    print("Plot player didapatkan:", PlotPlayerSave)
-                    return result
-                else
-                    warn("Gagal memanggil GetPlot RemoteFunction")
-                end
-            elseif getPlot:IsA("RemoteEvent") then
-                -- Jika RemoteEvent, kita perlu mendengarkan respon. Biasanya ada event lain.
-                -- Untuk sederhana, kita asumsikan respon dikirim ke event tertentu.
-                -- Tapi kita tidak punya info, jadi kita coba panggil dan tunggu.
-                local responseEvent = remoteBank:FindFirstChild("GetPlotResponse") -- asumsi
-                if responseEvent and responseEvent:IsA("RemoteEvent") then
-                    responseEvent.OnClientEvent:Connect(function(plot)
-                        PlotPlayerSave = plot
-                        print("Plot player diterima:", plot)
-                    end)
-                    getPlot:FireServer()
-                    -- Tunggu sebentar
-                    wait(1)
-                else
-                    warn("Tidak ada response event untuk GetPlot")
-                end
-            end
-        else
-            warn("GetPlot tidak ditemukan di RemoteBank")
-        end
-    else
-        warn("RemoteBank tidak ditemukan")
+-- Fungsi untuk mendapatkan BaseId dari player
+local function getBaseId()
+    -- Cek atribut "BaseId" pada player
+    local baseIdAttr = localPlayer:GetAttribute("BaseId")
+    if baseIdAttr and type(baseIdAttr) == "string" then
+        return baseIdAttr
     end
-
-    -- Fallback: coba cari di tempat lain? atau gunakan data dari workspace?
-    if not PlotPlayerSave then
-        -- Coba deteksi dari posisi player saat ini (asumsi plot berdasarkan posisi)
-        local currentPos = rootPart.Position
-        local floorSpawnCoords = {
-            Vector3.new(123.879, 56, -117.25),
-            Vector3.new(123.879, 56, -57.25),
-            Vector3.new(123.879, 56, 2.75),
-            Vector3.new(123.879, 56, 62.75),
-            Vector3.new(123.879, 56, 122.75)
-        }
-        for i, coord in ipairs(floorSpawnCoords) do
-            if (currentPos - coord).Magnitude < 10 then
-                PlotPlayerSave = i
-                print("Plot player terdeteksi dari posisi:", i)
-                break
-            end
-        end
-    end
-
-    if not PlotPlayerSave then
-        PlotPlayerSave = 1 -- default
-        print("Plot player tidak diketahui, menggunakan default 1")
-    end
+    -- Jika tidak ada, coba cek di dalam player (mungkin disimpan di leaderstats atau lainnya)
+    -- Fallback: cari di workspace.Bases berdasarkan posisi player?
+    -- Untuk sementara, kita asumsikan tidak ada.
+    return nil
 end
 
--- Panggil saat script dimuat
-getPlayerPlot()
-
--- Data lokasi spawn berdasarkan plot
-local plotSpawnLocations = {
-    [1] = CFrame.new(131.375, 56, -117.251),
-    [2] = CFrame.new(131.375, 56, -57.251),
-    [3] = CFrame.new(131.375, 56, 2.749),
-    [4] = CFrame.new(131.375, 56, 62.749),
-    [5] = CFrame.new(131.375, 56, 122.749)
+-- Mapping baseId ke nama base yang ada di workspace.Bases
+local baseMapping = {
+    ["Base 1"] = "Base 1",
+    ["Base 2"] = "Base 2",
+    ["Base 3"] = "Base 3",
+    ["Base 4"] = "Base 4",
+    ["Base 5"] = "Base 5",
 }
 
--- Fungsi teleport ke base sesuai plot
-local function teleportToBase()
-    if PlotPlayerSave and plotSpawnLocations[PlotPlayerSave] then
-        rootPart.CFrame = plotSpawnLocations[PlotPlayerSave]
+-- Coba dapatkan BaseId
+local baseId = getBaseId()
+if baseId and baseMapping[baseId] then
+    PlotPlayer = baseMapping[baseId]
+else
+    -- Jika tidak ditemukan, coba cek berdasarkan posisi player? Atau default ke Base 1?
+    -- Untuk keperluan demo, kita set ke Base 1 jika tidak ada.
+    PlotPlayer = "Base 1"
+    warn("BaseId tidak ditemukan, menggunakan default Base 1")
+end
+
+-- Simpan PlotPlayer ke _G agar bisa diakses oleh script lain
+_G.PlotPlayer = PlotPlayer
+
+-- Koordinat untuk setiap base
+local baseCoordinates = {
+    ["Base 1"] = Vector3.new(-13.896, 5, -120.056),
+    ["Base 2"] = Vector3.new(-14.193, 5, -60.192),
+    ["Base 3"] = Vector3.new(-13.609, 5, -0.075),
+    ["Base 4"] = Vector3.new(-13.91, 5, 59.939),
+    ["Base 5"] = Vector3.new(-13.907, 5, 119.951),
+}
+
+-- ==================================================
+-- 9. FUNGSI TELEPORT
+-- ==================================================
+local function teleportTo(position)
+    local character = localPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(position)
     else
-        warn("Plot tidak diketahui, teleport ke plot 1")
-        rootPart.CFrame = plotSpawnLocations[1]
+        -- Tunggu karakter muncul
+        localPlayer.CharacterAdded:Wait()
+        teleportTo(position)
     end
 end
 
--- Fungsi untuk mengecek apakah ada pemain lain dalam radius 3 dari suatu posisi
-local function isPlayerInRadius(position, radius)
+-- ==================================================
+-- 10. FUNGSI-FUNGSI UNTUK TOMBOL
+-- ==================================================
+
+-- Tombol VIP: Hancurkan ScriptedPart di semua zona VIP
+UI.AddButton({
+    Text = "VIP",
+    Callback = function()
+        local vipZones = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Walls") and workspace.Map.Walls:FindFirstChild("VIPsZones")
+        if vipZones then
+            for i = 1, 7 do
+                local zone = vipZones:FindFirstChild(tostring(i))
+                if zone then
+                    local scriptedPart = zone:FindFirstChild("ScriptedPart")
+                    if scriptedPart then
+                        scriptedPart:Destroy()
+                    end
+                end
+            end
+        end
+    end
+})
+
+-- Tombol Go To Home
+UI.AddButton({
+    Text = "Go To Home",
+    Callback = function()
+        if PlotPlayer and baseCoordinates[PlotPlayer] then
+            teleportTo(baseCoordinates[PlotPlayer])
+        else
+            warn("PlotPlayer tidak valid")
+        end
+    end
+})
+
+-- Tombol Go To Sell
+UI.AddButton({
+    Text = "Go To Sell",
+    Callback = function()
+        teleportTo(Vector3.new(42.287, 4, 139.483))
+    end
+})
+
+-- Tombol Go To Jump
+UI.AddButton({
+    Text = "Go To Jump",
+    Callback = function()
+        teleportTo(Vector3.new(42.96, 3.915, 1.243))
+    end
+})
+
+-- ==================================================
+-- 11. CHECKBOX UNTUK AUTO FITUR
+-- ==================================================
+
+-- Variabel untuk menyimpan status loop
+local autoSecretEnabled = false
+local autoGodEnabled = false
+local autoCelestialEnabled = false
+local infJumpEnabled = false
+
+-- Fungsi umum untuk mencari model dalam zone dengan prioritas
+local function getModelsFromZones(zones)
+    local models = {}
+    for _, zoneName in ipairs(zones) do
+        local zone = workspace:FindFirstChild("Zones") and workspace.Zones:FindFirstChild(zoneName)
+        if zone then
+            for _, child in ipairs(zone:GetChildren()) do
+                -- Asumsikan model brainrot adalah instance dengan kelas "Model" dan memiliki RootPart
+                if child:IsA("Model") and child:FindFirstChild("RootPart") then
+                    table.insert(models, child)
+                end
+            end
+        end
+    end
+    return models
+end
+
+-- Fungsi cek player lain dalam radius
+local function isPlayerNearby(model, radius)
     radius = radius or 3
+    if not model then return false end
+    local modelPos = model:GetPivot().Position
+    
     for _, player in ipairs(players:GetPlayers()) do
         if player ~= localPlayer then
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local dist = (char.HumanoidRootPart.Position - position).Magnitude
-                if dist <= radius then
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local distance = (character.HumanoidRootPart.Position - modelPos).Magnitude
+                if distance <= radius then
                     return true
                 end
             end
@@ -528,414 +562,203 @@ local function isPlayerInRadius(position, radius)
     return false
 end
 
--- Fungsi untuk mencari entity dengan rarity tertentu
-local function findEntityByRarity(rarityPattern)
-    local entitiesFolder = workspace:FindFirstChild("EntitiesFolder")
-    if not entitiesFolder then return nil end
-
-    for _, model in ipairs(entitiesFolder:GetChildren()) do
-        if model:IsA("Model") then
-            -- Cari MeshPart di dalam model (langsung)
-            local meshPart = model:FindFirstChildOfClass("MeshPart") or model:FindFirstChildOfClass("Part")
-            if meshPart then
-                local billboard = meshPart:FindFirstChild("EntityBillboardTemplate")
-                if billboard then
-                    local rarityLabel = billboard:FindFirstChild("RarityLabel")
-                    if rarityLabel and rarityLabel:IsA("TextLabel") then
-                        local text = rarityLabel.Text
-                        if rarityPattern == "Event" then
-                            -- Event: selain common, uncommon, rare, epic, legendary, mythical, secret, celestial, OG, divine
-                            local commonRarities = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical", "Secret", "Celestial", "OG", "Divine"}
-                            local isCommon = false
-                            for _, r in ipairs(commonRarities) do
-                                if text == r then
-                                    isCommon = true
-                                    break
-                                end
-                            end
-                            if not isCommon then
-                                return model
-                            end
-                        else
-                            if text == rarityPattern then
-                                return model
-                            end
-                        end
-                    end
-                end
-            end
+-- Fungsi mencari model yang tersedia (tanpa player di dekatnya) dalam daftar
+local function findAvailableModel(models)
+    if #models == 0 then return nil end
+    -- Acak urutan
+    local shuffled = {}
+    for i, v in ipairs(models) do shuffled[i] = v end
+    for i = #shuffled, 2, -1 do
+        local j = math.random(i)
+        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+    end
+    for _, model in ipairs(shuffled) do
+        if not isPlayerNearby(model) then
+            return model
         end
     end
     return nil
 end
 
--- Fungsi untuk interaksi dengan entity (tekan E selama 1.7 detik)
-local function interactWithEntity(entity)
-    if not entity then return end
-    -- Cari proximity prompt di entity
-    local prompt = entity:FindFirstChildOfClass("ProximityPrompt")
-    if not prompt then
-        -- Cari di seluruh descendant
-        prompt = entity:FindFirstChildWhichIsA("ProximityPrompt", true)
+-- Fungsi interaksi dengan brainrot
+local function interactWithBrainrot(brainrotModel)
+    if not brainrotModel then return false end
+    local holdDuration = 0.25
+    
+    -- Cari ProximityPrompt di dalam model (biasanya di RootPart.CollectPrompt)
+    local rootPart = brainrotModel:FindFirstChild("RootPart")
+    if rootPart then
+        local prompt = rootPart:FindFirstChild("CollectPrompt")
+        if prompt and prompt:IsA("ProximityPrompt") then
+            prompt:InputHoldBegin()
+            task.wait(holdDuration)
+            prompt:InputHoldEnd()
+            return true
+        end
     end
-    if prompt then
-        -- Simulasi hold E
-        prompt:InputHold()
-        wait(1.7)  -- tunggu 1.7 detik
-        prompt:InputEnd()
-        print("Interaksi selesai")
-    else
-        warn("Tidak ada ProximityPrompt pada entity")
+    
+    -- Alternatif: cari ClickDetector
+    local clickDetector = brainrotModel:FindFirstChildWhichIsA("ClickDetector", true)
+    if clickDetector then
+        fireclickdetector(clickDetector)
+        return true
     end
+    
+    return false
 end
 
--- Variabel untuk menyimpan state auto switches
-local autoStates = {
-    Secret = false,
-    Celestial = false,
-    OG = false,
-    Divine = false,
-    Event = false,
-    CollectMoney = false,
-    UpgradeAll = false
-}
-
--- Urutan prioritas rarity
-local rarityPriority = {"Event", "Divine", "OG", "Celestial", "Secret"}
-
--- Fungsi utama auto rarity
-local function autoRarityLoop()
+-- Loop untuk Auto Secret
+coroutine.wrap(function()
     while true do
-        wait(0.5)
-        local targetRarity = nil
-        for _, rarity in ipairs(rarityPriority) do
-            if autoStates[rarity] then
-                targetRarity = rarity
-                break
-            end
-        end
-        if not targetRarity then
-            wait(1)
-            continue
-        end
-
-        -- Cari entity dengan rarity target
-        local entity = findEntityByRarity(targetRarity)
-        if entity then
-            -- Dapatkan posisi entity
-            local primaryPart = entity.PrimaryPart
-            if not primaryPart then
-                primaryPart = entity:FindFirstChildOfClass("MeshPart") or entity:FindFirstChildOfClass("Part")
-            end
-            if primaryPart then
-                local entityPos = primaryPart.Position
-                -- Cek apakah ada pemain lain dalam radius 3
-                if not isPlayerInRadius(entityPos, 3) then
-                    -- Teleport ke entity
-                    rootPart.CFrame = CFrame.new(entityPos)
-                    wait(0.5)
+        if autoSecretEnabled then
+            local zones = {"Zone12", "Zone11"}  -- prioritas 12 dulu
+            local models = getModelsFromZones(zones)
+            local target = findAvailableModel(models)
+            if target then
+                -- Teleport ke model
+                local rootPart = target:FindFirstChild("RootPart")
+                if rootPart then
+                    teleportTo(rootPart.Position)
+                    task.wait(0.5)  -- tunggu sebentar
                     -- Interaksi
-                    interactWithEntity(entity)
-                    -- Kembali ke base
-                    teleportToBase()
-                    -- Tunggu 1 detik sebelum loop berikutnya
-                    wait(1)
-                else
-                    -- Ada pemain, tunggu sebentar
-                    wait(1)
-                end
-            else
-                wait(1)
-            end
-        else
-            wait(1)
-        end
-    end
-end
-
--- Fungsi untuk Collect Money
-local function collectMoneyLoop()
-    while true do
-        wait(0.5)
-        if not autoStates.CollectMoney then
-            wait(1)
-            continue
-        end
-
-        -- Tentukan plot base berdasarkan posisi player saat ini
-        local currentPos = rootPart.Position
-        local plotBase = nil
-        local floorSpawnCoords = {
-            Vector3.new(123.879, 56, -117.25),
-            Vector3.new(123.879, 56, -57.25),
-            Vector3.new(123.879, 56, 2.75),
-            Vector3.new(123.879, 56, 62.75),
-            Vector3.new(123.879, 56, 122.75)
-        }
-        for i, coord in ipairs(floorSpawnCoords) do
-            if (currentPos - coord).Magnitude < 5 then
-                plotBase = i
-                break
-            end
-        end
-
-        if not plotBase then
-            wait(1)
-            continue
-        end
-
-        local plots = workspace:FindFirstChild("Plots")
-        if not plots then
-            wait(1)
-            continue
-        end
-
-        for plotIndex = 1, 5 do
-            local plot = plots:FindFirstChild(tostring(plotIndex))
-            if plot then
-                local floors = plot:FindFirstChild("Floors")
-                if floors then
-                    for floorIndex = 0, 4 do
-                        local floor = floors:FindFirstChild("Floor"..floorIndex)
-                        if floor then
-                            local stands = floor:FindFirstChild("Stands")
-                            if stands then
-                                for standIndex = 1, 10 do
-                                    local stand = stands:FindFirstChild(tostring(standIndex))
-                                    if stand then
-                                        local cashModel = stand:FindFirstChild("CashModel")
-                                        if cashModel then
-                                            local touchPart = cashModel:FindFirstChild("TouchPart")
-                                            if touchPart then
-                                                local touchInterest = touchPart:FindFirstChild("TouchInterest")
-                                                if touchInterest then
-                                                    if touchInterest:IsA("RemoteEvent") then
-                                                        touchInterest:FireServer()
-                                                    elseif touchInterest:IsA("TouchTransmitter") then
-                                                        -- Simulasi touched dengan memindahkan part sedikit? Atau fire event?
-                                                        -- Kita bisa coba panggil method :Touch() jika ada, tapi tidak.
-                                                        -- Alternatif: fire event yang mungkin terkait.
-                                                    end
-                                                end
-                                            end
-                                        end
-                                    end
-                                end
-                            end
+                    local success = interactWithBrainrot(target)
+                    if success then
+                        task.wait(0.3)  -- tunggu interaksi selesai
+                        -- Kembali ke plot
+                        if PlotPlayer and baseCoordinates[PlotPlayer] then
+                            teleportTo(baseCoordinates[PlotPlayer])
                         end
                     end
                 end
             end
         end
-        wait(1)
+        task.wait(2)  -- interval pengecekan
     end
-end
+end)()
 
--- Fungsi untuk Upgrade All
-local function upgradeAllLoop()
+-- Loop untuk Auto God
+coroutine.wrap(function()
     while true do
-        wait(0.5)
-        if not autoStates.UpgradeAll then
-            wait(1)
-            continue
-        end
-
-        local currentPos = rootPart.Position
-        local plotBase = nil
-        local floorSpawnCoords = {
-            Vector3.new(123.879, 56, -117.25),
-            Vector3.new(123.879, 56, -57.25),
-            Vector3.new(123.879, 56, 2.75),
-            Vector3.new(123.879, 56, 62.75),
-            Vector3.new(123.879, 56, 122.75)
-        }
-        for i, coord in ipairs(floorSpawnCoords) do
-            if (currentPos - coord).Magnitude < 5 then
-                plotBase = i
-                break
-            end
-        end
-
-        if not plotBase then
-            wait(1)
-            continue
-        end
-
-        local plots = workspace:FindFirstChild("Plots")
-        if not plots then
-            wait(1)
-            continue
-        end
-
-        for plotIndex = 1, 5 do
-            local plot = plots:FindFirstChild(tostring(plotIndex))
-            if plot then
-                local floors = plot:FindFirstChild("Floors")
-                if floors then
-                    for floorIndex = 0, 4 do
-                        local floor = floors:FindFirstChild("Floor"..floorIndex)
-                        if floor then
-                            local stands = floor:FindFirstChild("Stands")
-                            if stands then
-                                for standIndex = 1, 10 do
-                                    local stand = stands:FindFirstChild(tostring(standIndex))
-                                    if stand then
-                                        local upgradeButton = stand:FindFirstChild("UpgradeButton")
-                                        if upgradeButton then
-                                            local template = upgradeButton:FindFirstChild("UpgradeButtonTemplate")
-                                            if template then
-                                                local imageButton = template:FindFirstChildOfClass("ImageButton")
-                                                if imageButton then
-                                                    -- Klik tombol
-                                                    imageButton:Click()
-                                                end
-                                            end
-                                        end
-                                    end
-                                end
-                            end
+        if autoGodEnabled then
+            local zones = {"Zone14", "Zone13"}
+            local models = getModelsFromZones(zones)
+            local target = findAvailableModel(models)
+            if target then
+                local rootPart = target:FindFirstChild("RootPart")
+                if rootPart then
+                    teleportTo(rootPart.Position)
+                    task.wait(0.5)
+                    local success = interactWithBrainrot(target)
+                    if success then
+                        task.wait(0.3)
+                        if PlotPlayer and baseCoordinates[PlotPlayer] then
+                            teleportTo(baseCoordinates[PlotPlayer])
                         end
                     end
                 end
             end
         end
-        wait(1)
+        task.wait(2)
     end
-end
+end)()
 
--- ==================================================
--- 9. MENAMBAHKAN ELEMEN UI
--- ==================================================
-
--- Container Slide: WalkSpeed
-UI.AddSlider({
-    Text = "Walkspeed",
-    Min = 16,
-    Max = 300,
-    Default = 16,
-    Callback = function(value)
-        if humanoid then
-            humanoid.WalkSpeed = value
+-- Loop untuk Auto Celestial
+coroutine.wrap(function()
+    while true do
+        if autoCelestialEnabled then
+            local zones = {"Zone16", "Zone15"}
+            local models = getModelsFromZones(zones)
+            local target = findAvailableModel(models)
+            if target then
+                local rootPart = target:FindFirstChild("RootPart")
+                if rootPart then
+                    teleportTo(rootPart.Position)
+                    task.wait(0.5)
+                    local success = interactWithBrainrot(target)
+                    if success then
+                        task.wait(0.3)
+                        if PlotPlayer and baseCoordinates[PlotPlayer] then
+                            teleportTo(baseCoordinates[PlotPlayer])
+                        end
+                    end
+                end
+            end
         end
+        task.wait(2)
     end
-})
+end)()
 
--- Container Tombol
-UI.AddButton({
-    Text = "VIP",
-    Callback = function()
-        local paidArea = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Stages") and workspace.Map.Stages:FindFirstChild("PaidArea")
-        if paidArea then
-            paidArea:Destroy()
-            print("PaidArea dihancurkan")
-        else
-            warn("PaidArea tidak ditemukan")
-        end
-    end
-})
-
-UI.AddButton({
-    Text = "Remove Crushed",
-    Callback = function()
-        local crushers = workspace:FindFirstChild("Crushers")
-        if crushers then crushers:Destroy() end
-        local killCrushers = workspace:FindFirstChild("KillCrushers")
-        if killCrushers then killCrushers:Destroy() end
-        print("Crushers dihapus")
-    end
-})
-
-UI.AddButton({
-    Text = "Go To Base",
-    Callback = function()
-        teleportToBase()
-    end
-})
-
--- Container Switch
-UI.AddSwitch({
+-- Checkbox Auto Secret
+UI.AddCheckbox({
     Text = "Auto Secret",
     Default = false,
     Callback = function(state)
-        autoStates.Secret = state
+        autoSecretEnabled = state
     end
 })
 
-UI.AddSwitch({
+-- Checkbox Auto God
+UI.AddCheckbox({
+    Text = "Auto God",
+    Default = false,
+    Callback = function(state)
+        autoGodEnabled = state
+    end
+})
+
+-- Checkbox Auto Celestial
+UI.AddCheckbox({
     Text = "Auto Celestial",
     Default = false,
     Callback = function(state)
-        autoStates.Celestial = state
-    end
-})
-
-UI.AddSwitch({
-    Text = "Auto OG",
-    Default = false,
-    Callback = function(state)
-        autoStates.OG = state
-    end
-})
-
-UI.AddSwitch({
-    Text = "Auto Admin",
-    Default = false,
-    Callback = function(state)
-        -- Tidak ada implementasi
-    end
-})
-
-UI.AddSwitch({
-    Text = "Auto Exclusive",
-    Default = false,
-    Callback = function(state)
-    end
-})
-
-UI.AddSwitch({
-    Text = "Auto Devine",
-    Default = false,
-    Callback = function(state)
-        autoStates.Divine = state
-    end
-})
-
-UI.AddSwitch({
-    Text = "Auto Event",
-    Default = false,
-    Callback = function(state)
-        autoStates.Event = state
-    end
-})
-
-UI.AddSwitch({
-    Text = "Collect Money",
-    Default = false,
-    Callback = function(state)
-        autoStates.CollectMoney = state
-    end
-})
-
-UI.AddSwitch({
-    Text = "Upgrade All",
-    Default = false,
-    Callback = function(state)
-        autoStates.UpgradeAll = state
+        autoCelestialEnabled = state
     end
 })
 
 -- ==================================================
--- 10. MEMULAI LOOP UNTUK AUTO FITUR
+-- 12. INFINITE JUMP
 -- ==================================================
+-- Infinite jump menggunakan UserInputService
+local function setupInfiniteJump(enabled)
+    if enabled then
+        -- Koneksi untuk mendeteksi tombol spasi
+        local jumpConnection
+        jumpConnection = userInput.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode.Space then
+                local character = localPlayer.Character
+                if character then
+                    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+                    if humanoid then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                end
+            end
+        end)
+        -- Simpan koneksi agar bisa dimatikan
+        _G.InfJumpConnection = jumpConnection
+    else
+        if _G.InfJumpConnection then
+            _G.InfJumpConnection:Disconnect()
+            _G.InfJumpConnection = nil
+        end
+    end
+end
 
-coroutine.wrap(autoRarityLoop)()
-coroutine.wrap(collectMoneyLoop)()
-coroutine.wrap(upgradeAllLoop)()
+UI.AddCheckbox({
+    Text = "INF Jump",
+    Default = false,
+    Callback = function(state)
+        infJumpEnabled = state
+        setupInfiniteJump(state)
+    end
+})
 
 -- ==================================================
--- 11. EXPOSE FUNGSI KE GLOBAL
+-- 13. EXPOSE FUNGSI KE GLOBAL
 -- ==================================================
 _G[guiName] = UI
 
-print("GUI [Escape Getting Crushed For Brainrots] Library berhasil dimuat. Gunakan _G['" .. guiName .. "'] untuk menambahkan elemen.")
-print("Contoh: _G['" .. guiName .. "'].AddButton({Text = 'Klik Saya', Callback = function() print('diklik') end})")
+print("GUI [Jump to Steal Brainrots] berhasil dimuat.")
+print("Gunakan _G['" .. guiName .. "'] untuk menambahkan elemen.")
+print("PlotPlayer saat ini: " .. tostring(PlotPlayer))
