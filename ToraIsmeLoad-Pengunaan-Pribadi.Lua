@@ -4,6 +4,7 @@ local gameScripts = {
     [138048509924404] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/SaveBrainrotfromLava",
     [78326551441316]  = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapeGettingCrushedForBrainrots",
     [135094773390024] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapePoliceForBrainrots",
+    [109533024287077] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/1SpeedEscapeforBrainrots",
     [71812071769179]  = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapeGuardstoStealBrainrots",
     [131623223084840] = "https://raw.githubusercontent.com/gumanba/Scripts/refs/heads/main/EscapeTsunamiForBrainrots"
     
