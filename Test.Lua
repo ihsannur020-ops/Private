@@ -114,13 +114,13 @@ function UI.AddSlider(config)
     local callback = config.Callback or function() end
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 30)
+    frame.Size = UDim2.new(1, -40, 0, 30)  -- Made narrower (changed from -20 to -40)
     frame.Position = UDim2.new(0, 10, 0, 0)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -60, 1, 0)
+    label.Size = UDim2.new(1, -70, 1, 0)  -- Adjusted to leave room for value label
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -448,9 +448,8 @@ local function interactWithBrainrot(brainrotModel)
     return false
 end
 
--- Fungsi isPlayerNearby dimodifikasi: parameter Distance dengan default 10
-local function isPlayerNearby(model, Distance)
-    Distance = Distance or 10
+local function isPlayerNearby(model, radius)
+    radius = radius or 3
     if not model then return false end
     local modelPos = model:GetPivot().Position
     
@@ -458,8 +457,8 @@ local function isPlayerNearby(model, Distance)
         if player ~= localPlayer then
             local character = player.Character
             if character and character:FindFirstChild("HumanoidRootPart") then
-                local dist = (character.HumanoidRootPart.Position - modelPos).Magnitude
-                if dist <= Distance then
+                local distance = (character.HumanoidRootPart.Position - modelPos).Magnitude
+                if distance <= radius then
                     return true
                 end
             end
@@ -513,6 +512,63 @@ local function findModelsInFolder(folderName)
     return models
 end
 
+-- Function to simulate clicking inventory slot
+local function clickInventorySlot(slotNumber)
+    slotNumber = slotNumber or 1
+    -- Try to find the hotbar GUI
+    local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then return end
+
+    -- Common hotbar names
+    local hotbarNames = {"Hotbar", "Inventory", "Toolbar"}
+    local button = nil
+
+    for _, gui in ipairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") then
+            for _, hotbarName in ipairs(hotbarNames) do
+                local hotbar = gui:FindFirstChild(hotbarName)
+                if hotbar then
+                    -- Look for a button with the slot number
+                    button = hotbar:FindFirstChild(tostring(slotNumber)) or 
+                             hotbar:FindFirstChild("Slot"..slotNumber) or
+                             hotbar:FindFirstChild("Button"..slotNumber)
+                    if button and button:IsA("GuiButton") then
+                        break
+                    end
+                end
+            end
+        end
+        if button then break end
+    end
+
+    if button then
+        -- Fire the click event
+        if firesignal then
+            firesignal(button.MouseButton1Click)
+        else
+            button.MouseButton1Click:Fire()
+        end
+    else
+        -- Fallback: simulate key press '1' (slot 1)
+        local keyCode = Enum.KeyCode.One
+        if slotNumber == 1 then keyCode = Enum.KeyCode.One
+        elseif slotNumber == 2 then keyCode = Enum.KeyCode.Two
+        elseif slotNumber == 3 then keyCode = Enum.KeyCode.Three
+        elseif slotNumber == 4 then keyCode = Enum.KeyCode.Four
+        elseif slotNumber == 5 then keyCode = Enum.KeyCode.Five
+        elseif slotNumber == 6 then keyCode = Enum.KeyCode.Six
+        elseif slotNumber == 7 then keyCode = Enum.KeyCode.Seven
+        elseif slotNumber == 8 then keyCode = Enum.KeyCode.Eight
+        elseif slotNumber == 9 then keyCode = Enum.KeyCode.Nine
+        end
+
+        virtualUser:KeyDown(keyCode)
+        task.wait(0.1)
+        virtualUser:KeyUp(keyCode)
+    end
+end
+
+-- Modified auto-collect logic with inventory clicks
 local function processRebirthNeed()
     local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
     if not rebirths then
@@ -546,8 +602,7 @@ local function processRebirthNeed()
 
     interactWithBrainrot(targetModel)
 
-    -- Diubah dari 1.7 menjadi 1.6
-    task.wait(1.6)
+    task.wait(1.7)
 
     teleport(afterInteractPoint)
     task.wait(0.5)
@@ -558,12 +613,20 @@ local function processRebirthNeed()
     else
         teleport(plotPositions[1])
     end
+
+    -- New: Simulate inventory click sequence
+    task.wait(1)
+    clickInventorySlot(1)  -- Click slot 1 to hold item
+    task.wait(1)
+    clickInventorySlot(1)  -- Click again to release
 end
 
 local autoStates = {
     Godly = false,
     Celestial = false,
-    Secret = false
+    Secret = false,
+    Mythic = false,    -- New
+    Legendary = false  -- New
 }
 
 local function autoCollect(typeName)
@@ -580,8 +643,7 @@ local function autoCollect(typeName)
 
     interactWithBrainrot(targetModel)
 
-    -- Diubah dari 1.7 menjadi 1.6
-    task.wait(1.6)
+    task.wait(1.7)
 
     teleport(afterInteractPoint)
     task.wait(0.5)
@@ -593,6 +655,12 @@ local function autoCollect(typeName)
         teleport(plotPositions[1])
     end
 
+    -- New: Simulate inventory click sequence
+    task.wait(1)
+    clickInventorySlot(1)  -- Hold
+    task.wait(1)
+    clickInventorySlot(1)  -- Release
+
     return true
 end
 
@@ -602,6 +670,8 @@ local function startAutoLoop()
         if autoStates.Godly then table.insert(order, "Godly") end
         if autoStates.Celestial then table.insert(order, "Celestial") end
         if autoStates.Secret then table.insert(order, "Secret") end
+        if autoStates.Mythic then table.insert(order, "Mythic") end      -- New
+        if autoStates.Legendary then table.insert(order, "Legendary") end -- New
 
         if #order > 0 then
             for _, typeName in ipairs(order) do
@@ -621,6 +691,7 @@ local collectCashEnabled = false
 local upgradeAllEnabled = false
 local instantProximityEnabled = false
 local afkEnabled = false
+local instantClaimEnabled = false  -- New
 
 local placesCache = nil
 
@@ -742,6 +813,43 @@ local function startAFKLoop()
     end
 end
 
+-- New: Instant Claim loop
+local function startInstantClaimLoop()
+    local savedPosition = nil
+    while true do
+        if instantClaimEnabled then
+            local carrying = localPlayer:GetAttribute("CarryingBrainrot")
+            if carrying then
+                -- Save current position
+                local character = localPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    savedPosition = character.HumanoidRootPart.Position
+                    -- Teleport to afterInteractPoint
+                    teleport(afterInteractPoint)
+                    task.wait(0.5)
+                    -- Teleport back
+                    if savedPosition then
+                        teleport(savedPosition)
+                        savedPosition = nil
+                    end
+                end
+            end
+        end
+        task.wait(0.5) -- Check frequently
+    end
+end
+
+-- New: Claim Manual function
+local function claimManual()
+    local character = localPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local savedPos = character.HumanoidRootPart.Position
+    teleport(afterInteractPoint)
+    task.wait(0.5)
+    teleport(savedPos)
+end
+
+-- UI Elements
 UI.AddSlider({
     Text = "Walkspeed",
     Min = 16,
@@ -751,6 +859,20 @@ UI.AddSlider({
         local character = localPlayer.Character
         if character and character:FindFirstChild("Humanoid") then
             character.Humanoid.WalkSpeed = value
+        end
+    end
+})
+
+-- New Jump Power slider
+UI.AddSlider({
+    Text = "Jump Power",
+    Min = 5,
+    Max = 150,
+    Default = 5,
+    Callback = function(value)
+        local character = localPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.JumpPower = value
         end
     end
 })
@@ -785,6 +907,12 @@ UI.AddButton({
     Callback = teleportToHome
 })
 
+-- New Claim Manual button
+UI.AddButton({
+    Text = "Claim Manual",
+    Callback = claimManual
+})
+
 createCheckbox({
     Text = "Auto Godly",
     Default = false,
@@ -809,11 +937,38 @@ createCheckbox({
     end
 })
 
+-- New Auto Mythic checkbox
+createCheckbox({
+    Text = "Auto Mythic",
+    Default = false,
+    Callback = function(state)
+        autoStates.Mythic = state
+    end
+})
+
+-- New Auto Legendary checkbox
+createCheckbox({
+    Text = "Auto Legendary",
+    Default = false,
+    Callback = function(state)
+        autoStates.Legendary = state
+    end
+})
+
 createCheckbox({
     Text = "Instant Proximity",
     Default = false,
     Callback = function(state)
         instantProximityEnabled = state
+    end
+})
+
+-- New Instant Claim checkbox
+createCheckbox({
+    Text = "Instant Claim",
+    Default = false,
+    Callback = function(state)
+        instantClaimEnabled = state
     end
 })
 
@@ -851,5 +1006,6 @@ task.spawn(startAutoLoop)
 task.spawn(startCollectCashLoop)
 task.spawn(startUpgradeAllLoop)
 task.spawn(startAFKLoop)
+task.spawn(startInstantClaimLoop)  -- New loop
 
 _G[guiName] = UI
