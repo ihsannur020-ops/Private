@@ -4,7 +4,7 @@ local userInput = game:GetService("UserInputService")
 local tweenService = game:GetService("TweenService")
 local runService = game:GetService("RunService")
 local replicatedStorage = game:GetService("ReplicatedStorage")
-local virtualUser = game:GetService("VirtualUser")
+local virtualInput = game:GetService("VirtualInputManager")  -- Changed from VirtualUser
 
 local localPlayer = players.LocalPlayer
 local guiName = "SurviveLAVA_ByAzka"
@@ -113,14 +113,15 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
+    -- Narrower slider centered: offset -40, position X = 20
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -40, 0, 30)  -- Made narrower (changed from -20 to -40)
-    frame.Position = UDim2.new(0, 10, 0, 0)
+    frame.Size = UDim2.new(1, -40, 0, 30)
+    frame.Position = UDim2.new(0, 20, 0, 0)  -- Centered
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -70, 1, 0)  -- Adjusted to leave room for value label
+    label.Size = UDim2.new(1, -70, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -512,7 +513,7 @@ local function findModelsInFolder(folderName)
     return models
 end
 
--- Function to simulate clicking inventory slot
+-- Function to simulate clicking inventory slot using VirtualInputManager
 local function clickInventorySlot(slotNumber)
     slotNumber = slotNumber or 1
     -- Try to find the hotbar GUI
@@ -549,8 +550,8 @@ local function clickInventorySlot(slotNumber)
             button.MouseButton1Click:Fire()
         end
     else
-        -- Fallback: simulate key press '1' (slot 1)
-        local keyCode = Enum.KeyCode.One
+        -- Fallback: Use VirtualInputManager to simulate key press
+        local keyCode = nil
         if slotNumber == 1 then keyCode = Enum.KeyCode.One
         elseif slotNumber == 2 then keyCode = Enum.KeyCode.Two
         elseif slotNumber == 3 then keyCode = Enum.KeyCode.Three
@@ -562,13 +563,14 @@ local function clickInventorySlot(slotNumber)
         elseif slotNumber == 9 then keyCode = Enum.KeyCode.Nine
         end
 
-        virtualUser:KeyDown(keyCode)
-        task.wait(0.1)
-        virtualUser:KeyUp(keyCode)
+        if keyCode then
+            virtualInput:SendKeyEvent(true, keyCode, false, game)
+            task.wait(0.1)
+            virtualInput:SendKeyEvent(false, keyCode, false, game)
+        end
     end
 end
 
--- Modified auto-collect logic with inventory clicks
 local function processRebirthNeed()
     local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
     if not rebirths then
@@ -614,7 +616,7 @@ local function processRebirthNeed()
         teleport(plotPositions[1])
     end
 
-    -- New: Simulate inventory click sequence
+    -- Simulate inventory click sequence
     task.wait(1)
     clickInventorySlot(1)  -- Click slot 1 to hold item
     task.wait(1)
@@ -625,8 +627,8 @@ local autoStates = {
     Godly = false,
     Celestial = false,
     Secret = false,
-    Mythic = false,    -- New
-    Legendary = false  -- New
+    Mythic = false,
+    Legendary = false
 }
 
 local function autoCollect(typeName)
@@ -655,7 +657,7 @@ local function autoCollect(typeName)
         teleport(plotPositions[1])
     end
 
-    -- New: Simulate inventory click sequence
+    -- Simulate inventory click sequence
     task.wait(1)
     clickInventorySlot(1)  -- Hold
     task.wait(1)
@@ -670,8 +672,8 @@ local function startAutoLoop()
         if autoStates.Godly then table.insert(order, "Godly") end
         if autoStates.Celestial then table.insert(order, "Celestial") end
         if autoStates.Secret then table.insert(order, "Secret") end
-        if autoStates.Mythic then table.insert(order, "Mythic") end      -- New
-        if autoStates.Legendary then table.insert(order, "Legendary") end -- New
+        if autoStates.Mythic then table.insert(order, "Mythic") end
+        if autoStates.Legendary then table.insert(order, "Legendary") end
 
         if #order > 0 then
             for _, typeName in ipairs(order) do
@@ -691,7 +693,6 @@ local collectCashEnabled = false
 local upgradeAllEnabled = false
 local instantProximityEnabled = false
 local afkEnabled = false
-local instantClaimEnabled = false  -- New
 
 local placesCache = nil
 
@@ -813,33 +814,6 @@ local function startAFKLoop()
     end
 end
 
--- New: Instant Claim loop
-local function startInstantClaimLoop()
-    local savedPosition = nil
-    while true do
-        if instantClaimEnabled then
-            local carrying = localPlayer:GetAttribute("CarryingBrainrot")
-            if carrying then
-                -- Save current position
-                local character = localPlayer.Character
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    savedPosition = character.HumanoidRootPart.Position
-                    -- Teleport to afterInteractPoint
-                    teleport(afterInteractPoint)
-                    task.wait(0.5)
-                    -- Teleport back
-                    if savedPosition then
-                        teleport(savedPosition)
-                        savedPosition = nil
-                    end
-                end
-            end
-        end
-        task.wait(0.5) -- Check frequently
-    end
-end
-
--- New: Claim Manual function
 local function claimManual()
     local character = localPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -863,7 +837,6 @@ UI.AddSlider({
     end
 })
 
--- New Jump Power slider
 UI.AddSlider({
     Text = "Jump Power",
     Min = 5,
@@ -907,7 +880,6 @@ UI.AddButton({
     Callback = teleportToHome
 })
 
--- New Claim Manual button
 UI.AddButton({
     Text = "Claim Manual",
     Callback = claimManual
@@ -937,7 +909,6 @@ createCheckbox({
     end
 })
 
--- New Auto Mythic checkbox
 createCheckbox({
     Text = "Auto Mythic",
     Default = false,
@@ -946,7 +917,6 @@ createCheckbox({
     end
 })
 
--- New Auto Legendary checkbox
 createCheckbox({
     Text = "Auto Legendary",
     Default = false,
@@ -963,14 +933,7 @@ createCheckbox({
     end
 })
 
--- New Instant Claim checkbox
-createCheckbox({
-    Text = "Instant Claim",
-    Default = false,
-    Callback = function(state)
-        instantClaimEnabled = state
-    end
-})
+-- Instant Claim checkbox removed as requested
 
 createCheckbox({
     Text = "Collect Cash",
@@ -1006,6 +969,6 @@ task.spawn(startAutoLoop)
 task.spawn(startCollectCashLoop)
 task.spawn(startUpgradeAllLoop)
 task.spawn(startAFKLoop)
-task.spawn(startInstantClaimLoop)  -- New loop
+-- Instant Claim loop removed
 
 _G[guiName] = UI
