@@ -4,7 +4,7 @@ local userInput = game:GetService("UserInputService")
 local tweenService = game:GetService("TweenService")
 local runService = game:GetService("RunService")
 local replicatedStorage = game:GetService("ReplicatedStorage")
-local virtualInput = game:GetService("VirtualInputManager")  -- Changed from VirtualUser
+local virtualInput = game:GetService("VirtualInputManager")
 
 local localPlayer = players.LocalPlayer
 local guiName = "SurviveLAVA_ByAzka"
@@ -113,10 +113,10 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Narrower slider centered: offset -40, position X = 20
+    -- Shift slider more to the right: left offset increased to 30
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -40, 0, 30)
-    frame.Position = UDim2.new(0, 20, 0, 0)  -- Centered
+    frame.Position = UDim2.new(0, 30, 0, 0)  -- More to the right
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
@@ -390,8 +390,10 @@ local plotPositions = {
 }
 
 local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
+local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)  -- New fuse machine teleport
 
 local currentPlotNumber = nil
+local instantProximityEnabled = false  -- Moved to top for clarity
 
 local function getPlotNumber()
     if currentPlotNumber then return currentPlotNumber end
@@ -430,9 +432,10 @@ local function teleportToHome()
     end
 end
 
+-- Modified interactWithBrainrot to use instant proximity if enabled
 local function interactWithBrainrot(brainrotModel)
     if not brainrotModel then return false end
-    local holdDuration = 1.7
+    local holdDuration = instantProximityEnabled and 0.1 or 1.7
     local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
     if prompt then
         prompt:InputHoldBegin()
@@ -511,6 +514,24 @@ local function findModelsInFolder(folderName)
         end
     end
     return models
+end
+
+-- New function to find all Lucky Block models across all Brainrots subfolders
+local function findLuckyBlockModels()
+    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
+    if not brainrotsFolder then return {} end
+    local luckyBlocks = {}
+    -- Search through all folders inside Brainrots
+    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, model in ipairs(folder:GetChildren()) do
+                if model:IsA("Model") and model.Name:find("Lucky Block") then
+                    table.insert(luckyBlocks, model)
+                end
+            end
+        end
+    end
+    return luckyBlocks
 end
 
 -- Function to simulate clicking inventory slot using VirtualInputManager
@@ -624,6 +645,7 @@ local function processRebirthNeed()
 end
 
 local autoStates = {
+    LuckyBlock = false,  -- New, placed first
     Godly = false,
     Celestial = false,
     Secret = false,
@@ -632,7 +654,12 @@ local autoStates = {
 }
 
 local function autoCollect(typeName)
-    local models = findModelsInFolder(typeName)
+    local models
+    if typeName == "LuckyBlock" then
+        models = findLuckyBlockModels()
+    else
+        models = findModelsInFolder(typeName)
+    end
     if #models == 0 then return false end
 
     local targetModel = findAvailableModel(models)
@@ -669,6 +696,7 @@ end
 local function startAutoLoop()
     while true do
         local order = {}
+        if autoStates.LuckyBlock then table.insert(order, "LuckyBlock") end
         if autoStates.Godly then table.insert(order, "Godly") end
         if autoStates.Celestial then table.insert(order, "Celestial") end
         if autoStates.Secret then table.insert(order, "Secret") end
@@ -691,7 +719,6 @@ end
 
 local collectCashEnabled = false
 local upgradeAllEnabled = false
-local instantProximityEnabled = false
 local afkEnabled = false
 
 local placesCache = nil
@@ -823,6 +850,11 @@ local function claimManual()
     teleport(savedPos)
 end
 
+-- New function for Fuse Machine button
+local function teleportToFuseMachine()
+    teleport(fuseMachinePoint)
+end
+
 -- UI Elements
 UI.AddSlider({
     Text = "Walkspeed",
@@ -885,6 +917,30 @@ UI.AddButton({
     Callback = claimManual
 })
 
+-- New Fuse Machine button
+UI.AddButton({
+    Text = "Fuse Machine",
+    Callback = teleportToFuseMachine
+})
+
+-- Checkboxes: Instant Proximity first, then Auto Lucky Block (above Godly)
+createCheckbox({
+    Text = "Instant Proximity",
+    Default = false,
+    Callback = function(state)
+        instantProximityEnabled = state
+    end
+})
+
+-- New Auto Lucky Block checkbox (placed above Godly)
+createCheckbox({
+    Text = "Auto Lucky Block",
+    Default = false,
+    Callback = function(state)
+        autoStates.LuckyBlock = state
+    end
+})
+
 createCheckbox({
     Text = "Auto Godly",
     Default = false,
@@ -926,16 +982,6 @@ createCheckbox({
 })
 
 createCheckbox({
-    Text = "Instant Proximity",
-    Default = false,
-    Callback = function(state)
-        instantProximityEnabled = state
-    end
-})
-
--- Instant Claim checkbox removed as requested
-
-createCheckbox({
     Text = "Collect Cash",
     Default = false,
     Callback = function(state)
@@ -969,6 +1015,5 @@ task.spawn(startAutoLoop)
 task.spawn(startCollectCashLoop)
 task.spawn(startUpgradeAllLoop)
 task.spawn(startAFKLoop)
--- Instant Claim loop removed
 
 _G[guiName] = UI
