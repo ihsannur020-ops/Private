@@ -103,6 +103,200 @@ local slideContainer = createContainer("SlideContainer")
 local buttonContainer = createContainer("ButtonContainer")
 local switchContainer = createContainer("SwitchContainer")
 
+-- ===== NEW FUSE MACHINE CONTAINER =====
+local fuseContainer = createContainer("Fuse Machine")
+
+-- Title for the container
+local fuseTitle = Instance.new("TextLabel")
+fuseTitle.Size = UDim2.new(1, 0, 0, 20)
+fuseTitle.BackgroundTransparency = 1
+fuseTitle.Text = "Fuse Machine"
+fuseTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+fuseTitle.Font = Enum.Font.GothamBold
+fuseTitle.TextSize = 16
+fuseTitle.Parent = fuseContainer
+
+-- Timer display label
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Size = UDim2.new(1, 0, 0, 30)
+timerLabel.BackgroundTransparency = 1
+timerLabel.Text = "Timer: 0"
+timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+timerLabel.Font = Enum.Font.Gotham
+timerLabel.TextSize = 14
+timerLabel.Parent = fuseContainer
+
+-- Function to update timer from the game's SurfaceGui
+local function updateFuseTimer()
+    local gameFolder = workspace:FindFirstChild("GameFolder")
+    if not gameFolder then return end
+    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
+    if not fuseMachine then return end
+    local timerDisplay = fuseMachine:FindFirstChild("TimerDisplay")
+    if not timerDisplay then return end
+    local surfaceGui = timerDisplay:FindFirstChildWhichIsA("SurfaceGui")
+    if not surfaceGui then return end
+    local display = surfaceGui:FindFirstChild("Display")
+    if display and display:IsA("TextLabel") then
+        timerLabel.Text = "Timer: " .. display.Text
+    end
+end
+
+-- Poll timer every 0.5 seconds
+task.spawn(function()
+    while true do
+        updateFuseTimer()
+        task.wait(0.5)
+    end
+end)
+
+-- Helper to fire a ProximityPrompt (simulate hold)
+local function fireProximityPrompt(prompt)
+    if prompt and prompt:IsA("ProximityPrompt") then
+        prompt:InputHoldBegin()
+        task.wait(prompt.HoldDuration or 0.1)
+        prompt:InputHoldEnd()
+    end
+end
+
+-- Create slot buttons (1-4)
+local function createFuseSlotButton(slotNumber)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Text = "Hold Brainrot for Slot " .. slotNumber
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.BorderSizePixel = 0
+    btn.Parent = fuseContainer
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = btn
+
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        local gameFolder = workspace:FindFirstChild("GameFolder")
+        if not gameFolder then return end
+        local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
+        if not fuseMachine then return end
+        local places = fuseMachine:FindFirstChild("Places")
+        if not places then return end
+        local slotFolder = places:FindFirstChild(tostring(slotNumber))
+        if not slotFolder then return end
+        local prompt = slotFolder:FindFirstChild("PlacePrompt")
+        if prompt and prompt:IsA("ProximityPrompt") then
+            fireProximityPrompt(prompt)
+        end
+    end)
+
+    return btn
+end
+
+for i = 1, 4 do
+    createFuseSlotButton(i)
+end
+
+-- Collect button
+local collectBtn = Instance.new("TextButton")
+collectBtn.Size = UDim2.new(1, 0, 0, 30)
+collectBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+collectBtn.Text = "Collect"
+collectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+collectBtn.Font = Enum.Font.Gotham
+collectBtn.TextSize = 14
+collectBtn.BorderSizePixel = 0
+collectBtn.Parent = fuseContainer
+
+local collectBtnCorner = Instance.new("UICorner")
+collectBtnCorner.CornerRadius = UDim.new(0, 4)
+collectBtnCorner.Parent = collectBtn
+
+-- Function to update collect button enabled state based on prompt.Enabled
+local function updateCollectButton()
+    local gameFolder = workspace:FindFirstChild("GameFolder")
+    if not gameFolder then
+        collectBtn.Active = false
+        return
+    end
+    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
+    if not fuseMachine then
+        collectBtn.Active = false
+        return
+    end
+    local result = fuseMachine:FindFirstChild("Result")
+    if not result then
+        collectBtn.Active = false
+        return
+    end
+    local collectAttachment = result:FindFirstChild("CollectAttachment")
+    if not collectAttachment then
+        collectBtn.Active = false
+        return
+    end
+    local prompt = collectAttachment:FindFirstChild("CollectPrompt")
+    if prompt and prompt:IsA("ProximityPrompt") then
+        local enabled = prompt.Enabled
+        collectBtn.Active = enabled
+        collectBtn.AutoButtonColor = enabled
+        collectBtn.BackgroundColor3 = enabled and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(30, 30, 30)
+        collectBtn.TextTransparency = enabled and 0 or 0.5
+    else
+        collectBtn.Active = false
+    end
+end
+
+-- Poll collect button state every second (as fallback)
+task.spawn(function()
+    while true do
+        updateCollectButton()
+        task.wait(1)
+    end
+end)
+
+-- Also connect to the prompt's Enabled property change if possible
+local function connectCollectPromptChanged()
+    local gameFolder = workspace:FindFirstChild("GameFolder")
+    if not gameFolder then return end
+    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
+    if not fuseMachine then return end
+    local result = fuseMachine:FindFirstChild("Result")
+    if not result then return end
+    local collectAttachment = result:FindFirstChild("CollectAttachment")
+    if not collectAttachment then return end
+    local prompt = collectAttachment:FindFirstChild("CollectPrompt")
+    if prompt and prompt:IsA("ProximityPrompt") then
+        prompt:GetPropertyChangedSignal("Enabled"):Connect(updateCollectButton)
+    end
+end
+task.spawn(connectCollectPromptChanged)
+
+-- Click handler for collect button
+collectBtn.MouseButton1Click:Connect(function()
+    if not collectBtn.Active then return end
+    local gameFolder = workspace:FindFirstChild("GameFolder")
+    if not gameFolder then return end
+    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
+    if not fuseMachine then return end
+    local result = fuseMachine:FindFirstChild("Result")
+    if not result then return end
+    local collectAttachment = result:FindFirstChild("CollectAttachment")
+    if not collectAttachment then return end
+    local prompt = collectAttachment:FindFirstChild("CollectPrompt")
+    if prompt and prompt:IsA("ProximityPrompt") and prompt.Enabled then
+        fireProximityPrompt(prompt)
+    end
+end)
+
+-- ===== END OF FUSE MACHINE CONTAINER =====
+
 local UI = {}
 
 function UI.AddSlider(config)
@@ -390,10 +584,10 @@ local plotPositions = {
 }
 
 local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
-local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)  -- New fuse machine teleport
+local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)
 
 local currentPlotNumber = nil
-local instantProximityEnabled = false  -- Moved to top for clarity
+local instantProximityEnabled = false
 
 local function getPlotNumber()
     if currentPlotNumber then return currentPlotNumber end
@@ -432,7 +626,6 @@ local function teleportToHome()
     end
 end
 
--- Modified interactWithBrainrot to use instant proximity if enabled
 local function interactWithBrainrot(brainrotModel)
     if not brainrotModel then return false end
     local holdDuration = instantProximityEnabled and 0.1 or 1.7
@@ -516,12 +709,10 @@ local function findModelsInFolder(folderName)
     return models
 end
 
--- New function to find all Lucky Block models across all Brainrots subfolders
 local function findLuckyBlockModels()
     local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
     if not brainrotsFolder then return {} end
     local luckyBlocks = {}
-    -- Search through all folders inside Brainrots
     for _, folder in ipairs(brainrotsFolder:GetChildren()) do
         if folder:IsA("Folder") then
             for _, model in ipairs(folder:GetChildren()) do
@@ -534,14 +725,11 @@ local function findLuckyBlockModels()
     return luckyBlocks
 end
 
--- Function to simulate clicking inventory slot using VirtualInputManager
 local function clickInventorySlot(slotNumber)
     slotNumber = slotNumber or 1
-    -- Try to find the hotbar GUI
     local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
     if not playerGui then return end
 
-    -- Common hotbar names
     local hotbarNames = {"Hotbar", "Inventory", "Toolbar"}
     local button = nil
 
@@ -550,7 +738,6 @@ local function clickInventorySlot(slotNumber)
             for _, hotbarName in ipairs(hotbarNames) do
                 local hotbar = gui:FindFirstChild(hotbarName)
                 if hotbar then
-                    -- Look for a button with the slot number
                     button = hotbar:FindFirstChild(tostring(slotNumber)) or 
                              hotbar:FindFirstChild("Slot"..slotNumber) or
                              hotbar:FindFirstChild("Button"..slotNumber)
@@ -564,14 +751,12 @@ local function clickInventorySlot(slotNumber)
     end
 
     if button then
-        -- Fire the click event
         if firesignal then
             firesignal(button.MouseButton1Click)
         else
             button.MouseButton1Click:Fire()
         end
     else
-        -- Fallback: Use VirtualInputManager to simulate key press
         local keyCode = nil
         if slotNumber == 1 then keyCode = Enum.KeyCode.One
         elseif slotNumber == 2 then keyCode = Enum.KeyCode.Two
@@ -637,15 +822,14 @@ local function processRebirthNeed()
         teleport(plotPositions[1])
     end
 
-    -- Simulate inventory click sequence
     task.wait(1)
-    clickInventorySlot(1)  -- Click slot 1 to hold item
+    clickInventorySlot(1)
     task.wait(1)
-    clickInventorySlot(1)  -- Click again to release
+    clickInventorySlot(1)
 end
 
 local autoStates = {
-    LuckyBlock = false,  -- New, placed first
+    LuckyBlock = false,
     Godly = false,
     Celestial = false,
     Secret = false,
@@ -684,11 +868,10 @@ local function autoCollect(typeName)
         teleport(plotPositions[1])
     end
 
-    -- Simulate inventory click sequence
     task.wait(1)
-    clickInventorySlot(1)  -- Hold
+    clickInventorySlot(1)
     task.wait(1)
-    clickInventorySlot(1)  -- Release
+    clickInventorySlot(1)
 
     return true
 end
@@ -850,7 +1033,6 @@ local function claimManual()
     teleport(savedPos)
 end
 
--- New function for Fuse Machine button
 local function teleportToFuseMachine()
     teleport(fuseMachinePoint)
 end
@@ -868,8 +1050,6 @@ UI.AddSlider({
         end
     end
 })
-
--- Jump Power slider removed as requested
 
 UI.AddButton({
     Text = "Remove Lava",
@@ -906,13 +1086,11 @@ UI.AddButton({
     Callback = claimManual
 })
 
--- New Fuse Machine button
 UI.AddButton({
     Text = "Fuse Machine",
     Callback = teleportToFuseMachine
 })
 
--- Checkboxes: Instant Proximity first, then Auto Lucky Block (above Godly)
 createCheckbox({
     Text = "Instant Proximity",
     Default = false,
@@ -921,7 +1099,6 @@ createCheckbox({
     end
 })
 
--- New Auto Lucky Block checkbox (placed above Godly)
 createCheckbox({
     Text = "Auto Lucky Block",
     Default = false,
