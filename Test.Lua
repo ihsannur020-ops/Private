@@ -116,7 +116,7 @@ function UI.AddSlider(config)
     -- Shift slider more to the right: left offset increased to 30
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -40, 0, 30)
-    frame.Position = UDim2.new(0, 30, 0, 0)  -- More to the right
+    frame.Position = UDim2.new(0, 50, 0, 0)  -- More to the right
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
