@@ -113,10 +113,9 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Slider digeser lebih kanan: offset 80, lebar dikurangi 80
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -80, 0, 30)   -- lebar lebih sempit
-    frame.Position = UDim2.new(0, 80, 0, 0) -- lebih ke kanan
+    frame.Size = UDim2.new(1, 0, 0, 30)   -- lebar lebih sempit
+    frame.Position = UDim2.new(0, 0, 0, 0) -- lebih ke kanan
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
