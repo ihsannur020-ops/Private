@@ -225,7 +225,44 @@ for i = 1, 4 do
     createFuseSlotButton(i)
 end
 
--- Collect button
+-- ===== NEW UI BUTTON FUSE MACHINE =====
+local uiButton = Instance.new("TextButton")
+uiButton.Size = UDim2.new(1, 0, 0, 30)
+uiButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+uiButton.Text = "UI Button Fuse Machine"
+uiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+uiButton.Font = Enum.Font.Gotham
+uiButton.TextSize = 14
+uiButton.BorderSizePixel = 0
+uiButton.Parent = fuseContainer
+
+local uiButtonCorner = Instance.new("UICorner")
+uiButtonCorner.CornerRadius = UDim.new(0, 4)
+uiButtonCorner.Parent = uiButton
+
+uiButton.MouseEnter:Connect(function()
+    uiButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+end)
+uiButton.MouseLeave:Connect(function()
+    uiButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+end)
+
+uiButton.MouseButton1Click:Connect(function()
+    local gameFolder = workspace:FindFirstChild("GameFolder")
+    if not gameFolder then return end
+    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
+    if not fuseMachine then return end
+    local uiButtonFolder = fuseMachine:FindFirstChild("UIButton")
+    if not uiButtonFolder then return end
+    local main = uiButtonFolder:FindFirstChild("Main")
+    if not main then return end
+    local prompt = main:FindFirstChild("ProximityPrompt")
+    if prompt and prompt:IsA("ProximityPrompt") then
+        fireProximityPrompt(prompt)
+    end
+end)
+
+-- ===== COLLECT BUTTON =====
 local collectBtn = Instance.new("TextButton")
 collectBtn.Size = UDim2.new(1, 0, 0, 30)
 collectBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -603,7 +640,7 @@ local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
 local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)
 
 local currentPlotNumber = nil
-local instantProximityEnabled = false
+local instantProximityEnabled = false  -- Still used internally by interactWithBrainrot but checkbox removed
 
 local function getPlotNumber()
     if currentPlotNumber then return currentPlotNumber end
@@ -1107,13 +1144,7 @@ UI.AddButton({
     Callback = teleportToFuseMachine
 })
 
-createCheckbox({
-    Text = "Instant Proximity",
-    Default = false,
-    Callback = function(state)
-        instantProximityEnabled = state
-    end
-})
+-- Instant Proximity checkbox REMOVED
 
 createCheckbox({
     Text = "Auto Lucky Block",
