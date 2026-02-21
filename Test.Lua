@@ -105,6 +105,7 @@ local switchContainer = createContainer("SwitchContainer")
 
 local UI = {}
 
+-- Redesigned slider with modern look
 function UI.AddSlider(config)
     local container = slideContainer
     local text = config.Text or "Slider"
@@ -113,62 +114,117 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Shift slider more to the right: left offset increased to 30
+    -- Main frame: narrower and shifted right
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -40, 0, 30)
-    frame.Position = UDim2.new(0, 50, 0, 0)  -- More to the right
+    frame.Size = UDim2.new(1, -40, 0, 45)  -- Taller to accommodate design
+    frame.Position = UDim2.new(0, 30, 0, 0)
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
+    -- Label with modern font and slight bold
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -70, 1, 0)
+    label.Size = UDim2.new(1, -80, 0, 20)
+    label.Position = UDim2.new(0, 0, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
-    label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.Font = Enum.Font.GothamSemibold
+    label.TextSize = 15
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
+    -- Value display: rounded rectangle with gradient-like dark background
+    local valueBg = Instance.new("Frame")
+    valueBg.Size = UDim2.new(0, 50, 0, 22)
+    valueBg.Position = UDim2.new(1, -50, 0, -1)
+    valueBg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    valueBg.BackgroundTransparency = 0.2
+    valueBg.BorderSizePixel = 0
+    valueBg.Parent = frame
+
+    local valueCorner = Instance.new("UICorner")
+    valueCorner.CornerRadius = UDim.new(0, 6)
+    valueCorner.Parent = valueBg
+
     local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0, 50, 1, 0)
-    valueLabel.Position = UDim2.new(1, -50, 0, 0)
+    valueLabel.Size = UDim2.new(1, 0, 1, 0)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = tostring(default)
-    valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    valueLabel.Font = Enum.Font.Gotham
+    valueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)  -- Light blue accent
+    valueLabel.Font = Enum.Font.GothamBold
     valueLabel.TextSize = 14
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.Parent = frame
+    valueLabel.Parent = valueBg
 
+    -- Track container (to position below label)
+    local trackContainer = Instance.new("Frame")
+    trackContainer.Size = UDim2.new(1, 0, 0, 20)
+    trackContainer.Position = UDim2.new(0, 0, 0, 25)
+    trackContainer.BackgroundTransparency = 1
+    trackContainer.Parent = frame
+
+    -- Track background
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, 0, 0, 4)
-    track.Position = UDim2.new(0, 0, 1, -8)
-    track.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    track.Size = UDim2.new(1, 0, 0, 6)
+    track.Position = UDim2.new(0, 0, 0.5, -3)
+    track.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     track.BorderSizePixel = 0
-    track.Parent = frame
+    track.Parent = trackContainer
 
+    local trackCorner = Instance.new("UICorner")
+    trackCorner.CornerRadius = UDim.new(0, 3)
+    trackCorner.Parent = track
+
+    -- Fill
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+    fill.BackgroundColor3 = Color3.fromRGB(80, 180, 255)  -- Brighter blue
     fill.BorderSizePixel = 0
     fill.Parent = track
 
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 3)
+    fillCorner.Parent = fill
+
+    -- Thumb (modern circle with glow effect)
     local thumb = Instance.new("TextButton")
-    thumb.Size = UDim2.new(0, 12, 0, 12)
-    thumb.Position = UDim2.new((default - min) / (max - min), -6, 0, -4)
+    thumb.Size = UDim2.new(0, 18, 0, 18)
+    thumb.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
     thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     thumb.Text = ""
     thumb.BorderSizePixel = 0
-    thumb.Parent = track
+    thumb.Parent = trackContainer
+
+    -- Add a subtle shadow via a second frame behind (optional)
+    local thumbShadow = Instance.new("Frame")
+    thumbShadow.Size = UDim2.new(0, 20, 0, 20)
+    thumbShadow.Position = UDim2.new(0, -1, 0, -1)
+    thumbShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    thumbShadow.BackgroundTransparency = 0.7
+    thumbShadow.BorderSizePixel = 0
+    thumbShadow.ZIndex = thumb.ZIndex - 1
+    thumbShadow.Parent = thumb
+
+    local thumbShadowCorner = Instance.new("UICorner")
+    thumbShadowCorner.CornerRadius = UDim.new(0, 10)
+    thumbShadowCorner.Parent = thumbShadow
 
     local thumbCorner = Instance.new("UICorner")
-    thumbCorner.CornerRadius = UDim.new(0, 6)
+    thumbCorner.CornerRadius = UDim.new(0, 9)
     thumbCorner.Parent = thumb
-    local trackCorner = Instance.new("UICorner")
-    trackCorner.CornerRadius = UDim.new(0, 2)
-    trackCorner.Parent = track
 
+    -- Small inner circle for style
+    local innerDot = Instance.new("Frame")
+    innerDot.Size = UDim2.new(0, 8, 0, 8)
+    innerDot.Position = UDim2.new(0.5, -4, 0.5, -4)
+    innerDot.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
+    innerDot.BorderSizePixel = 0
+    innerDot.Parent = thumb
+
+    local innerDotCorner = Instance.new("UICorner")
+    innerDotCorner.CornerRadius = UDim.new(0, 4)
+    innerDotCorner.Parent = innerDot
+
+    -- Dragging logic
     local dragging = false
     thumb.MouseButton1Down:Connect(function()
         dragging = true
@@ -190,7 +246,7 @@ function UI.AddSlider(config)
             value = math.floor(value + 0.5)
             valueLabel.Text = tostring(value)
             fill.Size = UDim2.new(percent, 0, 1, 0)
-            thumb.Position = UDim2.new(percent, -6, 0, -4)
+            thumb.Position = UDim2.new(percent, -9, 0.5, -9)
             callback(value)
         end
     end)
@@ -390,10 +446,10 @@ local plotPositions = {
 }
 
 local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
-local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)  -- New fuse machine teleport
+local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)
 
 local currentPlotNumber = nil
-local instantProximityEnabled = false  -- Moved to top for clarity
+local instantProximityEnabled = false
 
 local function getPlotNumber()
     if currentPlotNumber then return currentPlotNumber end
@@ -432,7 +488,6 @@ local function teleportToHome()
     end
 end
 
--- Modified interactWithBrainrot to use instant proximity if enabled
 local function interactWithBrainrot(brainrotModel)
     if not brainrotModel then return false end
     local holdDuration = instantProximityEnabled and 0.1 or 1.7
@@ -516,12 +571,10 @@ local function findModelsInFolder(folderName)
     return models
 end
 
--- New function to find all Lucky Block models across all Brainrots subfolders
 local function findLuckyBlockModels()
     local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
     if not brainrotsFolder then return {} end
     local luckyBlocks = {}
-    -- Search through all folders inside Brainrots
     for _, folder in ipairs(brainrotsFolder:GetChildren()) do
         if folder:IsA("Folder") then
             for _, model in ipairs(folder:GetChildren()) do
@@ -534,14 +587,11 @@ local function findLuckyBlockModels()
     return luckyBlocks
 end
 
--- Function to simulate clicking inventory slot using VirtualInputManager
 local function clickInventorySlot(slotNumber)
     slotNumber = slotNumber or 1
-    -- Try to find the hotbar GUI
     local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
     if not playerGui then return end
 
-    -- Common hotbar names
     local hotbarNames = {"Hotbar", "Inventory", "Toolbar"}
     local button = nil
 
@@ -550,7 +600,6 @@ local function clickInventorySlot(slotNumber)
             for _, hotbarName in ipairs(hotbarNames) do
                 local hotbar = gui:FindFirstChild(hotbarName)
                 if hotbar then
-                    -- Look for a button with the slot number
                     button = hotbar:FindFirstChild(tostring(slotNumber)) or 
                              hotbar:FindFirstChild("Slot"..slotNumber) or
                              hotbar:FindFirstChild("Button"..slotNumber)
@@ -564,14 +613,12 @@ local function clickInventorySlot(slotNumber)
     end
 
     if button then
-        -- Fire the click event
         if firesignal then
             firesignal(button.MouseButton1Click)
         else
             button.MouseButton1Click:Fire()
         end
     else
-        -- Fallback: Use VirtualInputManager to simulate key press
         local keyCode = nil
         if slotNumber == 1 then keyCode = Enum.KeyCode.One
         elseif slotNumber == 2 then keyCode = Enum.KeyCode.Two
@@ -637,15 +684,14 @@ local function processRebirthNeed()
         teleport(plotPositions[1])
     end
 
-    -- Simulate inventory click sequence
     task.wait(1)
-    clickInventorySlot(1)  -- Click slot 1 to hold item
+    clickInventorySlot(1)
     task.wait(1)
-    clickInventorySlot(1)  -- Click again to release
+    clickInventorySlot(1)
 end
 
 local autoStates = {
-    LuckyBlock = false,  -- New, placed first
+    LuckyBlock = false,
     Godly = false,
     Celestial = false,
     Secret = false,
@@ -684,11 +730,10 @@ local function autoCollect(typeName)
         teleport(plotPositions[1])
     end
 
-    -- Simulate inventory click sequence
     task.wait(1)
-    clickInventorySlot(1)  -- Hold
+    clickInventorySlot(1)
     task.wait(1)
-    clickInventorySlot(1)  -- Release
+    clickInventorySlot(1)
 
     return true
 end
@@ -850,7 +895,6 @@ local function claimManual()
     teleport(savedPos)
 end
 
--- New function for Fuse Machine button
 local function teleportToFuseMachine()
     teleport(fuseMachinePoint)
 end
@@ -917,13 +961,11 @@ UI.AddButton({
     Callback = claimManual
 })
 
--- New Fuse Machine button
 UI.AddButton({
     Text = "Fuse Machine",
     Callback = teleportToFuseMachine
 })
 
--- Checkboxes: Instant Proximity first, then Auto Lucky Block (above Godly)
 createCheckbox({
     Text = "Instant Proximity",
     Default = false,
@@ -932,7 +974,6 @@ createCheckbox({
     end
 })
 
--- New Auto Lucky Block checkbox (placed above Godly)
 createCheckbox({
     Text = "Auto Lucky Block",
     Default = false,
