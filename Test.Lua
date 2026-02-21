@@ -105,7 +105,6 @@ local switchContainer = createContainer("SwitchContainer")
 
 local UI = {}
 
--- Redesigned slider with modern look
 function UI.AddSlider(config)
     local container = slideContainer
     local text = config.Text or "Slider"
@@ -114,117 +113,62 @@ function UI.AddSlider(config)
     local default = config.Default or (min + max) / 2
     local callback = config.Callback or function() end
 
-    -- Main frame: narrower and shifted right
+    -- Slider shifted further right: left offset 40, width parent width -50
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -40, 0, 45)  -- Taller to accommodate design
-    frame.Position = UDim2.new(0, 30, 0, 0)
+    frame.Size = UDim2.new(1, -50, 0, 30)
+    frame.Position = UDim2.new(0, 40, 0, 0)  -- More to the right
     frame.BackgroundTransparency = 1
     frame.Parent = container
 
-    -- Label with modern font and slight bold
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -80, 0, 20)
-    label.Position = UDim2.new(0, 0, 0, 0)
+    label.Size = UDim2.new(1, -70, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
-    label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    label.Font = Enum.Font.GothamSemibold
-    label.TextSize = 15
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    -- Value display: rounded rectangle with gradient-like dark background
-    local valueBg = Instance.new("Frame")
-    valueBg.Size = UDim2.new(0, 50, 0, 22)
-    valueBg.Position = UDim2.new(1, -50, 0, -1)
-    valueBg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    valueBg.BackgroundTransparency = 0.2
-    valueBg.BorderSizePixel = 0
-    valueBg.Parent = frame
-
-    local valueCorner = Instance.new("UICorner")
-    valueCorner.CornerRadius = UDim.new(0, 6)
-    valueCorner.Parent = valueBg
-
     local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(1, 0, 1, 0)
+    valueLabel.Size = UDim2.new(0, 50, 1, 0)
+    valueLabel.Position = UDim2.new(1, -50, 0, 0)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = tostring(default)
-    valueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)  -- Light blue accent
-    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    valueLabel.Font = Enum.Font.Gotham
     valueLabel.TextSize = 14
-    valueLabel.Parent = valueBg
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.Parent = frame
 
-    -- Track container (to position below label)
-    local trackContainer = Instance.new("Frame")
-    trackContainer.Size = UDim2.new(1, 0, 0, 20)
-    trackContainer.Position = UDim2.new(0, 0, 0, 25)
-    trackContainer.BackgroundTransparency = 1
-    trackContainer.Parent = frame
-
-    -- Track background
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, 0, 0, 6)
-    track.Position = UDim2.new(0, 0, 0.5, -3)
-    track.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    track.Size = UDim2.new(1, 0, 0, 4)
+    track.Position = UDim2.new(0, 0, 1, -8)
+    track.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     track.BorderSizePixel = 0
-    track.Parent = trackContainer
+    track.Parent = frame
 
-    local trackCorner = Instance.new("UICorner")
-    trackCorner.CornerRadius = UDim.new(0, 3)
-    trackCorner.Parent = track
-
-    -- Fill
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(80, 180, 255)  -- Brighter blue
+    fill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
     fill.BorderSizePixel = 0
     fill.Parent = track
 
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 3)
-    fillCorner.Parent = fill
-
-    -- Thumb (modern circle with glow effect)
     local thumb = Instance.new("TextButton")
-    thumb.Size = UDim2.new(0, 18, 0, 18)
-    thumb.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
+    thumb.Size = UDim2.new(0, 12, 0, 12)
+    thumb.Position = UDim2.new((default - min) / (max - min), -6, 0, -4)
     thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     thumb.Text = ""
     thumb.BorderSizePixel = 0
-    thumb.Parent = trackContainer
-
-    -- Add a subtle shadow via a second frame behind (optional)
-    local thumbShadow = Instance.new("Frame")
-    thumbShadow.Size = UDim2.new(0, 20, 0, 20)
-    thumbShadow.Position = UDim2.new(0, -1, 0, -1)
-    thumbShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    thumbShadow.BackgroundTransparency = 0.7
-    thumbShadow.BorderSizePixel = 0
-    thumbShadow.ZIndex = thumb.ZIndex - 1
-    thumbShadow.Parent = thumb
-
-    local thumbShadowCorner = Instance.new("UICorner")
-    thumbShadowCorner.CornerRadius = UDim.new(0, 10)
-    thumbShadowCorner.Parent = thumbShadow
+    thumb.Parent = track
 
     local thumbCorner = Instance.new("UICorner")
-    thumbCorner.CornerRadius = UDim.new(0, 9)
+    thumbCorner.CornerRadius = UDim.new(0, 6)
     thumbCorner.Parent = thumb
+    local trackCorner = Instance.new("UICorner")
+    trackCorner.CornerRadius = UDim.new(0, 2)
+    trackCorner.Parent = track
 
-    -- Small inner circle for style
-    local innerDot = Instance.new("Frame")
-    innerDot.Size = UDim2.new(0, 8, 0, 8)
-    innerDot.Position = UDim2.new(0.5, -4, 0.5, -4)
-    innerDot.BackgroundColor3 = Color3.fromRGB(60, 140, 255)
-    innerDot.BorderSizePixel = 0
-    innerDot.Parent = thumb
-
-    local innerDotCorner = Instance.new("UICorner")
-    innerDotCorner.CornerRadius = UDim.new(0, 4)
-    innerDotCorner.Parent = innerDot
-
-    -- Dragging logic
     local dragging = false
     thumb.MouseButton1Down:Connect(function()
         dragging = true
@@ -246,7 +190,7 @@ function UI.AddSlider(config)
             value = math.floor(value + 0.5)
             valueLabel.Text = tostring(value)
             fill.Size = UDim2.new(percent, 0, 1, 0)
-            thumb.Position = UDim2.new(percent, -9, 0.5, -9)
+            thumb.Position = UDim2.new(percent, -6, 0, -4)
             callback(value)
         end
     end)
@@ -641,39 +585,24 @@ end
 
 local function processRebirthNeed()
     local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
-    if not rebirths then
-        return
-    end
+    if not rebirths then return end
     local value = tonumber(rebirths.Value)
-    if not value then
-        return
-    end
+    if not value then return end
     local index = value + 1
-    if index > 12 then
-        return
-    end
+    if index > 12 then return end
     local brainrotName = rebirthData[index]
-    if not brainrotName then
-        return
-    end
+    if not brainrotName then return end
 
     local models = findModelsByName(brainrotName)
-    if #models == 0 then
-        return
-    end
+    if #models == 0 then return end
 
     local targetModel = findAvailableModel(models)
-    if not targetModel then
-        return
-    end
+    if not targetModel then return end
 
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
-
     interactWithBrainrot(targetModel)
-
     task.wait(1.7)
-
     teleport(afterInteractPoint)
     task.wait(0.5)
 
@@ -709,17 +638,12 @@ local function autoCollect(typeName)
     if #models == 0 then return false end
 
     local targetModel = findAvailableModel(models)
-    if not targetModel then
-        return false
-    end
+    if not targetModel then return false end
 
     teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
     task.wait(0.5)
-
     interactWithBrainrot(targetModel)
-
     task.wait(1.7)
-
     teleport(afterInteractPoint)
     task.wait(0.5)
 
@@ -841,7 +765,7 @@ local function clickAllUpgrades()
             if firesignal then
                 firesignal(event)
             else
-                local success, err = pcall(function()
+                pcall(function()
                     event:Fire()
                 end)
             end
