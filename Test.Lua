@@ -103,7 +103,7 @@ local slideContainer = createContainer("SlideContainer")
 local buttonContainer = createContainer("ButtonContainer")
 local switchContainer = createContainer("SwitchContainer")
 
--- ===== FUSE MACHINE CONTAINER (FIXED) =====
+-- ===== FUSE MACHINE CONTAINER =====
 local fuseContainer = createContainer("Fuse Machine")
 
 -- Title
@@ -116,11 +116,11 @@ fuseTitle.Font = Enum.Font.GothamBold
 fuseTitle.TextSize = 16
 fuseTitle.Parent = fuseContainer
 
--- Timer display
+-- Timer display (now shows raw text like "1/4", "2/4", etc.)
 local timerLabel = Instance.new("TextLabel")
 timerLabel.Size = UDim2.new(1, 0, 0, 30)
 timerLabel.BackgroundTransparency = 1
-timerLabel.Text = "Timer: 0"
+timerLabel.Text = "0/4"
 timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 timerLabel.Font = Enum.Font.Gotham
 timerLabel.TextSize = 14
@@ -137,7 +137,7 @@ local function updateFuseTimer()
     if not surfaceGui then return end
     local display = surfaceGui:FindFirstChild("Display")
     if display and display:IsA("TextLabel") then
-        timerLabel.Text = "Timer: " .. display.Text
+        timerLabel.Text = display.Text  -- Directly show the game's text (e.g., "1/4")
     end
 end
 
@@ -148,10 +148,17 @@ task.spawn(function()
     end
 end)
 
--- Helper to fire a ProximityPrompt (with optional teleport)
+-- Helper to fire a ProximityPrompt using exploit function if available
 local function fireProximityPrompt(prompt)
     if not (prompt and prompt:IsA("ProximityPrompt")) then return end
-    -- Teleport to the prompt's parent part to ensure range
+
+    -- Try exploit's fireproximityprompt function (common in executors)
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+        return
+    end
+
+    -- Fallback: teleport and use InputHoldBegin (legitimate method)
     local part = prompt.Parent
     if part and part:IsA("BasePart") then
         local character = localPlayer.Character
@@ -160,7 +167,6 @@ local function fireProximityPrompt(prompt)
             task.wait(0.3)
         end
     end
-    -- Simulate hold
     pcall(function()
         prompt:InputHoldBegin()
         task.wait(prompt.HoldDuration)
@@ -201,7 +207,7 @@ local function createFuseSlotButton(slotNumber)
         local slotFolder = places:FindFirstChild(tostring(slotNumber))
         if not slotFolder then return end
 
-        -- First try to find "PlacePrompt" directly, else any ProximityPrompt
+        -- Try to find "PlacePrompt" first, otherwise any ProximityPrompt
         local prompt = slotFolder:FindFirstChild("PlacePrompt")
         if not prompt or not prompt:IsA("ProximityPrompt") then
             prompt = slotFolder:FindFirstChildWhichIsA("ProximityPrompt")
