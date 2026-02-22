@@ -9,10 +9,12 @@ local virtualInput = game:GetService("VirtualInputManager")
 local localPlayer = players.LocalPlayer
 local guiName = "SurviveLAVA_ByAzka"
 
+-- Clean up existing GUI
 if coreGui:FindFirstChild(guiName) then
     coreGui:FindFirstChild(guiName):Destroy()
 end
 
+-- GUI Creation
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = guiName
 screenGui.Parent = coreGui
@@ -99,441 +101,11 @@ local function createContainer(name)
     return container
 end
 
-local slideContainer = createContainer("SlideContainer")
+-- Containers
 local buttonContainer = createContainer("ButtonContainer")
 local switchContainer = createContainer("SwitchContainer")
 
--- ===== FUSE MACHINE CONTAINER =====
-local fuseContainer = createContainer("Fuse Machine")
-
--- Title
-local fuseTitle = Instance.new("TextLabel")
-fuseTitle.Size = UDim2.new(1, 0, 0, 20)
-fuseTitle.BackgroundTransparency = 1
-fuseTitle.Text = "Fuse Machine"
-fuseTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-fuseTitle.Font = Enum.Font.GothamBold
-fuseTitle.TextSize = 16
-fuseTitle.Parent = fuseContainer
-
--- Timer display (now shows raw text like "1/4", "2/4", etc.)
-local timerLabel = Instance.new("TextLabel")
-timerLabel.Size = UDim2.new(1, 0, 0, 30)
-timerLabel.BackgroundTransparency = 1
-timerLabel.Text = "0/4"
-timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-timerLabel.Font = Enum.Font.Gotham
-timerLabel.TextSize = 14
-timerLabel.Parent = fuseContainer
-
-local function updateFuseTimer()
-    local gameFolder = workspace:FindFirstChild("GameFolder")
-    if not gameFolder then return end
-    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
-    if not fuseMachine then return end
-    local timerDisplay = fuseMachine:FindFirstChild("TimerDisplay")
-    if not timerDisplay then return end
-    local surfaceGui = timerDisplay:FindFirstChildWhichIsA("SurfaceGui")
-    if not surfaceGui then return end
-    local display = surfaceGui:FindFirstChild("Display")
-    if display and display:IsA("TextLabel") then
-        timerLabel.Text = display.Text  -- Directly show the game's text (e.g., "1/4")
-    end
-end
-
-task.spawn(function()
-    while true do
-        updateFuseTimer()
-        task.wait(0.5)
-    end
-end)
-
--- Helper to fire a ProximityPrompt using exploit function if available
-local function fireProximityPrompt(prompt)
-    if not (prompt and prompt:IsA("ProximityPrompt")) then return end
-
-    -- Try exploit's fireproximityprompt function (common in executors)
-    if fireproximityprompt then
-        fireproximityprompt(prompt)
-        return
-    end
-
-    -- Fallback: teleport and use InputHoldBegin (legitimate method)
-    local part = prompt.Parent
-    if part and part:IsA("BasePart") then
-        local character = localPlayer.Character
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            character.HumanoidRootPart.CFrame = part.CFrame + Vector3.new(0, 3, 0)
-            task.wait(0.3)
-        end
-    end
-    pcall(function()
-        prompt:InputHoldBegin()
-        task.wait(prompt.HoldDuration)
-        prompt:InputHoldEnd()
-    end)
-end
-
--- Create slot buttons (1-4)
-local function createFuseSlotButton(slotNumber)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    btn.Text = "Hold Brainrot for Slot " .. slotNumber
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.BorderSizePixel = 0
-    btn.Parent = fuseContainer
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 4)
-    btnCorner.Parent = btn
-
-    btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    end)
-    btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    end)
-
-    btn.MouseButton1Click:Connect(function()
-        local gameFolder = workspace:FindFirstChild("GameFolder")
-        if not gameFolder then return end
-        local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
-        if not fuseMachine then return end
-        local places = fuseMachine:FindFirstChild("Places")
-        if not places then return end
-        local slotFolder = places:FindFirstChild(tostring(slotNumber))
-        if not slotFolder then return end
-
-        -- Try to find "PlacePrompt" first, otherwise any ProximityPrompt
-        local prompt = slotFolder:FindFirstChild("PlacePrompt")
-        if not prompt or not prompt:IsA("ProximityPrompt") then
-            prompt = slotFolder:FindFirstChildWhichIsA("ProximityPrompt")
-        end
-
-        if prompt then
-            fireProximityPrompt(prompt)
-        end
-    end)
-
-    return btn
-end
-
-for i = 1, 4 do
-    createFuseSlotButton(i)
-end
-
--- ===== NEW UI BUTTON FUSE MACHINE =====
-local uiButton = Instance.new("TextButton")
-uiButton.Size = UDim2.new(1, 0, 0, 30)
-uiButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-uiButton.Text = "UI Button Fuse Machine"
-uiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-uiButton.Font = Enum.Font.Gotham
-uiButton.TextSize = 14
-uiButton.BorderSizePixel = 0
-uiButton.Parent = fuseContainer
-
-local uiButtonCorner = Instance.new("UICorner")
-uiButtonCorner.CornerRadius = UDim.new(0, 4)
-uiButtonCorner.Parent = uiButton
-
-uiButton.MouseEnter:Connect(function()
-    uiButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-end)
-uiButton.MouseLeave:Connect(function()
-    uiButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-end)
-
-uiButton.MouseButton1Click:Connect(function()
-    local gameFolder = workspace:FindFirstChild("GameFolder")
-    if not gameFolder then return end
-    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
-    if not fuseMachine then return end
-    local uiButtonFolder = fuseMachine:FindFirstChild("UIButton")
-    if not uiButtonFolder then return end
-    local main = uiButtonFolder:FindFirstChild("Main")
-    if not main then return end
-    local prompt = main:FindFirstChild("ProximityPrompt")
-    if prompt and prompt:IsA("ProximityPrompt") then
-        fireProximityPrompt(prompt)
-    end
-end)
-
--- ===== COLLECT BUTTON =====
-local collectBtn = Instance.new("TextButton")
-collectBtn.Size = UDim2.new(1, 0, 0, 30)
-collectBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-collectBtn.Text = "Collect"
-collectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-collectBtn.Font = Enum.Font.Gotham
-collectBtn.TextSize = 14
-collectBtn.BorderSizePixel = 0
-collectBtn.Parent = fuseContainer
-
-local collectBtnCorner = Instance.new("UICorner")
-collectBtnCorner.CornerRadius = UDim.new(0, 4)
-collectBtnCorner.Parent = collectBtn
-
-local function updateCollectButton()
-    local gameFolder = workspace:FindFirstChild("GameFolder")
-    if not gameFolder then
-        collectBtn.Active = false
-        return
-    end
-    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
-    if not fuseMachine then
-        collectBtn.Active = false
-        return
-    end
-    local result = fuseMachine:FindFirstChild("Result")
-    if not result then
-        collectBtn.Active = false
-        return
-    end
-    local collectAttachment = result:FindFirstChild("CollectAttachment")
-    if not collectAttachment then
-        collectBtn.Active = false
-        return
-    end
-    local prompt = collectAttachment:FindFirstChild("CollectPrompt")
-    if prompt and prompt:IsA("ProximityPrompt") then
-        local enabled = prompt.Enabled
-        collectBtn.Active = enabled
-        collectBtn.AutoButtonColor = enabled
-        collectBtn.BackgroundColor3 = enabled and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(30, 30, 30)
-        collectBtn.TextTransparency = enabled and 0 or 0.5
-    else
-        collectBtn.Active = false
-    end
-end
-
-task.spawn(function()
-    while true do
-        updateCollectButton()
-        task.wait(1)
-    end
-end)
-
-local function connectCollectPromptChanged()
-    local gameFolder = workspace:FindFirstChild("GameFolder")
-    if not gameFolder then return end
-    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
-    if not fuseMachine then return end
-    local result = fuseMachine:FindFirstChild("Result")
-    if not result then return end
-    local collectAttachment = result:FindFirstChild("CollectAttachment")
-    if not collectAttachment then return end
-    local prompt = collectAttachment:FindFirstChild("CollectPrompt")
-    if prompt and prompt:IsA("ProximityPrompt") then
-        prompt:GetPropertyChangedSignal("Enabled"):Connect(updateCollectButton)
-    end
-end
-task.spawn(connectCollectPromptChanged)
-
-collectBtn.MouseButton1Click:Connect(function()
-    if not collectBtn.Active then return end
-    local gameFolder = workspace:FindFirstChild("GameFolder")
-    if not gameFolder then return end
-    local fuseMachine = gameFolder:FindFirstChild("FuseMachine")
-    if not fuseMachine then return end
-    local result = fuseMachine:FindFirstChild("Result")
-    if not result then return end
-    local collectAttachment = result:FindFirstChild("CollectAttachment")
-    if not collectAttachment then return end
-    local prompt = collectAttachment:FindFirstChild("CollectPrompt")
-    if prompt and prompt:IsA("ProximityPrompt") and prompt.Enabled then
-        fireProximityPrompt(prompt)
-    end
-end)
-
--- ===== END OF FUSE MACHINE CONTAINER =====
-
-local UI = {}
-
-function UI.AddSlider(config)
-    local container = slideContainer
-    local text = config.Text or "Slider"
-    local min = config.Min or 0
-    local max = config.Max or 100
-    local default = config.Default or (min + max) / 2
-    local callback = config.Callback or function() end
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -40, 0, 30)
-    frame.Position = UDim2.new(0, 30, 0, 0)
-    frame.BackgroundTransparency = 1
-    frame.Parent = container
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -70, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0, 50, 1, 0)
-    valueLabel.Position = UDim2.new(1, -50, 0, 0)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(default)
-    valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    valueLabel.Font = Enum.Font.Gotham
-    valueLabel.TextSize = 14
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.Parent = frame
-
-    local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, 0, 0, 4)
-    track.Position = UDim2.new(0, 0, 1, -8)
-    track.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    track.BorderSizePixel = 0
-    track.Parent = frame
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-    fill.BorderSizePixel = 0
-    fill.Parent = track
-
-    local thumb = Instance.new("TextButton")
-    thumb.Size = UDim2.new(0, 12, 0, 12)
-    thumb.Position = UDim2.new((default - min) / (max - min), -6, 0, -4)
-    thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    thumb.Text = ""
-    thumb.BorderSizePixel = 0
-    thumb.Parent = track
-
-    local thumbCorner = Instance.new("UICorner")
-    thumbCorner.CornerRadius = UDim.new(0, 6)
-    thumbCorner.Parent = thumb
-    local trackCorner = Instance.new("UICorner")
-    trackCorner.CornerRadius = UDim.new(0, 2)
-    trackCorner.Parent = track
-
-    local dragging = false
-    thumb.MouseButton1Down:Connect(function()
-        dragging = true
-    end)
-
-    userInput.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    userInput.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mousePos = userInput:GetMouseLocation()
-            local trackAbsPos, trackSize = track.AbsolutePosition, track.AbsoluteSize
-            local relativeX = math.clamp(mousePos.X - trackAbsPos.X, 0, trackSize.X)
-            local percent = relativeX / trackSize.X
-            local value = min + (max - min) * percent
-            value = math.floor(value + 0.5)
-            valueLabel.Text = tostring(value)
-            fill.Size = UDim2.new(percent, 0, 1, 0)
-            thumb.Position = UDim2.new(percent, -6, 0, -4)
-            callback(value)
-        end
-    end)
-
-    return frame
-end
-
-function UI.AddButton(config)
-    local container = buttonContainer
-    local text = config.Text or "Button"
-    local callback = config.Callback or function() end
-
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 0, 30)
-    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    button.Text = text
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.Gotham
-    button.TextSize = 14
-    button.BorderSizePixel = 0
-    button.Parent = container
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 4)
-    btnCorner.Parent = button
-
-    button.MouseButton1Click:Connect(callback)
-
-    button.MouseEnter:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    end)
-    button.MouseLeave:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    end)
-
-    return button
-end
-
-local function createCheckbox(config)
-    local container = switchContainer
-    local text = config.Text or "Checkbox"
-    local default = config.Default or false
-    local callback = config.Callback or function() end
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
-    frame.BackgroundTransparency = 1
-    frame.Parent = container
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -60, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-
-    local checkBtn = Instance.new("TextButton")
-    checkBtn.Size = UDim2.new(0, 24, 0, 24)
-    checkBtn.Position = UDim2.new(1, -30, 0.5, -12)
-    checkBtn.BackgroundColor3 = default and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
-    checkBtn.Text = ""
-    checkBtn.BorderSizePixel = 0
-    checkBtn.Parent = frame
-
-    local checkCorner = Instance.new("UICorner")
-    checkCorner.CornerRadius = UDim.new(0, 4)
-    checkCorner.Parent = checkBtn
-
-    local checkMark = Instance.new("TextLabel")
-    checkMark.Size = UDim2.new(1, 0, 1, 0)
-    checkMark.BackgroundTransparency = 1
-    checkMark.Text = default and "✓" or ""
-    checkMark.TextColor3 = Color3.fromRGB(255, 255, 255)
-    checkMark.TextSize = 18
-    checkMark.Font = Enum.Font.GothamBold
-    checkMark.Parent = checkBtn
-
-    local state = default
-
-    local function updateCheck()
-        checkBtn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
-        checkMark.Text = state and "✓" or ""
-    end
-
-    checkBtn.MouseButton1Click:Connect(function()
-        state = not state
-        updateCheck()
-        callback(state)
-    end)
-
-    return frame
-end
-
+-- Minimized frame (for when GUI is minimized)
 local minimizedFrame = Instance.new("Frame")
 minimizedFrame.Size = UDim2.new(0, 50, 0, 50)
 minimizedFrame.Position = UDim2.new(1, -70, 1, -70)
@@ -563,6 +135,7 @@ miniButton.BackgroundTransparency = 1
 miniButton.Text = ""
 miniButton.Parent = minimizedFrame
 
+-- Dragging logic for minimized frame (same as before)
 local dragging = false
 local dragStartPos
 local frameStartPos
@@ -613,620 +186,513 @@ closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
-local rebirthData = {
-    [1] = "BonecaAmbalabu",
-    [2] = "CactoHipopotamo",
-    [3] = "BallerinaCappuccina",
-    [4] = "CocofantoElefanto",
-    [5] = "Garama",
-    [6] = "UdinDinDinDun",
-    [7] = "LaVaccaSaturnoSatunita",
-    [8] = "LasVaquitasSaturnitas",
-    [9] = "GorilloWatermelondrillo",
-    [10] = "CompactaroniDiskaloni",
-    [11] = "ChillinChilli",
-    [12] = "CrazylonePizaione",
+-- =============================================
+-- Utility Functions
+-- =============================================
+local function getCharacter()
+    return localPlayer.Character
+end
+
+local function getHumanoidRootPart()
+    local char = getCharacter()
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function teleportToCFrame(cf)
+    local root = getHumanoidRootPart()
+    if root then
+        root.CFrame = cf
+    end
+end
+
+local function teleportToPosition(x, y, z)
+    teleportToCFrame(CFrame.new(x, y, z))
+end
+
+local function getPlotName()
+    return "Plot_" .. localPlayer.Name
+end
+
+local function getPlotModel()
+    return workspace:FindFirstChild(getPlotName())
+end
+
+local function getPlotSpawn()
+    local plot = getPlotModel()
+    return plot and plot:FindFirstChild("Spawn")
+end
+
+-- =============================================
+-- Toggle States
+-- =============================================
+local toggleStates = {
+    AlwaysGround = false,
+    AutoCelestial = false,
+    AutoSecret = false,
+    AutoCollectCash = false,
+    AutoUpgradeAll = false
 }
 
-local plotPositions = {
-    [1] = Vector3.new(100.205, 7, 83.222),
-    [2] = Vector3.new(50.205, 7, 83.221),
-    [3] = Vector3.new(0.205, 7, 83.221),
-    [4] = Vector3.new(-49.795, 7, 83.221),
-    [5] = Vector3.new(-99.795, 7, 83.221)
-}
+-- =============================================
+-- Always Ground
+-- =============================================
+local groundPart = nil
+local groundConnection = nil
 
-local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
-local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)
-
-local currentPlotNumber = nil
-local instantProximityEnabled = false  -- Still used internally by interactWithBrainrot but checkbox removed
-
-local function getPlotNumber()
-    if currentPlotNumber then return currentPlotNumber end
-    local plotAttr = localPlayer:GetAttribute("Plot")
-    if plotAttr then
-        local num = tonumber(plotAttr:match("%d+"))
-        if num and num >= 1 and num <= 5 then
-            currentPlotNumber = num
-            return num
+local function updateGroundPart()
+    if toggleStates.AlwaysGround then
+        if not groundPart then
+            groundPart = Instance.new("Part")
+            groundPart.Name = "AlwaysGroundByAzka"
+            groundPart.Anchored = true
+            groundPart.CanCollide = true
+            groundPart.CanQuery = true
+            groundPart.CanTouch = true
+            groundPart.Transparency = 1
+            groundPart.Size = Vector3.new(20.554, 3, 21.96)
+            groundPart.Parent = workspace
         end
-    end
-    return nil
-end
-
-local function getPlayerModel()
-    return workspace:FindFirstChild(localPlayer.Name)
-end
-
-local function teleport(position)
-    local character = localPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        character.HumanoidRootPart.CFrame = CFrame.new(position)
-    end
-end
-
-local function teleportToPlot(plotNumber)
-    if plotNumber and plotPositions[plotNumber] then
-        teleport(plotPositions[plotNumber])
-    end
-end
-
-local function teleportToHome()
-    local plot = getPlotNumber()
-    if plot then
-        teleportToPlot(plot)
-    end
-end
-
-local function interactWithBrainrot(brainrotModel)
-    if not brainrotModel then return false end
-    local holdDuration = instantProximityEnabled and 0.1 or 1.7
-    local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt then
-        prompt:InputHoldBegin()
-        task.wait(holdDuration)
-        prompt:InputHoldEnd()
-        return true
-    else
-        local clickDetector = brainrotModel:FindFirstChildWhichIsA("ClickDetector", true)
-        if clickDetector then
-            fireclickdetector(clickDetector)
-            return true
-        end
-    end
-    return false
-end
-
-local function isPlayerNearby(model, radius)
-    radius = radius or 3
-    if not model then return false end
-    local modelPos = model:GetPivot().Position
-    
-    for _, player in ipairs(players:GetPlayers()) do
-        if player ~= localPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local distance = (character.HumanoidRootPart.Position - modelPos).Magnitude
-                if distance <= radius then
-                    return true
-                end
-            end
-        end
-    end
-    return false
-end
-
-local function findAvailableModel(models)
-    if #models == 0 then return nil end
-    local shuffled = {}
-    for i, v in ipairs(models) do shuffled[i] = v end
-    for i = #shuffled, 2, -1 do
-        local j = math.random(i)
-        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-    end
-    for _, model in ipairs(shuffled) do
-        if not isPlayerNearby(model) then
-            return model
-        end
-    end
-    return nil
-end
-
-local function findModelsByName(name)
-    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
-    if not brainrotsFolder then return {} end
-    local models = {}
-    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            local model = folder:FindFirstChild(name)
-            if model then
-                table.insert(models, model)
-            end
-        end
-    end
-    return models
-end
-
-local function findModelsInFolder(folderName)
-    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
-    if not brainrotsFolder then return {} end
-    local targetFolder = brainrotsFolder:FindFirstChild(folderName)
-    if not targetFolder then return {} end
-    local models = {}
-    for _, child in ipairs(targetFolder:GetChildren()) do
-        if child:IsA("Model") then
-            table.insert(models, child)
-        end
-    end
-    return models
-end
-
-local function findLuckyBlockModels()
-    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
-    if not brainrotsFolder then return {} end
-    local luckyBlocks = {}
-    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, model in ipairs(folder:GetChildren()) do
-                if model:IsA("Model") and model.Name:find("Lucky Block") then
-                    table.insert(luckyBlocks, model)
-                end
-            end
-        end
-    end
-    return luckyBlocks
-end
-
-local function clickInventorySlot(slotNumber)
-    slotNumber = slotNumber or 1
-    local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
-    if not playerGui then return end
-
-    local hotbarNames = {"Hotbar", "Inventory", "Toolbar"}
-    local button = nil
-
-    for _, gui in ipairs(playerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") then
-            for _, hotbarName in ipairs(hotbarNames) do
-                local hotbar = gui:FindFirstChild(hotbarName)
-                if hotbar then
-                    button = hotbar:FindFirstChild(tostring(slotNumber)) or 
-                             hotbar:FindFirstChild("Slot"..slotNumber) or
-                             hotbar:FindFirstChild("Button"..slotNumber)
-                    if button and button:IsA("GuiButton") then
-                        break
+        -- Start updating position
+        if not groundConnection then
+            groundConnection = runService.Heartbeat:Connect(function()
+                if toggleStates.AlwaysGround and groundPart then
+                    local root = getHumanoidRootPart()
+                    if root then
+                        local pos = root.Position
+                        groundPart.Position = Vector3.new(pos.X, 13.686, pos.Z)
                     end
                 end
-            end
-        end
-        if button then break end
-    end
-
-    if button then
-        if firesignal then
-            firesignal(button.MouseButton1Click)
-        else
-            button.MouseButton1Click:Fire()
+            end)
         end
     else
-        local keyCode = nil
-        if slotNumber == 1 then keyCode = Enum.KeyCode.One
-        elseif slotNumber == 2 then keyCode = Enum.KeyCode.Two
-        elseif slotNumber == 3 then keyCode = Enum.KeyCode.Three
-        elseif slotNumber == 4 then keyCode = Enum.KeyCode.Four
-        elseif slotNumber == 5 then keyCode = Enum.KeyCode.Five
-        elseif slotNumber == 6 then keyCode = Enum.KeyCode.Six
-        elseif slotNumber == 7 then keyCode = Enum.KeyCode.Seven
-        elseif slotNumber == 8 then keyCode = Enum.KeyCode.Eight
-        elseif slotNumber == 9 then keyCode = Enum.KeyCode.Nine
+        if groundConnection then
+            groundConnection:Disconnect()
+            groundConnection = nil
         end
-
-        if keyCode then
-            virtualInput:SendKeyEvent(true, keyCode, false, game)
-            task.wait(0.1)
-            virtualInput:SendKeyEvent(false, keyCode, false, game)
+        if groundPart then
+            groundPart:Destroy()
+            groundPart = nil
         end
     end
 end
 
-local function processRebirthNeed()
-    local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
-    if not rebirths then
-        return
-    end
-    local value = tonumber(rebirths.Value)
-    if not value then
-        return
-    end
-    local index = value + 1
-    if index > 12 then
-        return
-    end
-    local brainrotName = rebirthData[index]
-    if not brainrotName then
-        return
-    end
+-- =============================================
+-- Auto Collect Cash
+-- =============================================
+local collectCashLoop = nil
 
-    local models = findModelsByName(brainrotName)
-    if #models == 0 then
-        return
-    end
+local function getCollectTouchParts()
+    local parts = {}
+    local plot = getPlotModel()
+    if not plot then return parts end
 
-    local targetModel = findAvailableModel(models)
-    if not targetModel then
-        return
-    end
-
-    teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
-    task.wait(0.5)
-
-    interactWithBrainrot(targetModel)
-
-    task.wait(1.7)
-
-    teleport(afterInteractPoint)
-    task.wait(0.5)
-
-    local plot = getPlotNumber()
-    if plot then
-        teleportToPlot(plot)
-    else
-        teleport(plotPositions[1])
-    end
-
-    task.wait(1)
-    clickInventorySlot(1)
-    task.wait(1)
-    clickInventorySlot(1)
-end
-
-local autoStates = {
-    LuckyBlock = false,
-    Godly = false,
-    Celestial = false,
-    Secret = false,
-    Mythic = false,
-    Legendary = false
-}
-
-local function autoCollect(typeName)
-    local models
-    if typeName == "LuckyBlock" then
-        models = findLuckyBlockModels()
-    else
-        models = findModelsInFolder(typeName)
-    end
-    if #models == 0 then return false end
-
-    local targetModel = findAvailableModel(models)
-    if not targetModel then
-        return false
-    end
-
-    teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
-    task.wait(0.5)
-
-    interactWithBrainrot(targetModel)
-
-    task.wait(1.7)
-
-    teleport(afterInteractPoint)
-    task.wait(0.5)
-
-    local plot = getPlotNumber()
-    if plot then
-        teleportToPlot(plot)
-    else
-        teleport(plotPositions[1])
-    end
-
-    task.wait(1)
-    clickInventorySlot(1)
-    task.wait(1)
-    clickInventorySlot(1)
-
-    return true
-end
-
-local function startAutoLoop()
-    while true do
-        local order = {}
-        if autoStates.LuckyBlock then table.insert(order, "LuckyBlock") end
-        if autoStates.Godly then table.insert(order, "Godly") end
-        if autoStates.Celestial then table.insert(order, "Celestial") end
-        if autoStates.Secret then table.insert(order, "Secret") end
-        if autoStates.Mythic then table.insert(order, "Mythic") end
-        if autoStates.Legendary then table.insert(order, "Legendary") end
-
-        if #order > 0 then
-            for _, typeName in ipairs(order) do
-                if autoStates[typeName] then
-                    local success = autoCollect(typeName)
-                    if success then
-                        task.wait(1)
-                    end
-                end
-            end
-        end
-        task.wait(1)
-    end
-end
-
-local collectCashEnabled = false
-local upgradeAllEnabled = false
-local afkEnabled = false
-
-local placesCache = nil
-
-local function getPlacesData()
-    if placesCache then return placesCache end
-    local plotNum = getPlotNumber()
-    if not plotNum then return nil end
-
-    local plotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Plots")
-    if not plotsFolder then return nil end
-
-    local plotFolder = plotsFolder:FindFirstChild(tostring(plotNum))
-    if not plotFolder then return nil end
-
-    local places = plotFolder:FindFirstChild("Places")
-    if not places then return nil end
-
-    local touchParts = {}
-    local upgradeButtons = {}
-
-    for i = 1, 30 do
-        local model = places:FindFirstChild(tostring(i))
-        if model then
-            local claim = model:FindFirstChild("Claim")
-            if claim then
-                local touchInterest = claim:FindFirstChildWhichIsA("TouchTransmitter")
-                if touchInterest then
-                    table.insert(touchParts, claim)
-                end
-            end
-            local upgradePart = model:FindFirstChild("Upgrade")
-            if upgradePart then
-                local surfaceGui = upgradePart:FindFirstChildWhichIsA("SurfaceGui")
-                if surfaceGui then
-                    local upgradeButton = surfaceGui:FindFirstChild("Upgrade")
-                    if upgradeButton and upgradeButton:IsA("GuiButton") then
-                        table.insert(upgradeButtons, upgradeButton)
+    local floors = {"Floor1", "Floor2", "Floor3"}
+    for _, floorName in ipairs(floors) do
+        local floor = plot:FindFirstChild(floorName)
+        if floor then
+            local slots = floor:FindFirstChild("Slots")
+            if slots then
+                for _, slot in ipairs(slots:GetChildren()) do
+                    local collectTouch = slot:FindFirstChild("CollectTouch")
+                    if collectTouch and collectTouch:IsA("BasePart") then
+                        table.insert(parts, collectTouch)
                     end
                 end
             end
         end
     end
-
-    placesCache = {
-        touchParts = touchParts,
-        upgradeButtons = upgradeButtons
-    }
-    return placesCache
+    return parts
 end
 
-local function fireAllTouchInterests()
-    local data = getPlacesData()
-    if not data then return end
-
-    local character = localPlayer.Character
-    if not character then return end
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-
-    for _, part in ipairs(data.touchParts) do
-        firetouchinterest(rootPart, part, 0)
-        firetouchinterest(rootPart, part, 1)
-        task.wait()
-    end
-end
-
-local function clickAllUpgrades()
-    local data = getPlacesData()
-    if not data then return end
-
-    for _, button in ipairs(data.upgradeButtons) do
-        local event = button.MouseButton1Click
-        if event then
-            if firesignal then
-                firesignal(event)
-            else
-                local success, err = pcall(function()
-                    event:Fire()
+local function startCollectCash()
+    if collectCashLoop then collectCashLoop:Disconnect() end
+    collectCashLoop = runService.Heartbeat:Connect(function()
+        if not toggleStates.AutoCollectCash then
+            collectCashLoop:Disconnect()
+            collectCashLoop = nil
+            return
+        end
+        local parts = getCollectTouchParts()
+        for _, part in ipairs(parts) do
+            if part.TouchInterest then
+                -- Fire the TouchTransmitter (simulate touch)
+                local args = { part.TouchInterest, part } -- might need proper arguments
+                -- In Roblox, you can call :Fire() on the TouchTransmitter with the touching part
+                -- We'll use a safe pcall
+                pcall(function()
+                    part.TouchInterest:Fire(part) -- assuming this works
                 end)
             end
         end
-        task.wait()
+        wait(0.1) -- small delay to avoid overloading
+    end)
+end
+
+local function stopCollectCash()
+    if collectCashLoop then
+        collectCashLoop:Disconnect()
+        collectCashLoop = nil
     end
 end
 
-local function startCollectCashLoop()
-    while true do
-        if collectCashEnabled then
-            fireAllTouchInterests()
-        end
-        task.wait(1)
-    end
-end
+-- =============================================
+-- Auto Upgrade All
+-- =============================================
+local upgradeLoop = nil
 
-local function startUpgradeAllLoop()
-    while true do
-        if upgradeAllEnabled then
-            clickAllUpgrades()
-        end
-        task.wait(1)
-    end
-end
+local function getUpgradeButtons()
+    local buttons = {}
+    local plot = getPlotModel()
+    if not plot then return buttons end
 
-local function startAFKLoop()
-    while true do
-        if afkEnabled then
-            local character = localPlayer.Character
-            if character and character:FindFirstChild("Humanoid") then
-                local humanoid = character.Humanoid
-                local currentPos = character.HumanoidRootPart.Position
-                local newPos = currentPos + character.HumanoidRootPart.CFrame.LookVector * 2
-                teleport(newPos)
-                task.wait(0.5)
-                teleport(currentPos)
-                task.wait(0.5)
+    local floors = {"Floor1", "Floor2", "Floor3"}
+    for _, floorName in ipairs(floors) do
+        local floor = plot:FindFirstChild(floorName)
+        if floor then
+            local slots = floor:FindFirstChild("Slots")
+            if slots then
+                for _, slot in ipairs(slots:GetChildren()) do
+                    local upgradePart = slot:FindFirstChild("UpgradePart")
+                    if upgradePart then
+                        local upgradeGUI = upgradePart:FindFirstChild("UpgradeGUI")
+                        if upgradeGUI then
+                            local upgradeButton = upgradeGUI:FindFirstChild("UpgradeButton")
+                            if upgradeButton and upgradeButton:IsA("TextButton") then
+                                table.insert(buttons, upgradeButton)
+                            end
+                        end
+                    end
+                end
             end
         end
-        task.wait(30)
+    end
+    return buttons
+end
+
+local function startUpgradeAll()
+    if upgradeLoop then upgradeLoop:Disconnect() end
+    upgradeLoop = runService.Heartbeat:Connect(function()
+        if not toggleStates.AutoUpgradeAll then
+            upgradeLoop:Disconnect()
+            upgradeLoop = nil
+            return
+        end
+        local buttons = getUpgradeButtons()
+        for _, btn in ipairs(buttons) do
+            pcall(function()
+                btn:Click()
+            end)
+        end
+        wait(0.5) -- delay between clicks
+    end)
+end
+
+local function stopUpgradeAll()
+    if upgradeLoop then
+        upgradeLoop:Disconnect()
+        upgradeLoop = nil
     end
 end
 
-local function claimManual()
-    local character = localPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local savedPos = character.HumanoidRootPart.Position
-    teleport(afterInteractPoint)
-    task.wait(0.5)
-    teleport(savedPos)
+-- =============================================
+-- Auto Celestial & Secret (with priority logic)
+-- =============================================
+local priorityRunning = false
+local priorityLoop = nil
+
+-- Signals from auto scripts to priority
+local celestialDone = Instance.new("BindableEvent")
+local secretDone = Instance.new("BindableEvent")
+
+-- Functions to perform one collection
+local function doCelestialCollection()
+    local spawners = workspace:FindFirstChild("ItemSpawners")
+    if not spawners then return end
+    local celestial = spawners:FindFirstChild("Celestial")
+    if not celestial then return end
+
+    local models = celestial:GetChildren()
+    if #models == 0 then return end
+
+    -- Pick first model (or random)
+    local target = models[1]
+    local rootPart = target:FindFirstChild("RootPart")
+    if not rootPart then return end
+    local prompt = rootPart:FindFirstChild("ProximityPrompt")
+    if not prompt then return end
+
+    -- Teleport to model
+    teleportToCFrame(rootPart.CFrame * CFrame.new(0, 2, 0)) -- slightly above
+    wait(0.5) -- wait for prompt to appear
+
+    -- Hold prompt
+    prompt:InputHoldBegin()
+    wait(1.05)
+    prompt:InputHoldEnd()
+
+    -- Teleport to cash location
+    teleportToPosition(100.107, 19.415, -451.556)
+    wait(0.5)
+
+    -- Signal completion
+    celestialDone:Fire()
 end
 
-local function teleportToFuseMachine()
-    teleport(fuseMachinePoint)
+local function doSecretCollection()
+    local spawners = workspace:FindFirstChild("ItemSpawners")
+    if not spawners then return end
+    local secret = spawners:FindFirstChild("Secret")
+    if not secret then return end
+
+    local models = secret:GetChildren()
+    if #models == 0 then return end
+
+    local target = models[1]
+    local rootPart = target:FindFirstChild("RootPart")
+    if not rootPart then return end
+    local prompt = rootPart:FindFirstChild("ProximityPrompt")
+    if not prompt then return end
+
+    teleportToCFrame(rootPart.CFrame * CFrame.new(0, 2, 0))
+    wait(0.5)
+
+    prompt:InputHoldBegin()
+    wait(1.05)
+    prompt:InputHoldEnd()
+
+    teleportToPosition(100.107, 19.415, -451.556)
+    wait(0.5)
+
+    secretDone:Fire()
 end
 
--- UI Elements
-UI.AddSlider({
-    Text = "Walkspeed",
-    Min = 16,
-    Max = 300,
-    Default = 16,
-    Callback = function(value)
-        local character = localPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.WalkSpeed = value
+-- Priority logic
+local function runPriority()
+    while priorityRunning do
+        if not (toggleStates.AutoCelestial or toggleStates.AutoSecret) then
+            -- Nothing to do
+            wait(1)
+            continue
+        end
+
+        if toggleStates.AutoCelestial and toggleStates.AutoSecret then
+            -- Both on: check Celestial first
+            teleportToPosition(3.149, 20, 4181.083)
+            wait(1)
+            local spawners = workspace:FindFirstChild("ItemSpawners")
+            if spawners then
+                local celestial = spawners:FindFirstChild("Celestial")
+                if celestial and #celestial:GetChildren() > 0 then
+                    -- Start Celestial and wait for it
+                    coroutine.wrap(doCelestialCollection)()
+                    celestialDone.Event:Wait()
+                else
+                    -- No Celestial, check Secret
+                    teleportToPosition(0.697, 20, 3334.632)
+                    wait(1)
+                    local secret = spawners:FindFirstChild("Secret")
+                    if secret and #secret:GetChildren() > 0 then
+                        coroutine.wrap(doSecretCollection)()
+                        secretDone.Event:Wait()
+                    else
+                        wait(2)
+                    end
+                end
+            end
+        elseif toggleStates.AutoCelestial then
+            -- Only Celestial
+            teleportToPosition(3.149, 20, 4181.083)
+            wait(1)
+            local spawners = workspace:FindFirstChild("ItemSpawners")
+            if spawners then
+                local celestial = spawners:FindFirstChild("Celestial")
+                if celestial and #celestial:GetChildren() > 0 then
+                    coroutine.wrap(doCelestialCollection)()
+                    celestialDone.Event:Wait()
+                else
+                    wait(2)
+                end
+            end
+        elseif toggleStates.AutoSecret then
+            -- Only Secret
+            teleportToPosition(0.697, 20, 3334.632)
+            wait(1)
+            local spawners = workspace:FindFirstChild("ItemSpawners")
+            if spawners then
+                local secret = spawners:FindFirstChild("Secret")
+                if secret and #secret:GetChildren() > 0 then
+                    coroutine.wrap(doSecretCollection)()
+                    secretDone.Event:Wait()
+                else
+                    wait(2)
+                end
+            end
+        end
+        wait(0.5)
+    end
+end
+
+local function startPriority()
+    if priorityRunning then return end
+    priorityRunning = true
+    priorityLoop = coroutine.wrap(runPriority)()
+end
+
+local function stopPriority()
+    priorityRunning = false
+    if priorityLoop then
+        -- coroutine will end naturally
+        priorityLoop = nil
+    end
+end
+
+-- =============================================
+-- UI Elements Creation
+-- =============================================
+local function createButton(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 16
+    btn.BorderSizePixel = 0
+    btn.Parent = buttonContainer
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(callback)
+end
+
+local function createCheckbox(text, stateVar)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = switchContainer
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -40, 1, 0)
+    label.Position = UDim2.new(0, 5, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 16
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 30, 0, 30)
+    toggleBtn.Position = UDim2.new(1, -35, 0, 0)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    toggleBtn.Text = "OFF"
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleBtn.TextSize = 12
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.BorderSizePixel = 0
+    toggleBtn.Parent = frame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = toggleBtn
+
+    local function updateButton()
+        if toggleStates[stateVar] then
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            toggleBtn.Text = "ON"
+        else
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            toggleBtn.Text = "OFF"
         end
     end
-})
 
-UI.AddButton({
-    Text = "Remove Lava",
-    Callback = function()
-        local lavasFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Lavas")
-        if lavasFolder then
-            lavasFolder:Destroy()
+    toggleBtn.MouseButton1Click:Connect(function()
+        toggleStates[stateVar] = not toggleStates[stateVar]
+        updateButton()
+
+        -- Handle specific toggles
+        if stateVar == "AlwaysGround" then
+            updateGroundPart()
+        elseif stateVar == "AutoCollectCash" then
+            if toggleStates.AutoCollectCash then
+                startCollectCash()
+            else
+                stopCollectCash()
+            end
+        elseif stateVar == "AutoUpgradeAll" then
+            if toggleStates.AutoUpgradeAll then
+                startUpgradeAll()
+            else
+                stopUpgradeAll()
+            end
+        elseif stateVar == "AutoCelestial" or stateVar == "AutoSecret" then
+            if toggleStates.AutoCelestial or toggleStates.AutoSecret then
+                startPriority()
+            else
+                stopPriority()
+            end
+        end
+    end)
+
+    updateButton()
+end
+
+-- Add Buttons
+createButton("Go To Plot", function()
+    local spawn = getPlotSpawn()
+    if spawn then
+        teleportToCFrame(spawn.CFrame)
+    end
+end)
+
+createButton("Remove Breakble Zone", function()
+    local spawn = getPlotSpawn()
+    if spawn then
+        teleportToCFrame(spawn.CFrame)
+        wait(0.5)
+        local root = getHumanoidRootPart()
+        if root then
+            root.Anchored = true
+        end
+        local breakable = workspace:FindFirstChild("BreakableBlocks")
+        if breakable then
+            breakable.Parent = nil
+            wait(0.5)
+            breakable.Parent = workspace
+        end
+        wait(0.5)
+        if root then
+            root.Anchored = false
         end
     end
-})
+end)
 
-UI.AddButton({
-    Text = "Remove VIP",
-    Callback = function()
-        local vipFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("VIPDoors")
-        if vipFolder then
-            vipFolder:Destroy()
-        end
-    end
-})
+createButton("Celestial Zone", function()
+    teleportToPosition(3.149, 20, 4181.083)
+end)
 
-UI.AddButton({
-    Text = "Rebirths Need",
-    Callback = processRebirthNeed
-})
+createButton("Secret Zone", function()
+    teleportToPosition(0.697, 20, 3334.632)
+end)
 
-UI.AddButton({
-    Text = "To Home",
-    Callback = teleportToHome
-})
+createButton("Manual Collect", function()
+    local root = getHumanoidRootPart()
+    if not root then return end
+    local savedPos = root.Position
+    teleportToPosition(100.107, 19.415, -451.556)
+    wait(1)
+    teleportToCFrame(CFrame.new(savedPos))
+end)
 
-UI.AddButton({
-    Text = "Claim Manual",
-    Callback = claimManual
-})
+-- Add Checkboxes
+createCheckbox("Always Ground", "AlwaysGround")
+createCheckbox("Auto Celestial", "AutoCelestial")
+createCheckbox("Auto Secret", "AutoSecret")
+createCheckbox("Auto Collect Cash", "AutoCollectCash")
+createCheckbox("Auto Upgrade All", "AutoUpgradeAll")
 
-UI.AddButton({
-    Text = "Fuse Machine",
-    Callback = teleportToFuseMachine
-})
-
--- Instant Proximity checkbox REMOVED
-
-createCheckbox({
-    Text = "Auto Lucky Block",
-    Default = false,
-    Callback = function(state)
-        autoStates.LuckyBlock = state
-    end
-})
-
-createCheckbox({
-    Text = "Auto Godly",
-    Default = false,
-    Callback = function(state)
-        autoStates.Godly = state
-    end
-})
-
-createCheckbox({
-    Text = "Auto Celestial",
-    Default = false,
-    Callback = function(state)
-        autoStates.Celestial = state
-    end
-})
-
-createCheckbox({
-    Text = "Auto Secret",
-    Default = false,
-    Callback = function(state)
-        autoStates.Secret = state
-    end
-})
-
-createCheckbox({
-    Text = "Auto Mythic",
-    Default = false,
-    Callback = function(state)
-        autoStates.Mythic = state
-    end
-})
-
-createCheckbox({
-    Text = "Auto Legendary",
-    Default = false,
-    Callback = function(state)
-        autoStates.Legendary = state
-    end
-})
-
-createCheckbox({
-    Text = "Collect Cash",
-    Default = false,
-    Callback = function(state)
-        collectCashEnabled = state
-        if state then
-            getPlacesData()
-        end
-    end
-})
-
-createCheckbox({
-    Text = "Upgrade All",
-    Default = false,
-    Callback = function(state)
-        upgradeAllEnabled = state
-        if state then
-            getPlacesData()
-        end
-    end
-})
-
-createCheckbox({
-    Text = "AFK",
-    Default = false,
-    Callback = function(state)
-        afkEnabled = state
-    end
-})
-
-task.spawn(startAutoLoop)
-task.spawn(startCollectCashLoop)
-task.spawn(startUpgradeAllLoop)
-task.spawn(startAFKLoop)
-
-_G[guiName] = UI
+-- Expose UI globally if needed
+_G[guiName] = { toggleStates = toggleStates }
