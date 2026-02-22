@@ -7,7 +7,7 @@ local replicatedStorage = game:GetService("ReplicatedStorage")
 local virtualInput = game:GetService("VirtualInputManager")
 
 local localPlayer = players.LocalPlayer
-local guiName = "RunForBrainrot"  -- Ganti nama GUI
+local guiName = "RunForBrainrot"
 
 if coreGui:FindFirstChild(guiName) then
     coreGui:FindFirstChild(guiName):Destroy()
@@ -38,7 +38,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -70, 0, 30)
 title.Position = UDim2.new(0, 5, 0, 5)
 title.BackgroundTransparency = 1
-title.Text = "Run For Brainrot"  -- Ganti judul
+title.Text = "Run For Brainrot"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
@@ -99,86 +99,90 @@ local function createContainer(name)
     return container
 end
 
+-- Containers (all kept for structure)
 local slideContainer = createContainer("SlideContainer")
 local buttonContainer = createContainer("ButtonContainer")
 local switchContainer = createContainer("SwitchContainer")
 
--- ============================================================
--- FUNGSI-FUNGSI UTAMA (diperbaiki)
--- ============================================================
+-- ===== PLOT DETECTION (FIXED) =====
+local currentPlotModel = nil
+local plotPositions = {  -- fallback positions (not used if plot model found)
+    [1] = Vector3.new(100.205, 7, 83.222),
+    [2] = Vector3.new(50.205, 7, 83.221),
+    [3] = Vector3.new(0.205, 7, 83.221),
+    [4] = Vector3.new(-49.795, 7, 83.221),
+    [5] = Vector3.new(-99.795, 7, 83.221)
+}
 
--- Mendapatkan folder plot milik player sendiri
-local function getPlayerPlotFolder()
-    local playerName = localPlayer.Name
-    return workspace:FindFirstChild("Plot_" .. playerName)
+local function getPlotModel()
+    if currentPlotModel and currentPlotModel.Parent then
+        return currentPlotModel
+    end
+    local plotName = "Plot_" .. localPlayer.Name
+    local model = workspace:FindFirstChild(plotName)
+    if model then
+        currentPlotModel = model
+        return model
+    end
+    return nil
 end
 
--- Teleport ke plot sendiri (Go To Plot)
+local function teleport(position)
+    local character = localPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(position)
+    end
+end
+
 local function teleportToHome()
-    local plotFolder = getPlayerPlotFolder()
-    if plotFolder then
-        -- Coba cari part "Spawn" atau "Start" di dalam plot
-        local spawnPart = plotFolder:FindFirstChild("Spawn") or plotFolder:FindFirstChild("Start") or plotFolder:FindFirstChild("Base")
-        if spawnPart and spawnPart:IsA("BasePart") then
-            local character = localPlayer.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                character.HumanoidRootPart.CFrame = spawnPart.CFrame + Vector3.new(0, 3, 0)
-            end
+    local plotModel = getPlotModel()
+    if plotModel then
+        local primaryPart = plotModel.PrimaryPart
+        if primaryPart then
+            teleport(primaryPart.Position + Vector3.new(0, 5, 0))
         else
-            -- Jika tidak ada, teleport ke posisi tengah plot
-            local cframe = plotFolder:GetPivot()
-            local character = localPlayer.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                character.HumanoidRootPart.CFrame = cframe + Vector3.new(0, 3, 0)
-            end
+            teleport(plotModel:GetPivot().Position + Vector3.new(0, 5, 0))
         end
     else
-        warn("Plot folder not found!")
+        -- fallback to first plot position
+        teleport(plotPositions[1])
     end
 end
 
--- Menghapus semua objek bernama "BreakableZone" (Remove Breakble Zone)
-local function removeBreakableZone()
-    -- Cari di workspace semua instance dengan nama "BreakableZone" (atau "BreakbleZone")
-    local zones = workspace:GetDescendants()
-    for _, obj in ipairs(zones) do
-        if obj.Name == "BreakableZone" or obj.Name == "BreakbleZone" then
-            obj:Destroy()
+-- ===== FUSE MACHINE FUNCTIONS (unchanged) =====
+local afterInteractPoint = Vector3.new(-127.503, 5, -1.24)
+local fuseMachinePoint = Vector3.new(-1.072, 510, -3609.463)
+
+local function fireProximityPrompt(prompt)
+    if not (prompt and prompt:IsA("ProximityPrompt")) then return end
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+        return
+    end
+    local part = prompt.Parent
+    if part and part:IsA("BasePart") then
+        local character = localPlayer.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = part.CFrame + Vector3.new(0, 3, 0)
+            task.wait(0.3)
         end
     end
-    -- Coba juga di GameFolder jika ada
-    local gameFolder = workspace:FindFirstChild("GameFolder")
-    if gameFolder then
-        for _, obj in ipairs(gameFolder:GetDescendants()) do
-            if obj.Name == "BreakableZone" or obj.Name == "BreakbleZone" then
-                obj:Destroy()
-            end
-        end
-    end
+    pcall(function()
+        prompt:InputHoldBegin()
+        task.wait(prompt.HoldDuration)
+        prompt:InputHoldEnd()
+    end)
 end
 
--- ============================================================
--- AUTO COLLECT CASH & AUTO UPGRADE ALL (diperbaiki)
--- ============================================================
-
-local collectCashEnabled = false
-local upgradeAllEnabled = false
+-- ===== AUTO COLLECT / UPGRADE (FIXED to use plot model) =====
 local placesCache = nil
-local lastPlotName = ""
 
 local function getPlacesData()
-    local plotFolder = getPlayerPlotFolder()
-    if not plotFolder then return nil end
-
-    -- Jika plot berubah, reset cache
-    if plotFolder.Name ~= lastPlotName then
-        placesCache = nil
-        lastPlotName = plotFolder.Name
-    end
-
     if placesCache then return placesCache end
+    local plotModel = getPlotModel()
+    if not plotModel then return nil end
 
-    local places = plotFolder:FindFirstChild("Places")
+    local places = plotModel:FindFirstChild("Places")
     if not places then return nil end
 
     local touchParts = {}
@@ -187,7 +191,6 @@ local function getPlacesData()
     for i = 1, 30 do
         local model = places:FindFirstChild(tostring(i))
         if model then
-            -- Claim (TouchTransmitter)
             local claim = model:FindFirstChild("Claim")
             if claim then
                 local touchInterest = claim:FindFirstChildWhichIsA("TouchTransmitter")
@@ -195,7 +198,6 @@ local function getPlacesData()
                     table.insert(touchParts, claim)
                 end
             end
-            -- Upgrade (Tombol di SurfaceGui)
             local upgradePart = model:FindFirstChild("Upgrade")
             if upgradePart then
                 local surfaceGui = upgradePart:FindFirstChildWhichIsA("SurfaceGui")
@@ -219,12 +221,10 @@ end
 local function fireAllTouchInterests()
     local data = getPlacesData()
     if not data then return end
-
     local character = localPlayer.Character
     if not character then return end
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
-
     for _, part in ipairs(data.touchParts) do
         firetouchinterest(rootPart, part, 0)
         firetouchinterest(rootPart, part, 1)
@@ -235,21 +235,275 @@ end
 local function clickAllUpgrades()
     local data = getPlacesData()
     if not data then return end
-
     for _, button in ipairs(data.upgradeButtons) do
         local event = button.MouseButton1Click
         if event then
             if firesignal then
                 firesignal(event)
             else
-                pcall(function()
-                    event:Fire()
-                end)
+                pcall(function() event:Fire() end)
             end
         end
         task.wait()
     end
 end
+
+-- ===== REBIRTH DATA (unchanged) =====
+local rebirthData = {
+    [1] = "BonecaAmbalabu",
+    [2] = "CactoHipopotamo",
+    [3] = "BallerinaCappuccina",
+    [4] = "CocofantoElefanto",
+    [5] = "Garama",
+    [6] = "UdinDinDinDun",
+    [7] = "LaVaccaSaturnoSatunita",
+    [8] = "LasVaquitasSaturnitas",
+    [9] = "GorilloWatermelondrillo",
+    [10] = "CompactaroniDiskaloni",
+    [11] = "ChillinChilli",
+    [12] = "CrazylonePizaione",
+}
+
+local instantProximityEnabled = false  -- kept for compatibility
+
+local function isPlayerNearby(model, radius)
+    radius = radius or 3
+    if not model then return false end
+    local modelPos = model:GetPivot().Position
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= localPlayer then
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local distance = (character.HumanoidRootPart.Position - modelPos).Magnitude
+                if distance <= radius then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+local function findAvailableModel(models)
+    if #models == 0 then return nil end
+    local shuffled = {}
+    for i, v in ipairs(models) do shuffled[i] = v end
+    for i = #shuffled, 2, -1 do
+        local j = math.random(i)
+        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+    end
+    for _, model in ipairs(shuffled) do
+        if not isPlayerNearby(model) then
+            return model
+        end
+    end
+    return nil
+end
+
+local function findModelsByName(name)
+    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
+    if not brainrotsFolder then return {} end
+    local models = {}
+    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            local model = folder:FindFirstChild(name)
+            if model then
+                table.insert(models, model)
+            end
+        end
+    end
+    return models
+end
+
+local function findModelsInFolder(folderName)
+    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
+    if not brainrotsFolder then return {} end
+    local targetFolder = brainrotsFolder:FindFirstChild(folderName)
+    if not targetFolder then return {} end
+    local models = {}
+    for _, child in ipairs(targetFolder:GetChildren()) do
+        if child:IsA("Model") then
+            table.insert(models, child)
+        end
+    end
+    return models
+end
+
+local function findLuckyBlockModels()
+    local brainrotsFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Brainrots")
+    if not brainrotsFolder then return {} end
+    local luckyBlocks = {}
+    for _, folder in ipairs(brainrotsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, model in ipairs(folder:GetChildren()) do
+                if model:IsA("Model") and model.Name:find("Lucky Block") then
+                    table.insert(luckyBlocks, model)
+                end
+            end
+        end
+    end
+    return luckyBlocks
+end
+
+local function clickInventorySlot(slotNumber)
+    slotNumber = slotNumber or 1
+    local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then return end
+    local hotbarNames = {"Hotbar", "Inventory", "Toolbar"}
+    local button = nil
+    for _, gui in ipairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") then
+            for _, hotbarName in ipairs(hotbarNames) do
+                local hotbar = gui:FindFirstChild(hotbarName)
+                if hotbar then
+                    button = hotbar:FindFirstChild(tostring(slotNumber)) or 
+                             hotbar:FindFirstChild("Slot"..slotNumber) or
+                             hotbar:FindFirstChild("Button"..slotNumber)
+                    if button and button:IsA("GuiButton") then
+                        break
+                    end
+                end
+            end
+        end
+        if button then break end
+    end
+    if button then
+        if firesignal then
+            firesignal(button.MouseButton1Click)
+        else
+            button.MouseButton1Click:Fire()
+        end
+    else
+        local keyCode = nil
+        if slotNumber == 1 then keyCode = Enum.KeyCode.One
+        elseif slotNumber == 2 then keyCode = Enum.KeyCode.Two
+        elseif slotNumber == 3 then keyCode = Enum.KeyCode.Three
+        elseif slotNumber == 4 then keyCode = Enum.KeyCode.Four
+        elseif slotNumber == 5 then keyCode = Enum.KeyCode.Five
+        elseif slotNumber == 6 then keyCode = Enum.KeyCode.Six
+        elseif slotNumber == 7 then keyCode = Enum.KeyCode.Seven
+        elseif slotNumber == 8 then keyCode = Enum.KeyCode.Eight
+        elseif slotNumber == 9 then keyCode = Enum.KeyCode.Nine
+        end
+        if keyCode then
+            virtualInput:SendKeyEvent(true, keyCode, false, game)
+            task.wait(0.1)
+            virtualInput:SendKeyEvent(false, keyCode, false, game)
+        end
+    end
+end
+
+local function interactWithBrainrot(brainrotModel)
+    if not brainrotModel then return false end
+    local holdDuration = instantProximityEnabled and 0.1 or 1.7
+    local prompt = brainrotModel:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then
+        prompt:InputHoldBegin()
+        task.wait(holdDuration)
+        prompt:InputHoldEnd()
+        return true
+    else
+        local clickDetector = brainrotModel:FindFirstChildWhichIsA("ClickDetector", true)
+        if clickDetector then
+            fireclickdetector(clickDetector)
+            return true
+        end
+    end
+    return false
+end
+
+-- ===== REBIRTH PROCESS (updated to use teleportToHome) =====
+local function processRebirthNeed()
+    local rebirths = localPlayer.leaderstats and localPlayer.leaderstats:FindFirstChild("Rebirths")
+    if not rebirths then return end
+    local value = tonumber(rebirths.Value)
+    if not value then return end
+    local index = value + 1
+    if index > 12 then return end
+    local brainrotName = rebirthData[index]
+    if not brainrotName then return end
+
+    local models = findModelsByName(brainrotName)
+    if #models == 0 then return end
+
+    local targetModel = findAvailableModel(models)
+    if not targetModel then return end
+
+    teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
+    task.wait(0.5)
+    interactWithBrainrot(targetModel)
+    task.wait(1.7)
+    teleport(afterInteractPoint)
+    task.wait(0.5)
+    teleportToHome()  -- FIXED: now uses actual plot location
+    task.wait(1)
+    clickInventorySlot(1)
+    task.wait(1)
+    clickInventorySlot(1)
+end
+
+-- ===== AUTO COLLECT LOOPS (updated to use teleportToHome) =====
+local autoStates = {
+    LuckyBlock = false,
+    Godly = false,
+    Celestial = false,
+    Secret = false,
+    Mythic = false,
+    Legendary = false
+}
+
+local function autoCollect(typeName)
+    local models
+    if typeName == "LuckyBlock" then
+        models = findLuckyBlockModels()
+    else
+        models = findModelsInFolder(typeName)
+    end
+    if #models == 0 then return false end
+
+    local targetModel = findAvailableModel(models)
+    if not targetModel then return false end
+
+    teleport(targetModel:GetPivot().Position + Vector3.new(0, 3, 0))
+    task.wait(0.5)
+    interactWithBrainrot(targetModel)
+    task.wait(1.7)
+    teleport(afterInteractPoint)
+    task.wait(0.5)
+    teleportToHome()  -- FIXED
+    task.wait(1)
+    clickInventorySlot(1)
+    task.wait(1)
+    clickInventorySlot(1)
+    return true
+end
+
+local function startAutoLoop()
+    while true do
+        local order = {}
+        if autoStates.LuckyBlock then table.insert(order, "LuckyBlock") end
+        if autoStates.Godly then table.insert(order, "Godly") end
+        if autoStates.Celestial then table.insert(order, "Celestial") end
+        if autoStates.Secret then table.insert(order, "Secret") end
+        if autoStates.Mythic then table.insert(order, "Mythic") end
+        if autoStates.Legendary then table.insert(order, "Legendary") end
+
+        if #order > 0 then
+            for _, typeName in ipairs(order) do
+                if autoStates[typeName] then
+                    local success = autoCollect(typeName)
+                    if success then task.wait(1) end
+                end
+            end
+        end
+        task.wait(1)
+    end
+end
+
+-- ===== TOGGLE STATES =====
+local collectCashEnabled = false
+local upgradeAllEnabled = false
+local afkEnabled = false
 
 local function startCollectCashLoop()
     while true do
@@ -269,12 +523,31 @@ local function startUpgradeAllLoop()
     end
 end
 
-task.spawn(startCollectCashLoop)
-task.spawn(startUpgradeAllLoop)
+local function startAFKLoop()
+    while true do
+        if afkEnabled then
+            local character = localPlayer.Character
+            if character and character:FindFirstChild("Humanoid") then
+                local humanoid = character.Humanoid
+                local currentPos = character.HumanoidRootPart.Position
+                local newPos = currentPos + character.HumanoidRootPart.CFrame.LookVector * 2
+                teleport(newPos)
+                task.wait(0.5)
+                teleport(currentPos)
+                task.wait(0.5)
+            end
+        end
+        task.wait(30)
+    end
+end
 
--- ============================================================
--- FUNGSI CREATE CHECKBOX (dengan tampilan baru)
--- ============================================================
+-- ===== UI FUNCTIONS (kept for structure) =====
+local UI = {}
+
+function UI.AddSlider(config) end  -- kept empty
+function UI.AddButton(config) end  -- kept empty
+
+-- Checkbox creator (styling already matches request)
 local function createCheckbox(config)
     local container = switchContainer
     local text = config.Text or "Checkbox"
@@ -308,26 +581,20 @@ local function createCheckbox(config)
     checkCorner.CornerRadius = UDim.new(0, 4)
     checkCorner.Parent = checkBtn
 
-    -- Centang (hanya muncul jika on)
     local checkMark = Instance.new("TextLabel")
     checkMark.Size = UDim2.new(1, 0, 1, 0)
     checkMark.BackgroundTransparency = 1
-    checkMark.Text = default and "✓" or ""  -- kosong jika off
+    checkMark.Text = default and "✓" or ""
     checkMark.TextColor3 = Color3.fromRGB(255, 255, 255)
     checkMark.TextSize = 18
-    checkMark.Font = Enum.Font.GothamBold  -- bold
+    checkMark.Font = Enum.Font.GothamBold
     checkMark.Parent = checkBtn
 
     local state = default
 
     local function updateCheck()
-        if state then
-            checkBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)  -- biru
-            checkMark.Text = "✓"  -- centang muncul
-        else
-            checkBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)  -- abu-abu
-            checkMark.Text = ""  -- kosong
-        end
+        checkBtn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
+        checkMark.Text = state and "✓" or ""
     end
 
     checkBtn.MouseButton1Click:Connect(function()
@@ -339,9 +606,7 @@ local function createCheckbox(config)
     return frame
 end
 
--- ============================================================
--- MINIMIZED FRAME (sama seperti sebelumnya)
--- ============================================================
+-- ===== MINIMIZED FRAME (unchanged) =====
 local minimizedFrame = Instance.new("Frame")
 minimizedFrame.Size = UDim2.new(0, 50, 0, 50)
 minimizedFrame.Position = UDim2.new(1, -70, 1, -70)
@@ -421,87 +686,111 @@ closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- ============================================================
--- MEMBUAT TOMBOL & CHECKBOX DI UI
--- ============================================================
+-- ===== UI ELEMENTS (buttons and checkboxes) =====
+UI.AddSlider({})  -- placeholder
+UI.AddButton({})  -- placeholder
 
--- Tombol Go To Plot
-local goToPlotBtn = Instance.new("TextButton")
-goToPlotBtn.Size = UDim2.new(1, 0, 0, 30)
-goToPlotBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-goToPlotBtn.Text = "Go To Plot"
-goToPlotBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-goToPlotBtn.Font = Enum.Font.Gotham
-goToPlotBtn.TextSize = 14
-goToPlotBtn.BorderSizePixel = 0
-goToPlotBtn.Parent = buttonContainer
+-- Buttons
+local function createButton(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.BorderSizePixel = 0
+    btn.Parent = buttonContainer
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 4)
-btnCorner.Parent = goToPlotBtn
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = btn
 
-goToPlotBtn.MouseEnter:Connect(function()
-    goToPlotBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    btn.MouseButton1Click:Connect(callback)
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50) end)
+    return btn
+end
+
+createButton("Remove Lava", function()
+    local lavasFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("Lavas")
+    if lavasFolder then lavasFolder:Destroy() end
 end)
-goToPlotBtn.MouseLeave:Connect(function()
-    goToPlotBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+
+createButton("Remove VIP", function()
+    local vipFolder = workspace:FindFirstChild("GameFolder") and workspace.GameFolder:FindFirstChild("VIPDoors")
+    if vipFolder then vipFolder:Destroy() end
 end)
-goToPlotBtn.MouseButton1Click:Connect(teleportToHome)
 
--- Tombol Remove Breakble Zone
-local removeZoneBtn = Instance.new("TextButton")
-removeZoneBtn.Size = UDim2.new(1, 0, 0, 30)
-removeZoneBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-removeZoneBtn.Text = "Remove Breakble Zone"
-removeZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-removeZoneBtn.Font = Enum.Font.Gotham
-removeZoneBtn.TextSize = 14
-removeZoneBtn.BorderSizePixel = 0
-removeZoneBtn.Parent = buttonContainer
-
-local btnCorner2 = Instance.new("UICorner")
-btnCorner2.CornerRadius = UDim.new(0, 4)
-btnCorner2.Parent = removeZoneBtn
-
-removeZoneBtn.MouseEnter:Connect(function()
-    removeZoneBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+createButton("Rebirths Need", processRebirthNeed)
+createButton("Go To Plot", teleportToHome)  -- renamed from "To Home"
+createButton("Claim Manual", function()
+    local character = localPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local savedPos = character.HumanoidRootPart.Position
+    teleport(afterInteractPoint)
+    task.wait(0.5)
+    teleport(savedPos)
 end)
-removeZoneBtn.MouseLeave:Connect(function()
-    removeZoneBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-end)
-removeZoneBtn.MouseButton1Click:Connect(removeBreakableZone)
+createButton("Fuse Machine", function() teleport(fuseMachinePoint) end)
 
--- Checkbox Auto Collect Cash
+-- Checkboxes
 createCheckbox({
-    Text = "Auto Collect Cash",
+    Text = "Auto Lucky Block",
+    Default = false,
+    Callback = function(state) autoStates.LuckyBlock = state end
+})
+createCheckbox({
+    Text = "Auto Godly",
+    Default = false,
+    Callback = function(state) autoStates.Godly = state end
+})
+createCheckbox({
+    Text = "Auto Celestial",
+    Default = false,
+    Callback = function(state) autoStates.Celestial = state end
+})
+createCheckbox({
+    Text = "Auto Secret",
+    Default = false,
+    Callback = function(state) autoStates.Secret = state end
+})
+createCheckbox({
+    Text = "Auto Mythic",
+    Default = false,
+    Callback = function(state) autoStates.Mythic = state end
+})
+createCheckbox({
+    Text = "Auto Legendary",
+    Default = false,
+    Callback = function(state) autoStates.Legendary = state end
+})
+createCheckbox({
+    Text = "Collect Cash",
     Default = false,
     Callback = function(state)
         collectCashEnabled = state
-        if state then
-            -- refresh cache
-            placesCache = nil
-            getPlacesData()
-        end
+        if state then getPlacesData() end
     end
 })
-
--- Checkbox Auto Upgrade All
 createCheckbox({
-    Text = "Auto Upgrade All",
+    Text = "Upgrade All",
     Default = false,
     Callback = function(state)
         upgradeAllEnabled = state
-        if state then
-            placesCache = nil
-            getPlacesData()
-        end
+        if state then getPlacesData() end
     end
 })
+createCheckbox({
+    Text = "AFK",
+    Default = false,
+    Callback = function(state) afkEnabled = state end
+})
 
--- (Opsional) bisa tambahkan tombol lain jika diperlukan, tapi sesuai permintaan hanya ini.
+-- Start loops
+task.spawn(startAutoLoop)
+task.spawn(startCollectCashLoop)
+task.spawn(startUpgradeAllLoop)
+task.spawn(startAFKLoop)
 
--- ============================================================
--- EXPORT UI (optional)
--- ============================================================
-local UI = {}
 _G[guiName] = UI
