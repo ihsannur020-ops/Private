@@ -366,23 +366,23 @@ local function showWarning(featureName, message, onNext, onClose)
 end
 
 -- =============================================
--- Auto Collect Cash (Improved with warning)
+-- Auto Collect Cash (Fixed with Fire TouchInterest)
 -- =============================================
 local collectCashLoop = nil
-local dummyPart = nil
+local dummyTouchPart = nil
 
-local function createDummyPart()
-    if not dummyPart then
-        dummyPart = Instance.new("Part")
-        dummyPart.Name = "DummyTouchPart"
-        dummyPart.Anchored = true
-        dummyPart.CanCollide = false
-        dummyPart.CanTouch = true
-        dummyPart.Transparency = 1
-        dummyPart.Size = Vector3.new(1,1,1)
-        dummyPart.Parent = workspace
+local function createDummyTouchPart()
+    if not dummyTouchPart then
+        dummyTouchPart = Instance.new("Part")
+        dummyTouchPart.Name = "DummyTouchPart"
+        dummyTouchPart.Anchored = true
+        dummyTouchPart.CanCollide = false
+        dummyTouchPart.CanTouch = true
+        dummyTouchPart.Transparency = 1
+        dummyTouchPart.Size = Vector3.new(1,1,1)
+        dummyTouchPart.Parent = workspace
     end
-    return dummyPart
+    return dummyTouchPart
 end
 
 local function getCollectTouchParts()
@@ -410,7 +410,7 @@ end
 
 local function startCollectCash()
     if collectCashLoop then collectCashLoop:Disconnect() end
-    local dummy = createDummyPart()
+    local dummy = createDummyTouchPart()
     collectCashLoop = runService.Heartbeat:Connect(function()
         if not toggleStates.AutoCollectCash then
             collectCashLoop:Disconnect()
@@ -419,12 +419,14 @@ local function startCollectCash()
         end
         local parts = getCollectTouchParts()
         for _, part in ipairs(parts) do
-            if part and part.Parent then
-                dummy.CFrame = part.CFrame
-                task.wait()
+            if part and part.Parent and part.TouchInterest then
+                pcall(function()
+                    -- Fire the TouchInterest with the dummy part as the touching part
+                    part.TouchInterest:Fire(dummy)
+                end)
             end
         end
-        task.wait(0.1)
+        task.wait(0.1) -- delay to avoid overloading
     end)
 end
 
@@ -433,14 +435,14 @@ local function stopCollectCash()
         collectCashLoop:Disconnect()
         collectCashLoop = nil
     end
-    if dummyPart then
-        dummyPart:Destroy()
-        dummyPart = nil
+    if dummyTouchPart then
+        dummyTouchPart:Destroy()
+        dummyTouchPart = nil
     end
 end
 
 -- =============================================
--- Auto Upgrade All (Improved with warning)
+-- Auto Upgrade All (Fixed with Click simulation)
 -- =============================================
 local upgradeLoop = nil
 
@@ -484,10 +486,11 @@ local function startUpgradeAll()
         local buttons = getUpgradeButtons()
         for _, btn in ipairs(buttons) do
             pcall(function()
+                -- Click the button
                 btn:Click()
             end)
         end
-        task.wait(0.5)
+        task.wait(0.5) -- delay between clicks
     end)
 end
 
@@ -781,7 +784,7 @@ local function createCheckbox(text, stateVar)
     updateCheckbox()
 end
 
--- Add Buttons (Hapus Remove Breakble Zone, perbaiki Go To Plot)
+-- Add Buttons
 createButton("Go To Plot", function()
     -- Teleport ke koordinat awal
     teleportToPosition(12.525, 20, -478.31)
