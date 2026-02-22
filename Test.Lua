@@ -233,6 +233,12 @@ local toggleStates = {
     AutoUpgradeAll = false
 }
 
+-- Warning flags (only show once)
+local warningsShown = {
+    CollectCash = false,
+    UpgradeAll = false
+}
+
 -- =============================================
 -- Always Ground
 -- =============================================
@@ -277,7 +283,90 @@ local function updateGroundPart()
 end
 
 -- =============================================
--- Auto Collect Cash (Improved)
+-- Warning Popup Function
+-- =============================================
+local function showWarning(featureName, message, onNext, onClose)
+    -- Create a semi-transparent overlay
+    local overlay = Instance.new("Frame")
+    overlay.Size = UDim2.new(1, 0, 1, 0)
+    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    overlay.BackgroundTransparency = 0.5
+    overlay.Active = true
+    overlay.Parent = screenGui
+    overlay.ZIndex = 10
+
+    local popup = Instance.new("Frame")
+    popup.Size = UDim2.new(0, 300, 0, 150)
+    popup.Position = UDim2.new(0.5, -150, 0.5, -75)
+    popup.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    popup.BorderSizePixel = 2
+    popup.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    popup.Parent = overlay
+    popup.ZIndex = 11
+
+    local popupCorner = Instance.new("UICorner")
+    popupCorner.CornerRadius = UDim.new(0, 8)
+    popupCorner.Parent = popup
+
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -20, 0, 60)
+    messageLabel.Position = UDim2.new(0, 10, 0, 10)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = message
+    messageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    messageLabel.TextWrapped = true
+    messageLabel.Font = Enum.Font.Gotham
+    messageLabel.TextSize = 14
+    messageLabel.Parent = popup
+
+    local buttonFrame = Instance.new("Frame")
+    buttonFrame.Size = UDim2.new(1, -20, 0, 40)
+    buttonFrame.Position = UDim2.new(0, 10, 1, -50)
+    buttonFrame.BackgroundTransparency = 1
+    buttonFrame.Parent = popup
+
+    local nextBtn = Instance.new("TextButton")
+    nextBtn.Size = UDim2.new(0.5, -5, 1, 0)
+    nextBtn.Position = UDim2.new(0, 0, 0, 0)
+    nextBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    nextBtn.Text = "Next"
+    nextBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nextBtn.Font = Enum.Font.GothamBold
+    nextBtn.TextSize = 16
+    nextBtn.BorderSizePixel = 0
+    nextBtn.Parent = buttonFrame
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0.5, -5, 1, 0)
+    closeBtn.Position = UDim2.new(0.5, 5, 0, 0)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    closeBtn.Text = "Close"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 16
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Parent = buttonFrame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 5)
+    btnCorner.Parent = nextBtn
+    local btnCorner2 = Instance.new("UICorner")
+    btnCorner2.CornerRadius = UDim.new(0, 5)
+    btnCorner2.Parent = closeBtn
+
+    nextBtn.MouseButton1Click:Connect(function()
+        overlay:Destroy()
+        onNext()
+    end)
+
+    closeBtn.MouseButton1Click:Connect(function()
+        overlay:Destroy()
+        onClose()
+    end)
+end
+
+-- =============================================
+-- Auto Collect Cash (Improved with warning)
 -- =============================================
 local collectCashLoop = nil
 local dummyPart = nil
@@ -330,14 +419,12 @@ local function startCollectCash()
         end
         local parts = getCollectTouchParts()
         for _, part in ipairs(parts) do
-            -- Simulate touch by moving dummy part to touch the CollectTouch
             if part and part.Parent then
                 dummy.CFrame = part.CFrame
-                -- Optional small delay
                 task.wait()
             end
         end
-        task.wait(0.1) -- small delay to avoid overloading
+        task.wait(0.1)
     end)
 end
 
@@ -353,7 +440,7 @@ local function stopCollectCash()
 end
 
 -- =============================================
--- Auto Upgrade All (Improved)
+-- Auto Upgrade All (Improved with warning)
 -- =============================================
 local upgradeLoop = nil
 
@@ -400,7 +487,7 @@ local function startUpgradeAll()
                 btn:Click()
             end)
         end
-        task.wait(0.5) -- delay between clicks
+        task.wait(0.5)
     end)
 end
 
@@ -431,27 +518,22 @@ local function doCelestialCollection()
     local models = celestial:GetChildren()
     if #models == 0 then return end
 
-    -- Pick first model (or random)
     local target = models[1]
     local rootPart = target:FindFirstChild("RootPart")
     if not rootPart then return end
     local prompt = rootPart:FindFirstChild("ProximityPrompt")
     if not prompt then return end
 
-    -- Teleport to model
-    teleportToCFrame(rootPart.CFrame * CFrame.new(0, 2, 0)) -- slightly above
-    task.wait(0.5) -- wait for prompt to appear
+    teleportToCFrame(rootPart.CFrame * CFrame.new(0, 2, 0))
+    task.wait(0.5)
 
-    -- Hold prompt
     prompt:InputHoldBegin()
     task.wait(1.05)
     prompt:InputHoldEnd()
 
-    -- Teleport to cash location
     teleportToPosition(100.107, 19.415, -451.556)
     task.wait(0.5)
 
-    -- Signal completion
     celestialDone:Fire()
 end
 
@@ -487,24 +569,20 @@ end
 local function runPriority()
     while priorityRunning do
         if not (toggleStates.AutoCelestial or toggleStates.AutoSecret) then
-            -- Nothing to do
             task.wait(1)
             continue
         end
 
         if toggleStates.AutoCelestial and toggleStates.AutoSecret then
-            -- Both on: check Celestial first
             teleportToPosition(3.149, 20, 4181.083)
             task.wait(1)
             local spawners = workspace:FindFirstChild("ItemSpawners")
             if spawners then
                 local celestial = spawners:FindFirstChild("Celestial")
                 if celestial and #celestial:GetChildren() > 0 then
-                    -- Start Celestial and wait for it
                     coroutine.wrap(doCelestialCollection)()
                     celestialDone.Event:Wait()
                 else
-                    -- No Celestial, check Secret
                     teleportToPosition(0.697, 20, 3334.632)
                     task.wait(1)
                     local secret = spawners:FindFirstChild("Secret")
@@ -517,7 +595,6 @@ local function runPriority()
                 end
             end
         elseif toggleStates.AutoCelestial then
-            -- Only Celestial
             teleportToPosition(3.149, 20, 4181.083)
             task.wait(1)
             local spawners = workspace:FindFirstChild("ItemSpawners")
@@ -531,7 +608,6 @@ local function runPriority()
                 end
             end
         elseif toggleStates.AutoSecret then
-            -- Only Secret
             teleportToPosition(0.697, 20, 3334.632)
             task.wait(1)
             local spawners = workspace:FindFirstChild("ItemSpawners")
@@ -558,7 +634,6 @@ end
 local function stopPriority()
     priorityRunning = false
     if priorityLoop then
-        -- coroutine will end naturally
         priorityLoop = nil
     end
 end
@@ -618,25 +693,65 @@ local function createCheckbox(text, stateVar)
     local checkmark = Instance.new("TextLabel")
     checkmark.Size = UDim2.new(1, 0, 1, 0)
     checkmark.BackgroundTransparency = 1
-    checkmark.Text = "✓" -- centang
+    checkmark.Text = "✓"
     checkmark.TextColor3 = Color3.fromRGB(255, 255, 255)
     checkmark.TextSize = 20
     checkmark.Font = Enum.Font.GothamBold
-    checkmark.Visible = false -- default off
+    checkmark.Visible = false
     checkmark.Parent = checkBtn
 
     local function updateCheckbox()
         if toggleStates[stateVar] then
-            checkBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- biru
+            checkBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
             checkmark.Visible = true
         else
-            checkBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80) -- abu-abu
+            checkBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
             checkmark.Visible = false
         end
     end
 
     checkBtn.MouseButton1Click:Connect(function()
-        toggleStates[stateVar] = not toggleStates[stateVar]
+        local newState = not toggleStates[stateVar]
+        
+        -- Special handling for features with warnings
+        if stateVar == "AutoCollectCash" and newState and not warningsShown.CollectCash then
+            -- Show warning
+            showWarning(
+                "CollectCash",
+                "Only useful if the player is close to the Plot because the plot must be loaded by the client from the server.",
+                function() -- Next
+                    warningsShown.CollectCash = true
+                    toggleStates[stateVar] = true
+                    updateCheckbox()
+                    startCollectCash()
+                end,
+                function() -- Close
+                    toggleStates[stateVar] = false
+                    updateCheckbox()
+                    -- Do nothing else
+                end
+            )
+            return
+        elseif stateVar == "AutoUpgradeAll" and newState and not warningsShown.UpgradeAll then
+            showWarning(
+                "UpgradeAll",
+                "Only useful if the player is close to the Plot because the plot must be loaded by the client from the server.",
+                function()
+                    warningsShown.UpgradeAll = true
+                    toggleStates[stateVar] = true
+                    updateCheckbox()
+                    startUpgradeAll()
+                end,
+                function()
+                    toggleStates[stateVar] = false
+                    updateCheckbox()
+                end
+            )
+            return
+        end
+
+        -- Normal toggle without warning or warning already shown
+        toggleStates[stateVar] = newState
         updateCheckbox()
 
         -- Handle specific toggles
@@ -666,37 +781,22 @@ local function createCheckbox(text, stateVar)
     updateCheckbox()
 end
 
--- Add Buttons (perbaikan Go To Plot dan Remove Breakble Zone)
+-- Add Buttons (Hapus Remove Breakble Zone, perbaiki Go To Plot)
 createButton("Go To Plot", function()
-    local spawn = getPlotSpawn()
-    if spawn then
-        teleportToCFrame(spawn.CFrame)
-    else
-        warn("Plot or Spawn not found")
-    end
-end)
-
-createButton("Remove Breakble Zone", function()
-    local spawn = getPlotSpawn()
-    if spawn then
-        teleportToCFrame(spawn.CFrame)
-        task.wait(0.5)
-        local root = getHumanoidRootPart()
-        if root then
-            root.Anchored = true
-        end
-        local breakable = workspace:FindFirstChild("BreakableBlocks")
-        if breakable then
-            breakable.Parent = nil
-            task.wait(0.5)
-            breakable.Parent = workspace
-        end
-        task.wait(0.5)
-        if root then
-            root.Anchored = false
+    -- Teleport ke koordinat awal
+    teleportToPosition(12.525, 20, -478.31)
+    task.wait(0.5)
+    -- Cari plot player
+    local plot = getPlotModel()
+    if plot then
+        local spawn = plot:FindFirstChild("Spawn")
+        if spawn then
+            teleportToCFrame(spawn.CFrame)
+        else
+            warn("Spawn not found in plot")
         end
     else
-        warn("Spawn not found")
+        warn("Plot not found")
     end
 end)
 
